@@ -73,7 +73,6 @@ useEffect(() => {
 
 
 // DATA LADEN
-useEffect(()=>{
 
 useEffect(()=>{
 
