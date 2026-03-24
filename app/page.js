@@ -75,11 +75,17 @@ useEffect(() => {
 // DATA LADEN
 useEffect(()=>{
 
-if(user){
-checkFirstUse()
-loadCommitments()
-loadHistory()
-}
+useEffect(()=>{
+
+  if(!user) return
+
+  const init = async () => {
+    await checkFirstUse()
+    await loadCommitments()
+    await loadHistory()
+  }
+
+  init()
 
 },[user])
 
