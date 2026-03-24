@@ -53,28 +53,7 @@ const handleSubmit = async () => {
 }
 
 
-
 // USER OPHALEN
-<<<<<<< HEAD
-useEffect(() => {
-
-  const init = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    setUser(session?.user ?? null)
-  }
-
-  init()
-
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user ?? null)
-  })
-
-  return () => {
-    listener.subscription.unsubscribe()
-  }
-
-}, [])
-=======
 useEffect(() => {
   const init = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -91,8 +70,6 @@ useEffect(() => {
     listener.subscription.unsubscribe()
   }
 }, [])
->>>>>>> e98dae0d0b3ffdd0aa1259cc9c5f0a9f93b8893d
-
 
 
 // DATA LADEN
