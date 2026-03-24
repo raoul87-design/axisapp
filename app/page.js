@@ -55,6 +55,7 @@ const handleSubmit = async () => {
 
 
 // USER OPHALEN
+<<<<<<< HEAD
 useEffect(() => {
 
   const init = async () => {
@@ -73,6 +74,24 @@ useEffect(() => {
   }
 
 }, [])
+=======
+useEffect(() => {
+  const init = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    setUser(session?.user ?? null)
+  }
+
+  init()
+
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null)
+  })
+
+  return () => {
+    listener.subscription.unsubscribe()
+  }
+}, [])
+>>>>>>> e98dae0d0b3ffdd0aa1259cc9c5f0a9f93b8893d
 
 
 
@@ -451,6 +470,21 @@ marginTop:60,
 fontFamily:"sans-serif"
 }}>
 
+<button onClick={async () => {
+  const email = prompt("Enter your email")
+  if (!email) return
+
+  await supabase.auth.signInWithOtp({
+    email: email,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  })
+
+  alert("Check your email")
+}}>
+  Login
+</button>
 
 <div style={{ textAlign: "center", marginBottom: 24 }}>
 
