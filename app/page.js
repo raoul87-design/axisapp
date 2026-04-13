@@ -19,6 +19,9 @@ const [interactionMode,setInteractionMode] = useState("")
 const [completed, setCompleted] = useState(null)
 const [answer, setAnswer] = useState("")
 const [showAll, setShowAll] = useState(false)
+const [whatsappInput, setWhatsappInput] = useState("")
+const [showWhatsappInput, setShowWhatsappInput] = useState(false)
+const [whatsappLinked, setWhatsappLinked] = useState(false)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 const handleSubmit = async () => {
@@ -264,6 +267,27 @@ loadCommitments()
 
 
 
+async function linkWhatsapp(number) {
+  if (!number || !user) return false
+
+  const formatted = number.startsWith("whatsapp:") ? number : `whatsapp:${number}`
+
+  const { error } = await supabase
+    .from("users")
+    .upsert(
+      { whatsapp_number: formatted, auth_user_id: user.id },
+      { onConflict: "whatsapp_number" }
+    )
+
+  if (error) {
+    alert("Fout bij koppelen: " + error.message)
+    return false
+  }
+
+  setWhatsappLinked(true)
+  return true
+}
+
 async function logout(){
 await supabase.auth.signOut()
 location.reload()
@@ -401,10 +425,8 @@ How should Axis interact with you?
 
 <button
 onClick={()=>{
-
 setInteractionMode("app")
 setShowOnboarding(false)
-
 }}
 style={{
 width:"100%",
@@ -417,25 +439,86 @@ fontWeight:"bold",
 cursor:"pointer"
 }}
 >
-
 Use the App
-
 </button>
 
 <button
+onClick={()=> setShowWhatsappInput(true)}
 style={{
 width:"100%",
 padding:"14px",
-background:"#333",
-border:"none",
+background:"#1a1a1a",
+border:"1px solid #444",
 borderRadius:8,
-color:"#999"
+fontWeight:"bold",
+cursor:"pointer",
+color:"#fff"
 }}
 >
-
-WhatsApp (coming soon)
-
+WhatsApp Coach
 </button>
+
+{showWhatsappInput && (
+<div style={{marginTop:20}}>
+  <p style={{marginBottom:8, color:"#aaa", fontSize:14}}>
+    Jouw WhatsApp nummer (bijv. +31612345678)
+  </p>
+  <input
+    autoFocus
+    value={whatsappInput}
+    onChange={(e) => setWhatsappInput(e.target.value)}
+    placeholder="+31612345678"
+    style={{
+      width:"100%",
+      padding:"12px",
+      borderRadius:8,
+      border:"1px solid #444",
+      background:"#111",
+      color:"#fff",
+      marginBottom:10,
+      fontSize:15
+    }}
+  />
+  <button
+    onClick={async () => {
+      const ok = await linkWhatsapp(whatsappInput)
+      if (ok) {
+        setInteractionMode("whatsapp")
+        setShowOnboarding(false)
+      }
+    }}
+    style={{
+      width:"100%",
+      padding:"12px",
+      background:"#22c55e",
+      border:"none",
+      borderRadius:8,
+      fontWeight:"bold",
+      cursor:"pointer",
+      marginBottom:8
+    }}
+  >
+    Koppelen
+  </button>
+  <button
+    onClick={() => {
+      setInteractionMode("app")
+      setShowOnboarding(false)
+    }}
+    style={{
+      width:"100%",
+      padding:"12px",
+      background:"transparent",
+      border:"none",
+      color:"#666",
+      cursor:"pointer",
+      fontSize:13
+    }}
+  >
+    Sla over
+  </button>
+</div>
+)}
 
 </>
 
@@ -518,6 +601,24 @@ fontSize:12
 }}
 >
 Wachtwoord instellen
+</button>
+
+<button
+onClick={async () => {
+  const number = prompt("Jouw WhatsApp nummer (+31...):")
+  if (!number) return
+  const ok = await linkWhatsapp(number)
+  if (ok) alert("WhatsApp gekoppeld!")
+}}
+style={{
+border:"none",
+background:"transparent",
+cursor:"pointer",
+color:"#555",
+fontSize:12
+}}
+>
+Koppel WhatsApp
 </button>
 
 <button
