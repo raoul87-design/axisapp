@@ -32,7 +32,7 @@ function getTone(streak, missedDays) {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, streak, missed_days")
+    .select("id, auth_user_id, streak, missed_days")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -69,14 +69,15 @@ async function handleMessage(from, body) {
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
 
-    // Stap 2: Commitment opslaan
+    // Stap 2: Commitment opslaan met auth_user_id
     console.log("=== [3] COMMITMENT OPSLAAN ===")
-    if (userData?.id) {
+    const authUserId = userData?.auth_user_id
+    if (authUserId) {
       const today = new Date().toISOString().split("T")[0]
       const { error: commitError } = await supabase
         .from("commitments")
         .insert({
-          user_id: userData.id,
+          user_id: authUserId,
           text: body,
           date: today,
           done: false,
@@ -84,10 +85,10 @@ async function handleMessage(from, body) {
       if (commitError) {
         console.error("Fout bij opslaan commitment:", commitError.message)
       } else {
-        console.log("Commitment opgeslagen:", body)
+        console.log("Commitment opgeslagen voor auth_user_id:", authUserId)
       }
     } else {
-      console.log("Geen user_id — commitment niet opgeslagen")
+      console.log("Geen auth_user_id gekoppeld aan dit WhatsApp nummer — commitment niet opgeslagen")
     }
 
     // Stap 3: Reply bepalen (tijdelijk vast, later AI)
