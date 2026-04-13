@@ -16,7 +16,9 @@ export default function Login() {
       }
     });
 
-    if (!error) {
+    if (error) {
+      alert("Fout: " + error.message)
+    } else {
       alert("Check your email for the login link");
     }
 
