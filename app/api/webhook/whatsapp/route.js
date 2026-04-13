@@ -2,7 +2,6 @@ import twilio from "twilio"
 import Anthropic from "@anthropic-ai/sdk"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
 const SYSTEM_PROMPT = `Je bent een persoonlijke discipline coach. Je bent motiverend maar direct. Maximaal 2 zinnen per antwoord. Spreek de gebruiker aan met jij/je.`
 
@@ -39,9 +38,14 @@ export async function POST(request) {
     // 4) Bericht actief versturen via Twilio client
     console.log("=== [4] BERICHT VERSTUREN VIA TWILIO CLIENT ===")
     console.log("Naar:", from)
+    console.log("TWILIO_ACCOUNT_SID aanwezig:", !!process.env.TWILIO_ACCOUNT_SID)
+    console.log("TWILIO_AUTH_TOKEN aanwezig:", !!process.env.TWILIO_AUTH_TOKEN)
+    console.log("TWILIO_WHATSAPP_NUMBER:", process.env.TWILIO_WHATSAPP_NUMBER)
+
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
     const message = await client.messages.create({
-      from: "whatsapp:+14155238886",
+      from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
       to: from,
       body: reply,
     })
