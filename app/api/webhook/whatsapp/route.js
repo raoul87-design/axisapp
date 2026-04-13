@@ -35,7 +35,7 @@ function getTone(streak, missedDays) {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, streak, missed_days")
+    .select("id, auth_user_id, streak, missed_days, awaiting_reflection")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -69,29 +69,66 @@ async function handleMessage(from, body) {
     const streak = userData?.streak ?? 0
     const missedDays = userData?.missed_days ?? 0
     const tone = getTone(streak, missedDays)
+    const awaitingReflection = userData?.awaiting_reflection ?? false
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
+    console.log("Awaiting reflection:", awaitingReflection)
 
-    // Stap 2: Commitment opslaan met auth_user_id
+    // Stap 2a: Reflectie flow
+    if (awaitingReflection) {
+      console.log("=== [3] REFLECTIE VERWERKEN ===")
+      const normalized = body.trim().toLowerCase()
+      const completed = normalized === "ja" || normalized === "yes"
+      const authUserId = userData?.auth_user_id
+
+      if (authUserId) {
+        await supabase.from("reflections").insert({
+          user_id: authUserId,
+          completed,
+          answer: body,
+        })
+        console.log("Reflectie opgeslagen:", completed)
+      }
+
+      // Streak en missed_days bijwerken
+      const newStreak = completed ? streak + 1 : 0
+      const newMissedDays = completed ? 0 : missedDays + 1
+      await supabase
+        .from("users")
+        .update({ streak: newStreak, missed_days: newMissedDays, awaiting_reflection: false })
+        .eq("id", userData.id)
+
+      console.log("Streak bijgewerkt:", newStreak, "| MissedDays:", newMissedDays)
+
+      const reply = completed
+        ? `Geweldig! 🔥 Streak staat nu op ${newStreak} ${newStreak === 1 ? "dag" : "dagen"}. Morgen weer!`
+        : `Oké, eerlijk is eerlijk. Morgen is een nieuwe kans — wat ga jij anders doen?`
+
+      const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+      await client.messages.create({
+        from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+        to: from,
+        body: reply,
+      })
+      console.log("Reflectie reply verstuurd")
+      return
+    }
+
+    // Stap 2b: Commitment opslaan
     console.log("=== [3] COMMITMENT OPSLAAN ===")
     const authUserId = userData?.auth_user_id
     if (authUserId) {
       const today = new Date().toISOString().split("T")[0]
       const { error: commitError } = await supabase
         .from("commitments")
-        .insert({
-          user_id: authUserId,
-          text: body,
-          date: today,
-          done: false,
-        })
+        .insert({ user_id: authUserId, text: body, date: today, done: false })
       if (commitError) {
         console.error("Fout bij opslaan commitment:", commitError.message)
       } else {
         console.log("Commitment opgeslagen voor auth_user_id:", authUserId)
       }
     } else {
-      console.log("Geen auth_user_id gekoppeld aan dit WhatsApp nummer — commitment niet opgeslagen")
+      console.log("Geen auth_user_id — commitment niet opgeslagen")
     }
 
     // Stap 3: AI reply
