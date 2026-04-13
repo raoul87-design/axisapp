@@ -1,33 +1,92 @@
 import { waitUntil } from "@vercel/functions"
 import twilio from "twilio"
-import Anthropic from "@anthropic-ai/sdk"
+import { createClient } from "@supabase/supabase-js"
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const supabase = createClient(
+  "https://zdqrrprjkddlxszmtcmx.supabase.co",
+  process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
+)
 
-const SYSTEM_PROMPT = `Je bent een persoonlijke discipline coach. Je bent motiverend maar direct. Maximaal 2 zinnen per antwoord. Spreek de gebruiker aan met jij/je.`
+const SYSTEM_PROMPTS = {
+  brutal: `Je bent een harde discipline coach. Je bent direct, confronterend en zonder medelijden.
+Je spreekt de waarheid, ook als het pijn doet. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+
+  hard: `Je bent een strenge discipline coach. Je bent eerlijk en direct, maar respectvol.
+Je houdt de gebruiker scherp. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+
+  medium: `Je bent een begeleidende discipline coach. Je bent motiverend en direct.
+Je helpt de gebruiker focussen. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+
+  soft: `Je bent een warme discipline coach. Je bent bemoedigend en positief.
+Je viert voortgang en houdt het momentum vast. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+}
+
+function getTone(streak, missedDays) {
+  if (missedDays >= 4) return "brutal"
+  if (missedDays >= 2) return "hard"
+  if (streak >= 7) return "soft"
+  if (streak >= 3) return "medium"
+  return "medium"
+}
+
+async function getUserData(whatsappNumber) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, streak, missed_days")
+    .eq("whatsapp_number", whatsappNumber)
+    .single()
+
+  if (error) {
+    console.log("Geen gebruiker gevonden voor:", whatsappNumber)
+    return null
+  }
+
+  return data
+}
+
+async function saveWhatsappNumber(whatsappNumber) {
+  const { error } = await supabase
+    .from("users")
+    .upsert({ whatsapp_number: whatsappNumber }, { onConflict: "whatsapp_number" })
+
+  if (error) {
+    console.error("Fout bij opslaan WhatsApp nummer:", error.message)
+  } else {
+    console.log("WhatsApp nummer opgeslagen:", whatsappNumber)
+  }
+}
 
 async function handleMessage(from, body) {
   try {
-    console.log("=== [2] ANTHROPIC API CALL STARTEN ===")
-    console.log("API key aanwezig:", !!process.env.ANTHROPIC_API_KEY)
+    // Stap 1: WhatsApp nummer opslaan als het nog niet bestaat
+    console.log("=== [2] GEBRUIKER OPHALEN / OPSLAAN ===")
+    await saveWhatsappNumber(from)
 
-    const aiResponse = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 256,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: body }],
-    })
+    const userData = await getUserData(from)
+    const streak = userData?.streak ?? 0
+    const missedDays = userData?.missed_days ?? 0
+    const tone = getTone(streak, missedDays)
 
-    console.log("=== [3] ANTHROPIC RESPONSE ONTVANGEN ===")
-    console.log("Stop reason:", aiResponse.stop_reason)
-    const reply = aiResponse.content[0].text
+    console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
+
+    // Stap 2: Reply bepalen (tijdelijk vast, later AI)
+    console.log("=== [3] REPLY BEPALEN ===")
+    const reply = "Goed bezig! 🔥 Wat is jouw commitment voor vandaag?"
+
+    // TODO: vervang bovenstaande door AI call zodra credits actief zijn:
+    // const aiResponse = await anthropic.messages.create({
+    //   model: "claude-sonnet-4-20250514",
+    //   max_tokens: 256,
+    //   system: SYSTEM_PROMPTS[tone],
+    //   messages: [{ role: "user", content: body }],
+    // })
+    // const reply = aiResponse.content[0].text
+
+    console.log("Toon:", tone)
     console.log("Antwoord:", reply)
 
-    console.log("=== [4] BERICHT VERSTUREN VIA TWILIO CLIENT ===")
-    console.log("Naar:", from)
-    console.log("TWILIO_ACCOUNT_SID aanwezig:", !!process.env.TWILIO_ACCOUNT_SID)
-    console.log("TWILIO_AUTH_TOKEN aanwezig:", !!process.env.TWILIO_AUTH_TOKEN)
-
+    // Stap 3: Versturen via Twilio
+    console.log("=== [4] BERICHT VERSTUREN ===")
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
     const message = await client.messages.create({
@@ -43,9 +102,7 @@ async function handleMessage(from, body) {
     console.error("Naam:", error.name)
     console.error("Bericht:", error.message)
     console.error("Status:", error.status)
-    console.error("Error body:", JSON.stringify(error.error))
-    console.error("Stack:", error.stack)
-    console.error("Volledige error JSON:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+    console.error("Volledige error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
   }
 }
 
@@ -59,7 +116,6 @@ export async function POST(request) {
   console.log("Van:", from)
   console.log("Tekst:", body)
 
-  // Stuur direct 200 terug aan Twilio, verwerk asynchroon
   waitUntil(handleMessage(from, body))
 
   return new Response(null, { status: 200 })
