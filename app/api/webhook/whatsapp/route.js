@@ -69,8 +69,29 @@ async function handleMessage(from, body) {
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
 
-    // Stap 2: Reply bepalen (tijdelijk vast, later AI)
-    console.log("=== [3] REPLY BEPALEN ===")
+    // Stap 2: Commitment opslaan
+    console.log("=== [3] COMMITMENT OPSLAAN ===")
+    if (userData?.id) {
+      const today = new Date().toISOString().split("T")[0]
+      const { error: commitError } = await supabase
+        .from("commitments")
+        .insert({
+          user_id: userData.id,
+          text: body,
+          date: today,
+          done: false,
+        })
+      if (commitError) {
+        console.error("Fout bij opslaan commitment:", commitError.message)
+      } else {
+        console.log("Commitment opgeslagen:", body)
+      }
+    } else {
+      console.log("Geen user_id — commitment niet opgeslagen")
+    }
+
+    // Stap 3: Reply bepalen (tijdelijk vast, later AI)
+    console.log("=== [4] REPLY BEPALEN ===")
     const reply = "Goed bezig! 🔥 Wat is jouw commitment voor vandaag?"
 
     // TODO: vervang bovenstaande door AI call zodra credits actief zijn:
@@ -86,7 +107,7 @@ async function handleMessage(from, body) {
     console.log("Antwoord:", reply)
 
     // Stap 3: Versturen via Twilio
-    console.log("=== [4] BERICHT VERSTUREN ===")
+    console.log("=== [5] BERICHT VERSTUREN ===")
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
     const message = await client.messages.create({
