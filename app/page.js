@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
 
 export default function Home() {
@@ -18,6 +19,7 @@ const [interactionMode,setInteractionMode] = useState("")
 const [completed, setCompleted] = useState(null)
 const [answer, setAnswer] = useState("")
 const [showAll, setShowAll] = useState(false)
+const router = useRouter()
 const FORCE_ONBOARDING = false
 const handleSubmit = async () => {
   // 👉 NIEUW (validatie)
@@ -57,13 +59,17 @@ const handleSubmit = async () => {
 useEffect(() => {
   const init = async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    setUser(session?.user ?? null)
+    const currentUser = session?.user ?? null
+    setUser(currentUser)
+    if (!currentUser) router.replace("/login")
   }
 
   init()
 
   const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user ?? null)
+    const currentUser = session?.user ?? null
+    setUser(currentUser)
+    if (!currentUser) router.replace("/login")
   })
 
   return () => {
@@ -451,22 +457,6 @@ margin:"auto",
 marginTop:60,
 fontFamily:"sans-serif"
 }}>
-
-<button onClick={async () => {
-  const email = prompt("Enter your email")
-  if (!email) return
-
-  await supabase.auth.signInWithOtp({
-    email: email,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`
-    }
-  })
-
-  alert("Check your email")
-}}>
-  Login
-</button>
 
 <div style={{ textAlign: "center", marginBottom: 24 }}>
 
