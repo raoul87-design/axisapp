@@ -488,7 +488,7 @@ return(
     padding: "24px 20px 12px"
   }}>
     <div>
-      <img src="/logo.png" alt="Axis logo" style={{ width: 100, height: 38 }} />
+      <img src="/logo.png" alt="Axis logo" style={{ width: 100, height: 38, mixBlendMode: "screen" }} />
       <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, marginTop: 4, textTransform: "uppercase" }}>
         Commit. Execute. Reflect. Recover.
       </p>
