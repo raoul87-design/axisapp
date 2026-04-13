@@ -691,31 +691,72 @@ return(
       </div>
     </div>
 
-    {/* GESCHIEDENIS */}
+    {/* WEEKGRID */}
     <div style={{ marginBottom: 32 }}>
-      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Geschiedenis</p>
+      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Deze week</p>
 
-      {history.map(day => {
+      {(() => {
+        const dagNamen = ["ma", "di", "wo", "do", "vr", "za", "zo"]
         const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const date = new Date(day.date)
-        date.setHours(0, 0, 0, 0)
-        const diff = Math.floor((today - date) / (1000 * 60 * 60 * 24))
-        const label = diff === 0 ? "Vandaag" : diff === 1 ? "Gisteren" : date.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric" })
-        const barColor = day.score >= 80 ? "#22c55e" : day.score >= 40 ? "#f97316" : "#ef4444"
+        const dayOfWeek = today.getDay()
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+
+        const weekDagen = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(today)
+          d.setHours(0, 0, 0, 0)
+          d.setDate(today.getDate() + mondayOffset + i)
+          return d.toISOString().split("T")[0]
+        })
+
+        const scoreMap = {}
+        history.forEach(d => { scoreMap[d.date] = Number(d.score) })
+
+        const actiefDagen = weekDagen.filter(d => {
+          const score = scoreMap[d]
+          return score !== undefined && score > 0
+        }).length
 
         return (
-          <div key={day.date} style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 13, color: "#aaa" }}>{label}</span>
-              <span style={{ fontSize: 12, color: barColor, fontWeight: "bold" }}>{day.score}%</span>
+          <>
+            <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+              {weekDagen.map((datum, i) => {
+                const score = scoreMap[datum]
+                const heeftData = score !== undefined
+                const isToekomst = datum > today.toISOString().split("T")[0]
+
+                let bg = "#1a1a1a"
+                let icon = ""
+                let textColor = "#333"
+
+                if (!isToekomst && heeftData) {
+                  if (score >= 80) { bg = "#14532d"; icon = "✓"; textColor = "#22c55e" }
+                  else if (score >= 40) { bg = "#431407"; icon = `${score}%`; textColor = "#f97316" }
+                  else if (score >= 1) { bg = "#450a0a"; icon = "×"; textColor = "#ef4444" }
+                }
+
+                return (
+                  <div key={datum} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8,
+                      background: bg,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: icon.length > 1 ? 9 : 14,
+                      color: textColor,
+                      fontWeight: "bold"
+                    }}>
+                      {icon}
+                    </div>
+                    <span style={{ fontSize: 10, color: "#444" }}>{dagNamen[i]}</span>
+                  </div>
+                )
+              })}
             </div>
-            <div style={{ width: "100%", height: 4, background: "#1e1e1e", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ width: day.score + "%", height: "100%", background: barColor, borderRadius: 4, transition: "width 0.4s ease" }} />
-            </div>
-          </div>
+            <p style={{ color: "#444", fontSize: 12, marginTop: 14 }}>
+              {actiefDagen} van 7 dagen actief deze week
+            </p>
+          </>
         )
-      })}
+      })()}
     </div>
 
   </div>
