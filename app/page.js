@@ -22,6 +22,7 @@ const [showAll, setShowAll] = useState(false)
 const [whatsappInput, setWhatsappInput] = useState("")
 const [showWhatsappInput, setShowWhatsappInput] = useState(false)
 const [whatsappLinked, setWhatsappLinked] = useState(false)
+const [showSettings, setShowSettings] = useState(false)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 const handleSubmit = async () => {
@@ -463,333 +464,294 @@ Sla over, ik gebruik de app
 
 }
 
+const done = commitments.filter(c => c.done).length
+const total = commitments.length
+const circumference = 2 * Math.PI * 36
+
 return(
 
 <div style={{
-maxWidth:420,
-margin:"auto",
-marginTop:60,
-fontFamily:"sans-serif"
+  maxWidth: 420,
+  margin: "auto",
+  paddingBottom: 100,
+  fontFamily: "sans-serif",
+  background: "#0f0f0f",
+  minHeight: "100vh",
+  color: "#fff"
 }}>
 
-<div style={{ textAlign: "center", marginBottom: 24 }}>
-
-  <img
-    src="/logo.png"
-    alt="Axis logo"
-    style={{
-      width: 130,
-      height: 50,
-      marginBottom: 12
-    }}
-  />
-
-  <p style={{
-    color: "#888",
-    fontSize: 11
-    ,
-    letterSpacing: 1
+  {/* HEADER */}
+  <div style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "24px 20px 12px"
   }}>
-    Commit. Execute. Reflect. Recover.
-  </p>
+    <div>
+      <img src="/logo.png" alt="Axis logo" style={{ width: 100, height: 38 }} />
+      <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, marginTop: 4, textTransform: "uppercase" }}>
+        Commit. Execute. Reflect. Recover.
+      </p>
+    </div>
 
-</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {streak > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+          <span style={{ color: "#22c55e", fontSize: 12 }}>{streak} dagen</span>
+        </div>
+      )}
 
-<div style={{
-marginBottom:20,
-fontWeight:"bold"
-}}>
-🔥 {streak} day streak
-</div>
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 20, padding: "4px 8px" }}
+        >
+          ···
+        </button>
 
-
-{user && (
-
-<div style={{
-display:"flex",
-justifyContent:"space-between",
-alignItems:"center",
-marginBottom:20
-}}>
-
-<div>{user.email}</div>
-
-<div style={{ display:"flex", gap:12 }}>
-<button
-onClick={async () => {
-  const pw = prompt("Nieuw wachtwoord (min. 6 tekens):")
-  if (!pw || pw.length < 6) return
-  const { error } = await supabase.auth.updateUser({ password: pw })
-  if (error) alert("Fout: " + error.message)
-  else alert("Wachtwoord opgeslagen!")
-}}
-style={{
-border:"none",
-background:"transparent",
-cursor:"pointer",
-color:"#555",
-fontSize:12
-}}
->
-Wachtwoord instellen
-</button>
-
-<button
-onClick={async () => {
-  const number = prompt("Jouw WhatsApp nummer (+31...):")
-  if (!number) return
-  const ok = await linkWhatsapp(number)
-  if (ok) alert("WhatsApp gekoppeld!")
-}}
-style={{
-border:"none",
-background:"transparent",
-cursor:"pointer",
-color:"#555",
-fontSize:12
-}}
->
-Koppel WhatsApp
-</button>
-
-<button
-onClick={logout}
-style={{
-border:"none",
-background:"transparent",
-cursor:"pointer",
-color:"#999"
-}}
->
-Logout
-</button>
-</div>
-
-</div>
-
-)}
-
-<h3 style={{ marginTop: 32 }}>Today's Progress</h3>
-
-<div
-  style={{
-    marginTop: 12,
-    background: "#111",
-    border: "1px solid #333",
-    borderRadius: 8,
-    padding: 8
-  }}
->
-  <div
-    style={{
-      height: 8,
-      width: progress + "%",
-      background: "#22c55e",
-      borderRadius: 6,
-      transition: "width 0.4s ease"
-    }}
-  />
-</div>
-<p style={{ marginTop: 6, color: "#888", fontSize: 13 }}>
-  {progress === 100 ? "Perfect day" : progress > 0 ? "In progress" : "No activity"}
-</p>
-<p style={{ marginTop: 8, color: "#aaa" }}>
-  {progress + "% completed"}
-</p>
-
-<input
-value={text}
-onChange={(e)=>setText(e.target.value)}
-placeholder="What will you commit to today?"
-style={{
-width:"100%",
-padding:12,
-borderRadius:6,
-border:"1px solid #444",
-marginBottom:10,
-background:"#111",
-color:"#fff"
-}}
-/>
-
-
-
-<button
-onClick={addCommitment}
-style={{
-width:"100%",
-padding:14,
-borderRadius:6,
-border:"none",
-fontWeight:"bold",
-cursor:"pointer",
-background:"#22c55e",
-color:"black"
-}}
-> 
-Add Commitment
-</button>
-
-
-<h3 style={{marginTop:40}}>Today's Commitments</h3>
-
-{commitments
-  .slice(0, showAll ? commitments.length : 5)
-  .map(c => (
-  <div key={c.id} style={{marginTop:10}}>
-    <label style={{cursor:"pointer"}}>
-      <input
-        type="checkbox"
-        checked={c.done}
-        onChange={() => toggleDone(c.id, c.done)}
-          style={{ accentColor: "#22c55e" }}
-      />
-      <span style={{marginLeft:8}}>
-        {c.text}
-      </span>
-    </label>
+        {showSettings && (
+          <div style={{
+            position: "absolute", right: 0, top: 32,
+            background: "#1a1a1a", border: "1px solid #333",
+            borderRadius: 10, padding: "8px 0", minWidth: 180, zIndex: 100
+          }}>
+            <div style={{ padding: "6px 16px 6px", color: "#555", fontSize: 11 }}>{user?.email}</div>
+            <hr style={{ border: "none", borderTop: "1px solid #2a2a2a", margin: "4px 0" }} />
+            <button onClick={async () => {
+              setShowSettings(false)
+              const pw = prompt("Nieuw wachtwoord (min. 6 tekens):")
+              if (!pw || pw.length < 6) return
+              const { error } = await supabase.auth.updateUser({ password: pw })
+              if (error) alert("Fout: " + error.message)
+              else alert("Wachtwoord opgeslagen!")
+            }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#ccc", textAlign: "left", cursor: "pointer", fontSize: 14 }}>
+              Wachtwoord instellen
+            </button>
+            <button onClick={async () => {
+              setShowSettings(false)
+              const number = prompt("Jouw WhatsApp nummer (+31...):")
+              if (!number) return
+              const ok = await linkWhatsapp(number)
+              if (ok) alert("WhatsApp gekoppeld!")
+            }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#ccc", textAlign: "left", cursor: "pointer", fontSize: 14 }}>
+              Koppel WhatsApp
+            </button>
+            <hr style={{ border: "none", borderTop: "1px solid #2a2a2a", margin: "4px 0" }} />
+            <button onClick={logout} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#ef4444", textAlign: "left", cursor: "pointer", fontSize: 14 }}>
+              Uitloggen
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   </div>
-))}
 
-{commitments.length > 5 && (
-  <p style={{ color:"#666", fontSize:12, marginTop:8 }}>
-    +{commitments.length - 5} more
-  </p>
-)}
+  <div style={{ padding: "0 20px" }}>
 
-<h3 style={{ marginTop: 32 }}>Today's Reflection</h3>
+    {/* VOORTGANG */}
+    <div style={{ marginTop: 24, marginBottom: 32 }}>
+      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Vandaag</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
 
-<p style={{ color:"#aaa", fontSize:14 }}>
-  Did you complete your commitments today?
-</p>
+        <svg width={88} height={88} style={{ flexShrink: 0 }}>
+          <circle cx={44} cy={44} r={36} fill="none" stroke="#1e1e1e" strokeWidth={6} />
+          <circle
+            cx={44} cy={44} r={36} fill="none"
+            stroke="#22c55e" strokeWidth={6}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (circumference * progress / 100)}
+            strokeLinecap="round"
+            transform="rotate(-90 44 44)"
+            style={{ transition: "stroke-dashoffset 0.5s ease" }}
+          />
+          <text x={44} y={44} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={14} fontWeight="bold">
+            {progress}%
+          </text>
+        </svg>
 
-<div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-  <button
-    onClick={() => setCompleted(true)}
-    style={{
-      background: completed === true ? "#22c55e" : "#222",
-      color: "white",
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none"
-    }}
-  >
-    Yes
-  </button>
+        <div>
+          <p style={{ fontSize: 28, fontWeight: "bold", margin: 0 }}>
+            {done} <span style={{ color: "#444", fontSize: 18 }}>/ {total}</span>
+          </p>
+          <p style={{ color: "#555", fontSize: 13, marginTop: 4 }}>
+            {progress === 100 ? "Perfecte dag 🎯" : progress > 0 ? "Bezig..." : "Nog niets afgevinkt"}
+          </p>
+        </div>
+      </div>
+    </div>
 
-  <button
-    onClick={() => setCompleted(false)}
-    style={{
-      background: completed === false ? "#ef4444" : "#222",
-      color: "white",
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none"
-    }}
-  >
-    No
-  </button>
-</div>
+    {/* COMMITMENTS */}
+    <div style={{ marginBottom: 32 }}>
+      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Commitments</p>
 
-{/* 👉 Alleen tonen als keuze gemaakt is */}
-{completed !== null && (
-  <>
-    <p style={{ marginTop: 16 }}>
-      {completed
-        ? "What helped you stay consistent?"
-        : "What got in the way?"}
-    </p>
+      {commitments.length === 0 && (
+        <p style={{ color: "#444", fontSize: 14 }}>Nog geen commitments voor vandaag.</p>
+      )}
 
-    <textarea
-      value={answer}
-      onChange={(e) => setAnswer(e.target.value)}
-      placeholder="Write your reflection..."
+      {commitments.slice(0, showAll ? commitments.length : 5).map(c => (
+        <div
+          key={c.id}
+          onClick={() => toggleDone(c.id, c.done)}
+          style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "14px 0", borderBottom: "1px solid #1a1a1a", cursor: "pointer"
+          }}
+        >
+          <div style={{
+            width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+            border: c.done ? "none" : "2px solid #333",
+            background: c.done ? "#22c55e" : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            {c.done && <span style={{ color: "#000", fontSize: 13, fontWeight: "bold" }}>✓</span>}
+          </div>
+          <span style={{
+            fontSize: 15, color: c.done ? "#555" : "#fff",
+            textDecoration: c.done ? "line-through" : "none"
+          }}>
+            {c.text}
+          </span>
+        </div>
+      ))}
+
+      {commitments.length > 5 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          style={{ background: "none", border: "none", color: "#555", fontSize: 13, cursor: "pointer", marginTop: 8, padding: 0 }}
+        >
+          {showAll ? "Minder tonen" : `+${commitments.length - 5} meer`}
+        </button>
+      )}
+    </div>
+
+    {/* REFLECTIE */}
+    <div style={{ marginBottom: 32 }}>
+      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Reflectie</p>
+
+      <div style={{ background: "#1a1a1a", borderRadius: 12, padding: 20 }}>
+        <p style={{ fontSize: 15, marginBottom: 16, color: "#ccc" }}>
+          Heb je je commitments gehaald?
+        </p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => setCompleted(true)}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer",
+              background: completed === true ? "#166534" : "#222",
+              color: completed === true ? "#22c55e" : "#666",
+              fontWeight: completed === true ? "bold" : "normal",
+              fontSize: 14
+            }}
+          >
+            Ja
+          </button>
+          <button
+            onClick={() => setCompleted(false)}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer",
+              background: completed === false ? "#2a1a1a" : "#222",
+              color: completed === false ? "#ef4444" : "#666",
+              fontWeight: completed === false ? "bold" : "normal",
+              fontSize: 14
+            }}
+          >
+            Nee
+          </button>
+        </div>
+
+        {completed !== null && (
+          <div style={{ marginTop: 16 }}>
+            <p style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+              {completed ? "Wat hielp je om consistent te blijven?" : "Wat stond je in de weg?"}
+            </p>
+            <textarea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Schrijf je reflectie..."
+              rows={3}
+              style={{
+                width: "100%", padding: 12, borderRadius: 8,
+                background: "#111", color: "#fff", border: "1px solid #333",
+                fontSize: 14, resize: "none", boxSizing: "border-box"
+              }}
+            />
+            <button
+              onClick={handleSubmit}
+              style={{
+                marginTop: 10, background: "#22c55e", color: "#000",
+                padding: "10px 20px", borderRadius: 8, border: "none",
+                fontWeight: "bold", cursor: "pointer", fontSize: 14
+              }}
+            >
+              Opslaan
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* GESCHIEDENIS */}
+    <div style={{ marginBottom: 32 }}>
+      <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Geschiedenis</p>
+
+      {history.map(day => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const date = new Date(day.date)
+        date.setHours(0, 0, 0, 0)
+        const diff = Math.floor((today - date) / (1000 * 60 * 60 * 24))
+        const label = diff === 0 ? "Vandaag" : diff === 1 ? "Gisteren" : date.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric" })
+        const barColor = day.score >= 80 ? "#22c55e" : day.score >= 40 ? "#f97316" : "#ef4444"
+
+        return (
+          <div key={day.date} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ fontSize: 13, color: "#aaa" }}>{label}</span>
+              <span style={{ fontSize: 12, color: barColor, fontWeight: "bold" }}>{day.score}%</span>
+            </div>
+            <div style={{ width: "100%", height: 4, background: "#1e1e1e", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: day.score + "%", height: "100%", background: barColor, borderRadius: 4, transition: "width 0.4s ease" }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+
+  </div>
+
+  {/* FLOATING INPUT */}
+  <div style={{
+    position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+    width: "100%", maxWidth: 420,
+    padding: "12px 16px", background: "#0f0f0f",
+    borderTop: "1px solid #1a1a1a",
+    display: "flex", gap: 10, alignItems: "center"
+  }}>
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && text && addCommitment()}
+      placeholder="Voeg een commitment toe..."
       style={{
-        width: "100%",
-        padding: 12,
-        borderRadius: 6,
-        marginTop: 8,
-        background: "#111",
-        color: "white",
-        border: "1px solid #333"
+        flex: 1, padding: "12px 16px", borderRadius: 24,
+        border: "1px solid #2a2a2a", background: "#1a1a1a",
+        color: "#fff", fontSize: 14, outline: "none"
       }}
     />
-
     <button
-      onClick={handleSubmit}
+      onClick={addCommitment}
       style={{
-        marginTop: 12,
-        background: "#22c55e",
-        color: "black",
-        padding: "10px 16px",
-        borderRadius: 6,
-        border: "none"
+        width: 44, height: 44, borderRadius: "50%", border: "none",
+        background: text ? "#22c55e" : "#1e1e1e", cursor: "pointer",
+        fontSize: 22, color: text ? "#000" : "#333",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, transition: "background 0.2s"
       }}
     >
-      Save Reflection
+      +
     </button>
-  </>
-)}
-
-<h3 style={{marginTop:40}}>Discipline History</h3>
-
-{history.map(day=>{
-
-const today = new Date()
-today.setHours(0,0,0,0)
-
-const date = new Date(day.date)
-date.setHours(0,0,0,0)
-
-const diff = Math.floor((today-date)/(1000*60*60*24))
-
-let label = day.date
-
-if (diff === 0) label = "Today"
-else if (diff === 1) label = "Yesterday"
-else label = date.toLocaleDateString("en-US", {
-  weekday: "short",
-  day: "numeric"
-})
-
-return(
-
-<div key={day.date} style={{marginTop:6}}>
-
-<div style={{
-display:"flex",
-justifyContent:"space-between",
-marginBottom:3
-}}>
-
-<span style={{ fontSize: 13, color: "#aaa" }}>{label}</span>
-<span style={{ fontSize: 12, color: "#aaa" }}>
-  {day.score}%
-</span>
-
-</div>
-
-<div style={{
-width:"100%",
-height:3,
-background:"#2a2a2a",
-borderRadius:6,
-overflow:"hidden"
-}}>
-
-<div style={{
-width:day.score+"%",
-height:"100%",
-background:"#22c55e"
-}}/>
-
-</div>
-
-</div>
-
-)
-
-})}
+  </div>
 
 </div>
 
