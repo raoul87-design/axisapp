@@ -1,6 +1,9 @@
 import { waitUntil } from "@vercel/functions"
 import twilio from "twilio"
+import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const supabase = createClient(
   "https://zdqrrprjkddlxszmtcmx.supabase.co",
@@ -91,20 +94,19 @@ async function handleMessage(from, body) {
       console.log("Geen auth_user_id gekoppeld aan dit WhatsApp nummer — commitment niet opgeslagen")
     }
 
-    // Stap 3: Reply bepalen (tijdelijk vast, later AI)
-    console.log("=== [4] REPLY BEPALEN ===")
-    const reply = "Goed bezig! 🔥 Wat is jouw commitment voor vandaag?"
-
-    // TODO: vervang bovenstaande door AI call zodra credits actief zijn:
-    // const aiResponse = await anthropic.messages.create({
-    //   model: "claude-sonnet-4-20250514",
-    //   max_tokens: 256,
-    //   system: SYSTEM_PROMPTS[tone],
-    //   messages: [{ role: "user", content: body }],
-    // })
-    // const reply = aiResponse.content[0].text
-
+    // Stap 3: AI reply
+    console.log("=== [4] ANTHROPIC API CALL ===")
     console.log("Toon:", tone)
+    console.log("API key aanwezig:", !!process.env.ANTHROPIC_API_KEY)
+
+    const aiResponse = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 256,
+      system: SYSTEM_PROMPTS[tone],
+      messages: [{ role: "user", content: body }],
+    })
+    const reply = aiResponse.content[0].text
+
     console.log("Antwoord:", reply)
 
     // Stap 3: Versturen via Twilio
