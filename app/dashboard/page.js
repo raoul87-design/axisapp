@@ -141,13 +141,21 @@ export default function Dashboard() {
       { data: checkinsData },
       { data: reflectionsData },
     ] = await Promise.all([
-      supabase.from("users").select("id, auth_user_id, whatsapp_number, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null),
+      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       supabase.from("reflections").select("user_id, completed, created_at").gte("created_at", `${today}T00:00:00`),
     ])
 
-    setUsers(usersData || [])
+    // Dedupliceer op whatsapp_number — prefereer rij met auth_user_id
+    const userMap = new Map()
+    for (const u of (usersData || [])) {
+      const existing = userMap.get(u.whatsapp_number)
+      if (!existing || (!existing.auth_user_id && u.auth_user_id)) {
+        userMap.set(u.whatsapp_number, u)
+      }
+    }
+    setUsers(Array.from(userMap.values()))
     setTodayCommits(commitsData || [])
     setTodayReflections(reflectionsData || [])
 
@@ -214,6 +222,7 @@ export default function Dashboard() {
   const onTrack        = users.filter(u => (u.streak || 0) > 3 && (u.missed_days || 0) === 0)
 
   const shortNum = (n) => n ? n.replace("whatsapp:", "").replace("+31", "0") : "—"
+  const displayName = (user) => user?.name || shortNum(user?.whatsapp_number)
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif" }}>
@@ -251,7 +260,7 @@ export default function Dashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      {["Nummer", "Streak", "Vandaag", "Status"].map(h => (
+                      {["Client", "Streak", "Vandaag", "Status"].map(h => (
                         <th key={h} style={{ padding: "10px 20px", textAlign: "left", color: "#444", fontSize: 11, fontWeight: "normal", letterSpacing: 1 }}>{h}</th>
                       ))}
                     </tr>
@@ -259,8 +268,9 @@ export default function Dashboard() {
                   <tbody>
                     {users.map(user => (
                       <tr key={user.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                        <td style={{ padding: "14px 20px", fontSize: 13, color: "#ccc" }}>
-                          {shortNum(user.whatsapp_number)}
+                        <td style={{ padding: "14px 20px" }}>
+                          <p style={{ fontSize: 13, color: "#fff", margin: 0 }}>{displayName(user)}</p>
+                          {user.name && <p style={{ fontSize: 11, color: "#444", margin: "2px 0 0" }}>{shortNum(user.whatsapp_number)}</p>}
                         </td>
                         <td style={{ padding: "14px 20px" }}>
                           <span style={{ color: (user.streak || 0) > 0 ? GREEN : "#444", fontSize: 13, fontWeight: "bold" }}>
@@ -304,7 +314,7 @@ export default function Dashboard() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                  {["Nummer", "Commitment", "Afgevinkt"].map(h => (
+                  {["Client", "Commitment", "Afgevinkt"].map(h => (
                     <th key={h} style={{ padding: "10px 20px", textAlign: "left", color: "#444", fontSize: 11, fontWeight: "normal" }}>{h}</th>
                   ))}
                 </tr>
@@ -314,8 +324,9 @@ export default function Dashboard() {
                   const user = users.find(u => u.auth_user_id === c.user_id)
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      <td style={{ padding: "14px 20px", fontSize: 12, color: "#666" }}>
-                        {shortNum(user?.whatsapp_number)}
+                      <td style={{ padding: "14px 20px" }}>
+                        <p style={{ fontSize: 13, color: "#ccc", margin: 0 }}>{displayName(user)}</p>
+                        {user?.name && <p style={{ fontSize: 11, color: "#444", margin: "2px 0 0" }}>{shortNum(user?.whatsapp_number)}</p>}
                       </td>
                       <td style={{ padding: "14px 20px", fontSize: 13, color: "#ccc" }}>{c.text}</td>
                       <td style={{ padding: "14px 20px" }}>
@@ -342,7 +353,8 @@ export default function Dashboard() {
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 16 }}>Most Consistent</p>
                 {mostConsistent ? (
                   <>
-                    <p style={{ fontSize: 16, color: "#fff", marginBottom: 4 }}>{shortNum(mostConsistent.whatsapp_number)}</p>
+                    <p style={{ fontSize: 16, color: "#fff", marginBottom: 4 }}>{displayName(mostConsistent)}</p>
+                    {mostConsistent.name && <p style={{ fontSize: 11, color: "#444", margin: "-2px 0 8px" }}>{shortNum(mostConsistent.whatsapp_number)}</p>}
                     <p style={{ color: GREEN, fontSize: 13 }}>🔥 {mostConsistent.streak} {mostConsistent.streak === 1 ? "dag" : "dagen"} streak</p>
                   </>
                 ) : <p style={{ color: "#333" }}>Geen data</p>}
@@ -352,7 +364,8 @@ export default function Dashboard() {
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 16 }}>Needs Support</p>
                 {needsSupport ? (
                   <>
-                    <p style={{ fontSize: 16, color: "#fff", marginBottom: 4 }}>{shortNum(needsSupport.whatsapp_number)}</p>
+                    <p style={{ fontSize: 16, color: "#fff", marginBottom: 4 }}>{displayName(needsSupport)}</p>
+                    {needsSupport.name && <p style={{ fontSize: 11, color: "#444", margin: "-2px 0 8px" }}>{shortNum(needsSupport.whatsapp_number)}</p>}
                     <p style={{ color: "#ef4444", fontSize: 13 }}>⚠️ {needsSupport.missed_days} gemiste {needsSupport.missed_days === 1 ? "dag" : "dagen"}</p>
                   </>
                 ) : <p style={{ color: "#333" }}>Geen data</p>}
@@ -377,7 +390,7 @@ export default function Dashboard() {
                   const toneColor = { brutal: "#ef4444", hard: "#f97316", medium: GREEN, soft: "#86efac" }
                   return (
                     <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                      <span style={{ color: "#555", fontSize: 12, width: 100 }}>{shortNum(u.whatsapp_number)}</span>
+                      <span style={{ color: "#ccc", fontSize: 12, width: 120 }}>{displayName(u)}</span>
                       <span style={{ background: toneColor[tone] + "22", color: toneColor[tone], fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold", width: 60, textAlign: "center" }}>{tone}</span>
                       <span style={{ color: "#333", fontSize: 11 }}>streak {str} · gemist {missed}</span>
                     </div>
