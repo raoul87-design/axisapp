@@ -2,6 +2,7 @@ import twilio from "twilio"
 import Anthropic from "@anthropic-ai/sdk"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
 const SYSTEM_PROMPT = `Je bent een persoonlijke discipline coach. Je bent motiverend maar direct. Maximaal 2 zinnen per antwoord. Spreek de gebruiker aan met jij/je.`
 
@@ -35,15 +36,20 @@ export async function POST(request) {
     const reply = aiResponse.content[0].text
     console.log("Antwoord:", reply)
 
-    // 4) Voor Twilio response
-    const twiml = new twilio.twiml.MessagingResponse()
-    twiml.message(reply)
-    console.log("=== [4] TWILIO RESPONSE VERSTUREN ===")
-    console.log("TwiML:", twiml.toString())
+    // 4) Bericht actief versturen via Twilio client
+    console.log("=== [4] BERICHT VERSTUREN VIA TWILIO CLIENT ===")
+    console.log("Naar:", from)
 
-    return new Response(twiml.toString(), {
-      headers: { "Content-Type": "text/xml" },
+    const message = await client.messages.create({
+      from: "whatsapp:+14155238886",
+      to: from,
+      body: reply,
     })
+
+    console.log("Twilio SID:", message.sid)
+    console.log("Status:", message.status)
+
+    return new Response("OK", { status: 200 })
   } catch (error) {
     console.error("=== [ERROR] ===")
     console.error("Naam:", error.name)
