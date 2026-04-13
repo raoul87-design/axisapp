@@ -9,11 +9,27 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgot, setIsForgot] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const router = useRouter();
+
+  async function handleForgot() {
+    setError("")
+    setMessage("")
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset`
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setMessage("Check je e-mail voor de reset link.")
+    }
+  }
 
   async function handleSubmit() {
     setError("")
+    setMessage("")
 
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
@@ -57,7 +73,7 @@ export default function Login() {
 
       <h1 style={{ fontSize: 40, marginBottom: 8 }}>AXIS</h1>
       <p style={{ color: "#888", fontSize: 13, marginBottom: 24 }}>
-        {isSignUp ? "Maak een account aan" : "Log in op je account"}
+        {isForgot ? "Wachtwoord vergeten" : isSignUp ? "Maak een account aan" : "Log in op je account"}
       </p>
 
       <input
@@ -65,17 +81,20 @@ export default function Login() {
         placeholder="E-mailadres"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && (isForgot ? handleForgot() : handleSubmit())}
         style={inputStyle}
       />
 
-      <input
-        type="password"
-        placeholder="Wachtwoord"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        style={inputStyle}
-      />
+      {!isForgot && (
+        <input
+          type="password"
+          placeholder="Wachtwoord"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          style={inputStyle}
+        />
+      )}
 
       {error && (
         <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12, maxWidth: 260 }}>
@@ -83,8 +102,14 @@ export default function Login() {
         </p>
       )}
 
+      {message && (
+        <p style={{ color: "#22c55e", fontSize: 13, marginTop: 12, maxWidth: 260 }}>
+          {message}
+        </p>
+      )}
+
       <button
-        onClick={handleSubmit}
+        onClick={isForgot ? handleForgot : handleSubmit}
         style={{
           marginTop: 16,
           padding: "12px 20px",
@@ -98,14 +123,23 @@ export default function Login() {
           fontSize: 15,
         }}
       >
-        {isSignUp ? "Account aanmaken" : "Inloggen"}
+        {isForgot ? "Reset link versturen" : isSignUp ? "Account aanmaken" : "Inloggen"}
       </button>
 
+      {!isForgot && (
+        <p
+          onClick={() => { setIsSignUp(!isSignUp); setError(""); setMessage("") }}
+          style={{ marginTop: 16, color: "#888", fontSize: 13, cursor: "pointer" }}
+        >
+          {isSignUp ? "Al een account? Inloggen" : "Nog geen account? Aanmelden"}
+        </p>
+      )}
+
       <p
-        onClick={() => { setIsSignUp(!isSignUp); setError("") }}
-        style={{ marginTop: 16, color: "#888", fontSize: 13, cursor: "pointer" }}
+        onClick={() => { setIsForgot(!isForgot); setError(""); setMessage("") }}
+        style={{ marginTop: 8, color: "#555", fontSize: 12, cursor: "pointer" }}
       >
-        {isSignUp ? "Al een account? Inloggen" : "Nog geen account? Aanmelden"}
+        {isForgot ? "Terug naar inloggen" : "Wachtwoord vergeten?"}
       </p>
 
     </div>
