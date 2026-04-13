@@ -313,41 +313,52 @@ padding:40,
 borderRadius:12
 }}>
 
-<h1>Welcome to Axis</h1>
-
-<p style={{marginBottom:30}}>
-Commit. Execute. Reflect. Recover.
+<p style={{
+color:"#555",
+fontSize:12,
+letterSpacing:2,
+textTransform:"uppercase",
+marginBottom:32
+}}>
+Stap {onboardingStep} van 2
 </p>
 
 {onboardingStep === 1 && (
 
 <>
 
-<h3 style={{marginBottom:10}}>
-Where do you want more discipline?
-</h3>
+<h2 style={{marginBottom:8, fontSize:22}}>
+Waar ga jij vandaag voor?
+</h2>
 
-<select
-value={focusArea}
-onChange={(e)=>setFocusArea(e.target.value)}
+<p style={{color:"#888", fontSize:14, marginBottom:24}}>
+Eén commitment. Maak het concreet.
+</p>
+
+<input
+autoFocus
+value={text}
+onChange={(e)=>setText(e.target.value)}
+onKeyDown={(e)=> e.key === "Enter" && text && (addCommitment().then(()=> setOnboardingStep(2)))}
+placeholder="bijv. 30 minuten sporten"
 style={{
 width:"100%",
-padding:"12px",
-marginBottom:20,
-borderRadius:8
+padding:"14px",
+marginBottom:16,
+borderRadius:8,
+border:"1px solid #333",
+background:"#111",
+color:"#fff",
+fontSize:15
 }}
->
-
-<option value="">Select</option>
-<option value="health">Health</option>
-<option value="work">Work</option>
-<option value="learning">Learning</option>
-<option value="life">Life</option>
-
-</select>
+/>
 
 <button
-onClick={()=>setOnboardingStep(2)}
+onClick={async()=>{
+if(!text) return
+await addCommitment()
+setOnboardingStep(2)
+}}
 style={{
 width:"100%",
 padding:"14px",
@@ -355,12 +366,12 @@ background:"#22c55e",
 border:"none",
 borderRadius:8,
 fontWeight:"bold",
-cursor:"pointer"
+cursor:"pointer",
+fontSize:15,
+color:"#000"
 }}
 >
-
-Next
-
+Dit is mijn commitment →
 </button>
 
 </>
@@ -371,30 +382,40 @@ Next
 
 <>
 
-<h3 style={{marginBottom:10}}>
-What will you commit to today?
-</h3>
+<h2 style={{marginBottom:8, fontSize:22}}>
+Blijf op koers via WhatsApp
+</h2>
+
+<p style={{color:"#888", fontSize:14, marginBottom:24}}>
+AXIS stuurt je dagelijks een check-in.<br/>
+Geen app nodig — gewoon reageren.
+</p>
 
 <input
 autoFocus
-value={text}
-onChange={(e)=>setText(e.target.value)}
-placeholder="Example: Workout 30 min"
+value={whatsappInput}
+onChange={(e)=>setWhatsappInput(e.target.value)}
+placeholder="+31612345678"
 style={{
 width:"100%",
 padding:"14px",
-marginBottom:20,
+marginBottom:16,
 borderRadius:8,
-border:"1px solid #444"
+border:"1px solid #333",
+background:"#111",
+color:"#fff",
+fontSize:15
 }}
 />
 
 <button
 onClick={async()=>{
-
-await addCommitment()
-setOnboardingStep(3)
-
+if(!whatsappInput) return
+const ok = await linkWhatsapp(whatsappInput)
+if(ok){
+setInteractionMode("whatsapp")
+setShowOnboarding(false)
+}
 }}
 style={{
 width:"100%",
@@ -403,25 +424,14 @@ background:"#22c55e",
 border:"none",
 borderRadius:8,
 fontWeight:"bold",
-cursor:"pointer"
+cursor:"pointer",
+fontSize:15,
+color:"#000",
+marginBottom:10
 }}
 >
-
-Start
-
+Koppel WhatsApp (aanbevolen)
 </button>
-
-</>
-
-)}
-
-{onboardingStep === 3 && (
-
-<>
-
-<h3 style={{marginBottom:10}}>
-How should Axis interact with you?
-</h3>
 
 <button
 onClick={()=>{
@@ -430,95 +440,16 @@ setShowOnboarding(false)
 }}
 style={{
 width:"100%",
-padding:"14px",
-marginBottom:10,
-background:"#22c55e",
+padding:"12px",
+background:"transparent",
 border:"none",
-borderRadius:8,
-fontWeight:"bold",
-cursor:"pointer"
-}}
->
-Use the App
-</button>
-
-<button
-onClick={()=> setShowWhatsappInput(true)}
-style={{
-width:"100%",
-padding:"14px",
-background:"#1a1a1a",
-border:"1px solid #444",
-borderRadius:8,
-fontWeight:"bold",
+color:"#555",
 cursor:"pointer",
-color:"#fff"
+fontSize:13
 }}
 >
-WhatsApp Coach
+Sla over, ik gebruik de app
 </button>
-
-{showWhatsappInput && (
-<div style={{marginTop:20}}>
-  <p style={{marginBottom:8, color:"#aaa", fontSize:14}}>
-    Jouw WhatsApp nummer (bijv. +31612345678)
-  </p>
-  <input
-    autoFocus
-    value={whatsappInput}
-    onChange={(e) => setWhatsappInput(e.target.value)}
-    placeholder="+31612345678"
-    style={{
-      width:"100%",
-      padding:"12px",
-      borderRadius:8,
-      border:"1px solid #444",
-      background:"#111",
-      color:"#fff",
-      marginBottom:10,
-      fontSize:15
-    }}
-  />
-  <button
-    onClick={async () => {
-      const ok = await linkWhatsapp(whatsappInput)
-      if (ok) {
-        setInteractionMode("whatsapp")
-        setShowOnboarding(false)
-      }
-    }}
-    style={{
-      width:"100%",
-      padding:"12px",
-      background:"#22c55e",
-      border:"none",
-      borderRadius:8,
-      fontWeight:"bold",
-      cursor:"pointer",
-      marginBottom:8
-    }}
-  >
-    Koppelen
-  </button>
-  <button
-    onClick={() => {
-      setInteractionMode("app")
-      setShowOnboarding(false)
-    }}
-    style={{
-      width:"100%",
-      padding:"12px",
-      background:"transparent",
-      border:"none",
-      color:"#666",
-      cursor:"pointer",
-      fontSize:13
-    }}
-  >
-    Sla over
-  </button>
-</div>
-)}
 
 </>
 
