@@ -59,5 +59,5 @@ export async function POST(request) {
   // Stuur direct 200 terug aan Twilio, verwerk asynchroon
   waitUntil(handleMessage(from, body))
 
-  return new Response("OK", { status: 200 })
+  return new Response(null, { status: 200 })
 }
