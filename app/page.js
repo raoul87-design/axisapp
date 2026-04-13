@@ -500,6 +500,26 @@ marginBottom:20
 
 <div>{user.email}</div>
 
+<div style={{ display:"flex", gap:12 }}>
+<button
+onClick={async () => {
+  const pw = prompt("Nieuw wachtwoord (min. 6 tekens):")
+  if (!pw || pw.length < 6) return
+  const { error } = await supabase.auth.updateUser({ password: pw })
+  if (error) alert("Fout: " + error.message)
+  else alert("Wachtwoord opgeslagen!")
+}}
+style={{
+border:"none",
+background:"transparent",
+cursor:"pointer",
+color:"#555",
+fontSize:12
+}}
+>
+Wachtwoord instellen
+</button>
+
 <button
 onClick={logout}
 style={{
@@ -508,9 +528,10 @@ background:"transparent",
 cursor:"pointer",
 color:"#999"
 }}
-> 
+>
 Logout
 </button>
+</div>
 
 </div>
 
