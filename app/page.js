@@ -171,7 +171,6 @@ function calculateProgress(list){
 
 if(list.length === 0){
 setProgress(0)
-saveDailyScore(0)
 return
 }
 
