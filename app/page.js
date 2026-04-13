@@ -498,7 +498,7 @@ return(
       {streak > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
-          <span style={{ color: "#22c55e", fontSize: 12 }}>{streak} dagen</span>
+          <span style={{ color: "#22c55e", fontSize: 12 }}>{streak} {streak === 1 ? "dag" : "dagen"}</span>
         </div>
       )}
 
@@ -729,9 +729,9 @@ return(
                 let textColor = "#333"
 
                 if (!isToekomst && heeftData) {
-                  if (score >= 80) { bg = "#14532d"; icon = "✓"; textColor = "#22c55e" }
+                  if (score >= 80)      { bg = "#14532d"; icon = "✓";         textColor = "#22c55e" }
                   else if (score >= 40) { bg = "#431407"; icon = `${score}%`; textColor = "#f97316" }
-                  else if (score >= 1) { bg = "#450a0a"; icon = "×"; textColor = "#ef4444" }
+                  else                  { bg = "#450a0a"; icon = "×";         textColor = "#ef4444" }
                 }
 
                 return (
