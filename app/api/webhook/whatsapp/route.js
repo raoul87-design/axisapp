@@ -32,6 +32,11 @@ function getTone(streak, missedDays) {
   return "medium"
 }
 
+function normalizeNumber(raw) {
+  // "whatsapp:0613002594" → "whatsapp:+31613002594"
+  return raw.replace(/^(whatsapp:)0/, "$1+31")
+}
+
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
@@ -170,7 +175,7 @@ async function handleMessage(from, body) {
 export async function POST(request) {
   const formData = await request.formData()
 
-  const from = formData.get("From")
+  const from = normalizeNumber(formData.get("From"))
   const body = formData.get("Body")
 
   console.log("=== [1] BERICHT ONTVANGEN ===")
