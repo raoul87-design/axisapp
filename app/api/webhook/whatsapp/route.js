@@ -45,6 +45,7 @@ async function handleMessage(from, body) {
     console.error("Status:", error.status)
     console.error("Error body:", JSON.stringify(error.error))
     console.error("Stack:", error.stack)
+    console.error("Volledige error JSON:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
   }
 }
 
