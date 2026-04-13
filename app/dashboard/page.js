@@ -147,15 +147,7 @@ export default function Dashboard() {
       supabase.from("reflections").select("user_id, completed, created_at").gte("created_at", `${today}T00:00:00`),
     ])
 
-    // Dedupliceer op whatsapp_number — prefereer rij met auth_user_id
-    const userMap = new Map()
-    for (const u of (usersData || [])) {
-      const existing = userMap.get(u.whatsapp_number)
-      if (!existing || (!existing.auth_user_id && u.auth_user_id)) {
-        userMap.set(u.whatsapp_number, u)
-      }
-    }
-    setUsers(Array.from(userMap.values()))
+    setUsers(usersData || [])
     setTodayCommits(commitsData || [])
     setTodayReflections(reflectionsData || [])
 
