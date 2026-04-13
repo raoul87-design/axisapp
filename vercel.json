@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/evening-checkin",
       "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/midnight-check",
+      "schedule": "59 22 * * *"
     }
   ]
 }
