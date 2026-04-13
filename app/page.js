@@ -23,7 +23,7 @@ const [whatsappInput, setWhatsappInput] = useState("")
 const [showWhatsappInput, setShowWhatsappInput] = useState(false)
 const [whatsappLinked, setWhatsappLinked] = useState(false)
 const router = useRouter()
-const FORCE_ONBOARDING = true
+const FORCE_ONBOARDING = false
 const handleSubmit = async () => {
   // 👉 NIEUW (validatie)
   if (!answer) {
