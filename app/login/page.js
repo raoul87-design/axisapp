@@ -17,13 +17,19 @@ export default function Login() {
   async function handleForgot() {
     setError("")
     setMessage("")
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset`
-    })
-    if (error) {
-      setError(error.message)
-    } else {
-      setMessage("Check je e-mail voor de reset link.")
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset`
+      })
+      if (error) {
+        console.error("Supabase reset error:", error)
+        setError(error.message)
+      } else {
+        setMessage("Check je e-mail voor de reset link.")
+      }
+    } catch (e) {
+      console.error("Fetch error:", e)
+      setError(`Netwerkfout: ${e.message} — Controleer je internetverbinding of probeer opnieuw.`)
     }
   }
 
