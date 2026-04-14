@@ -12,8 +12,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Axis",
-  description: "Commit. Execute. Reflect. Recover",
+  title: "AXIS",
+  description: "Commit. Execute. Reflect. Recover.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "AXIS",
+    statusBarStyle: "black-translucent",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport = {
+  themeColor: "#22c55e",
 };
 
 export default function RootLayout({ children }) {

@@ -1,0 +1,17 @@
+{
+  "name": "AXIS",
+  "short_name": "AXIS",
+  "description": "Commit. Execute. Reflect. Recover.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "/logotransparant.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
