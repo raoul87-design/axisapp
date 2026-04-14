@@ -149,7 +149,7 @@ export default function Website() {
       <div id="probleem">
         <Section>
           <div style={{ maxWidth: 700 }}>
-            <Badge>Het probleem</Badge>
+            <Badge>The problem</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
               Most people know what to do.<br />
               <span style={{ color: SUB }}>They just don't do it consistently.</span>
@@ -165,7 +165,7 @@ export default function Website() {
       <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
         <Section>
           <div style={{ maxWidth: 700 }}>
-            <Badge>De rol van de coach</Badge>
+            <Badge>The coach</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
               That's why coaching exists.
             </h2>
@@ -179,7 +179,7 @@ export default function Website() {
       {/* ── OPLOSSING ───────────────────────────────────────── */}
       <div id="oplossing" style={{ borderTop: `1px solid ${BORDER}` }}>
         <Section>
-          <Badge>De oplossing</Badge>
+          <Badge>The solution</Badge>
           <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
             Axis fills the gap between sessions.
           </h2>
@@ -287,7 +287,7 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€99</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 15 clients</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 15 clients</p>
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect for independent coaches just getting started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
@@ -312,7 +312,7 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€299</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 50 clients</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 50 clients</p>
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For coaches who want visibility and a partner to get started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
@@ -334,7 +334,7 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€699</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 150 clients</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 150 clients</p>
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For gyms and coaching businesses that want Axis under their own name.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
