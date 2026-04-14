@@ -37,9 +37,9 @@ const C = theme === "dark" ? {
   border:      "#2a2a2a",
   borderSub:   "#1e1e1e",
   text:        "#ffffff",
-  textSub:     "#888",
-  textMuted:   "#666",
-  textDim:     "#444",
+  textSub:     "#cccccc",
+  textMuted:   "#888888",
+  textDim:     "#666666",
   inputBg:     "#1a1a1a",
   inputBorder: "#333",
 } : {
@@ -279,7 +279,7 @@ return (
   {/* HEADER */}
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 20px 12px" }}>
     <div>
-      <img src="/logotransparant" alt="Axis logo" style={{ width: 100, height: 38, filter: theme === "light" ? "invert(1)" : "none" }} />
+      <img src="/logotransparant.png" alt="Axis logo" style={{ width: 100, height: 38, filter: theme === "light" ? "invert(1)" : "none" }} />
       <p style={{ color: C.textSub, fontSize: 10, letterSpacing: 1.5, marginTop: 4, textTransform: "uppercase" }}>
         Commit. Execute. Reflect. Recover.
       </p>
