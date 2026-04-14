@@ -371,7 +371,7 @@ export default function Website() {
       <footer id="contact" style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <img src="/axis-logo.png" alt="AXIS" style={{ height: 28, display: "block" }} />
+            <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>AXIS</span>
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>Commit. Execute. Reflect. Recover.</p>
           </div>
           <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
