@@ -115,6 +115,8 @@ export default function Dashboard() {
   const [todayCommits, setTodayCommits] = useState([])
   const [weeklyData, setWeeklyData] = useState([])
   const [todayReflections, setTodayReflections] = useState([])
+  const [clientSearch, setClientSearch] = useState("")
+  const [clientSort,   setClientSort]   = useState("streak")
 
   // Auth check
   useEffect(() => {
@@ -232,19 +234,19 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {(activeNav === "Overview" || activeNav === "Clients") && (
+        {/* ── OVERVIEW ── */}
+        {activeNav === "Overview" && (
           <>
-            {/* Stat Cards */}
             <div style={{ display: "flex", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>
-              <StatCard label="Active Clients"        value={activeClients}  sub={`${todayActiveUsers} actief vandaag`} />
-              <StatCard label="Today's Commitments"   value={todayActiveUsers} sub={`${todayCommits.length} commitments totaal`} />
-              <StatCard label="Avg. Execution %"      value={`${avgExecution}%`} sub="gemiddeld over alle users" />
-              <StatCard label="Current Streaks"       value={activeStreaks}   sub={`langste streak: ${longestStreak} ${longestStreak === 1 ? "dag" : "dagen"}`} />
+              <StatCard label="Active Clients"      value={activeClients}    sub={`${todayActiveUsers} actief vandaag`} />
+              <StatCard label="Today's Commitments" value={todayActiveUsers}  sub={`${todayCommits.length} commitments totaal`} />
+              <StatCard label="Avg. Execution %"    value={`${avgExecution}%`} sub="gemiddeld over alle users" />
+              <StatCard label="Current Streaks"     value={activeStreaks}     sub={`langste streak: ${longestStreak} ${longestStreak === 1 ? "dag" : "dagen"}`} />
             </div>
 
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
 
-              {/* Clients tabel */}
+              {/* Compacte clients tabel */}
               <div style={{ flex: 2, minWidth: 320, background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}` }}>
                   <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" }}>Clients</p>
@@ -252,7 +254,7 @@ export default function Dashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      {["Client", "Streak", "Vandaag", "Status"].map(h => (
+                      {["Client", "Streak", "Status"].map(h => (
                         <th key={h} style={{ padding: "10px 20px", textAlign: "left", color: "#444", fontSize: 11, fontWeight: "normal", letterSpacing: 1 }}>{h}</th>
                       ))}
                     </tr>
@@ -269,16 +271,13 @@ export default function Dashboard() {
                             🔥 {user.streak || 0}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 20px", fontSize: 12, color: "#666" }}>
-                          {getTodayCommitment(user)}
-                        </td>
                         <td style={{ padding: "14px 20px" }}>
                           <Badge status={getClientStatus(user)} />
                         </td>
                       </tr>
                     ))}
                     {users.length === 0 && (
-                      <tr><td colSpan={4} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>Geen clients gevonden</td></tr>
+                      <tr><td colSpan={3} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>Geen clients gevonden</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -288,14 +287,100 @@ export default function Dashboard() {
               <div style={{ flex: 1, minWidth: 280, background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "20px 24px" }}>
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 20 }}>Weekly Check-outs</p>
                 <WeeklyChart data={weeklyData} />
-                <p style={{ color: "#333", fontSize: 11, marginTop: 16, textAlign: "center" }}>
-                  avond check-ins afgelopen 7 dagen
-                </p>
+                <p style={{ color: "#333", fontSize: 11, marginTop: 16, textAlign: "center" }}>avond check-ins afgelopen 7 dagen</p>
               </div>
 
             </div>
           </>
         )}
+
+        {/* ── CLIENTS ── */}
+        {activeNav === "Clients" && (() => {
+          const toneColor = { brutal: "#ef4444", hard: "#f97316", medium: GREEN, soft: "#86efac" }
+          const getTone = (u) => {
+            const m = u.missed_days || 0, s = u.streak || 0
+            return m >= 4 ? "brutal" : m >= 2 ? "hard" : s >= 7 ? "soft" : "medium"
+          }
+          const filtered = users
+            .filter(u => {
+              const q = clientSearch.toLowerCase()
+              return !q || displayName(u).toLowerCase().includes(q) || shortNum(u.whatsapp_number).includes(q)
+            })
+            .sort((a, b) => clientSort === "streak"
+              ? (b.streak || 0) - (a.streak || 0)
+              : (b.missed_days || 0) - (a.missed_days || 0)
+            )
+          return (
+            <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+              {/* Toolbar */}
+              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  value={clientSearch} onChange={e => setClientSearch(e.target.value)}
+                  placeholder="Zoek op naam of nummer..."
+                  style={{ flex: 1, minWidth: 200, padding: "8px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none" }}
+                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[["streak", "Streak"], ["missed", "Gemist"]].map(([val, label]) => (
+                    <button key={val} onClick={() => setClientSort(val)} style={{
+                      padding: "7px 14px", borderRadius: 8, border: `1px solid ${clientSort === val ? GREEN : "#2a2a2a"}`,
+                      background: clientSort === val ? "#0a1a0f" : "transparent",
+                      color: clientSort === val ? GREEN : "#555", fontSize: 12, cursor: "pointer"
+                    }}>↕ {label}</button>
+                  ))}
+                </div>
+                <span style={{ color: "#444", fontSize: 12 }}>{filtered.length} clients</span>
+              </div>
+
+              {/* Tabel */}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    {["Client", "Nummer", "Streak", "Gemist", "Volume", "Commitment", "Status"].map(h => (
+                      <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#444", fontSize: 11, fontWeight: "normal", letterSpacing: 1, whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(user => {
+                    const tone = getTone(user)
+                    return (
+                      <tr key={user.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                        <td style={{ padding: "12px 16px" }}>
+                          <p style={{ fontSize: 13, color: "#fff", margin: 0, whiteSpace: "nowrap" }}>{displayName(user)}</p>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 12, color: "#555", whiteSpace: "nowrap" }}>
+                          {shortNum(user.whatsapp_number)}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span style={{ color: (user.streak || 0) > 0 ? GREEN : "#444", fontSize: 13, fontWeight: "bold" }}>
+                            🔥 {user.streak || 0}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 13, color: (user.missed_days || 0) > 0 ? "#ef4444" : "#444" }}>
+                          {user.missed_days || 0}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span style={{ background: toneColor[tone] + "22", color: toneColor[tone], fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>{tone}</span>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 12, color: "#666", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {getTodayCommitment(user)}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <Badge status={getClientStatus(user)} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={7} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>
+                      {clientSearch ? "Geen clients gevonden voor deze zoekopdracht" : "Geen clients gevonden"}
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
 
         {/* Commitments tab */}
         {activeNav === "Commitments" && (
