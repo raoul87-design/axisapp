@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/morning-checkin",
-      "schedule": "0 7 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/evening-checkin",
@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/midnight-check",
-      "schedule": "59 22 * * *"
+      "schedule": "59 21 * * *"
     }
   ]
 }
