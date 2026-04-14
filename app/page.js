@@ -287,19 +287,6 @@ return (
 
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
 
-      {/* Theme toggle */}
-      <div style={{ display: "flex", background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 3, gap: 2 }}>
-        {["dark", "light"].map(m => (
-          <button key={m} onClick={() => toggleTheme(m)} style={{
-            padding: "4px 10px", borderRadius: 16, border: "none", cursor: "pointer", fontSize: 11,
-            background: theme === m ? C.cardAlt : "transparent",
-            color: theme === m ? C.text : C.textSub,
-            fontWeight: theme === m ? "bold" : "normal",
-            transition: "all 0.15s"
-          }}>{m}</button>
-        ))}
-      </div>
-
       {streak > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
@@ -313,8 +300,16 @@ return (
           ···
         </button>
         {showSettings && (
-          <div style={{ position: "absolute", right: 0, top: 32, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 0", minWidth: 180, zIndex: 100 }}>
+          <div style={{ position: "absolute", right: 0, top: 32, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 0", minWidth: 190, zIndex: 100 }}>
             <div style={{ padding: "6px 16px", color: C.textSub, fontSize: 11 }}>{user?.email}</div>
+            <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
+            {[{ val: "dark", label: "Dark", icon: "🌙" }, { val: "light", label: "Light", icon: "☀️" }].map(({ val, label, icon }) => (
+              <button key={val} onClick={() => { toggleTheme(val); setShowSettings(false) }}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: theme === val ? GREEN : "transparent", border: theme === val ? "none" : `1px solid ${C.border}`, flexShrink: 0 }} />
+                {icon} {label}
+              </button>
+            ))}
             <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
             <button onClick={async () => {
               setShowSettings(false)
