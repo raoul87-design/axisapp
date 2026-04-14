@@ -102,7 +102,7 @@ export default function Website() {
       {/* ── NAV ─────────────────────────────────────────────── */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "0.12em" }}>AXIS</span>
+          <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block" }} />
           <div className="nav-links" style={{ display: "flex", gap: 32 }}>
             <a href="#probleem">Over</a>
             <a href="#oplossing">Oplossing</a>
@@ -371,7 +371,7 @@ export default function Website() {
       <footer id="contact" style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.12em" }}>AXIS</span>
+            <img src="/axis-logo.png" alt="AXIS" style={{ height: 28, display: "block" }} />
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>Commit. Execute. Reflect. Recover.</p>
           </div>
           <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
