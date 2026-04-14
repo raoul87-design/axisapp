@@ -588,16 +588,31 @@ return (
 
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
   <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: C.bg, display: "flex", zIndex: 50 }}>
-    {[
-      { id: "vandaag", label: "Vandaag", icon: "🏠" },
-      { id: "coach",   label: "Coach",   icon: "💬" },
-    ].map(tab => (
-      <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-        style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
-        <span style={{ fontSize: 20, filter: activeTab === tab.id ? "none" : "grayscale(1) opacity(0.4)" }}>{tab.icon}</span>
-        <span style={{ fontSize: 10, color: activeTab === tab.id ? GREEN : C.textMuted, fontWeight: activeTab === tab.id ? "bold" : "normal" }}>{tab.label}</span>
-      </button>
-    ))}
+
+    {/* Vandaag tab */}
+    <button onClick={() => setActiveTab("vandaag")}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
+      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+        <circle cx={11} cy={11} r={9}
+          stroke={activeTab === "vandaag" ? GREEN : "#666"} strokeWidth={1.5}
+          fill={activeTab === "vandaag" ? "#0a1a0f" : "none"} />
+        <path d="M7 11l3 3 5-5" stroke={activeTab === "vandaag" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span style={{ fontSize: 11, color: activeTab === "vandaag" ? GREEN : C.textMuted, fontWeight: activeTab === "vandaag" ? "bold" : "normal" }}>Vandaag</span>
+    </button>
+
+    {/* Coach tab */}
+    <button onClick={() => setActiveTab("coach")}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
+      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+        <path d="M4 4h14a1 1 0 011 1v9a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"
+          stroke={activeTab === "coach" ? GREEN : "#666"} strokeWidth={1.5}
+          strokeLinecap="round" strokeLinejoin="round"
+          fill={activeTab === "coach" ? "#0a1a0f" : "none"} />
+      </svg>
+      <span style={{ fontSize: 11, color: activeTab === "coach" ? GREEN : C.textMuted, fontWeight: activeTab === "coach" ? "bold" : "normal" }}>Coach</span>
+    </button>
+
   </div>
 
 </div>
