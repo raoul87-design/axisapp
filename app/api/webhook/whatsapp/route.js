@@ -37,6 +37,11 @@ function normalizeNumber(raw) {
   return raw.replace(/^(whatsapp:)0/, "$1+31")
 }
 
+function getNLDate() {
+  // Gebruik Nederlandse tijd (Europe/Amsterdam) zodat na 22:00 UTC niet als morgen telt
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
+
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
@@ -121,19 +126,16 @@ async function handleMessage(from, body) {
 
     // Stap 2b: Commitment opslaan
     console.log("=== [3] COMMITMENT OPSLAAN ===")
-    const authUserId = userData?.auth_user_id
-    if (authUserId) {
-      const today = new Date().toISOString().split("T")[0]
-      const { error: commitError } = await supabase
-        .from("commitments")
-        .insert({ user_id: authUserId, text: body, date: today, done: false })
-      if (commitError) {
-        console.error("Fout bij opslaan commitment:", commitError.message)
-      } else {
-        console.log("Commitment opgeslagen voor auth_user_id:", authUserId)
-      }
+    // Gebruik auth_user_id als beschikbaar (app users), anders users.id (WhatsApp-only)
+    const commitUserId = userData?.auth_user_id || userData?.id
+    const today = getNLDate()
+    const { error: commitError } = await supabase
+      .from("commitments")
+      .insert({ user_id: commitUserId, text: body, date: today, done: false })
+    if (commitError) {
+      console.error("Fout bij opslaan commitment:", commitError.message)
     } else {
-      console.log("Geen auth_user_id — commitment niet opgeslagen")
+      console.log("Commitment opgeslagen voor user:", commitUserId, "| datum:", today)
     }
 
     // Stap 3: AI reply
