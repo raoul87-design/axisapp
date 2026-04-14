@@ -118,7 +118,7 @@ export default function Website() {
         <div className="hero-grid" style={{ display: "flex", alignItems: "center", gap: 64 }}>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Badge>Discipline systeem voor coaches</Badge>
+            <Badge>Discipline System for Coaches</Badge>
             <h1 style={{ fontSize: "clamp(36px, 5vw, 60px)", fontWeight: 800, lineHeight: 1.1, margin: "24px 0 20px", letterSpacing: "-0.02em" }}>
               Your clients know<br />
               <span style={{ color: G }}>what to do.</span>
