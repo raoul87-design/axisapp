@@ -23,7 +23,21 @@ const [whatsappInput, setWhatsappInput] = useState("")
 const [showWhatsappInput, setShowWhatsappInput] = useState(false)
 const [whatsappLinked, setWhatsappLinked] = useState(false)
 const [showSettings, setShowSettings] = useState(false)
+const [weekCheckIns, setWeekCheckIns] = useState(new Set())
+const [weekCommits, setWeekCommits]   = useState(new Set())
 const router = useRouter()
+
+function getNLDate() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
+
+function getMondayNL() {
+  const today = new Date(getNLDate())
+  const day = today.getDay()
+  const offset = day === 0 ? -6 : 1 - day
+  today.setDate(today.getDate() + offset)
+  return today.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
 const FORCE_ONBOARDING = false
 const handleSubmit = async () => {
   // 👉 NIEUW (validatie)
@@ -92,6 +106,7 @@ useEffect(()=>{
     await checkFirstUse()
     await loadCommitments()
     await loadHistory()
+    await loadWeekData()
   }
 
   init()
@@ -165,6 +180,38 @@ const sortedDays = uniqueDays.sort((a, b) =>
 setHistory(sortedDays.slice(0,7))
 calculateStreak(sortedDays)
 
+}
+
+async function loadWeekData() {
+  const monday = getMondayNL()
+  const today  = getNLDate()
+
+  // Haal public users.id op (check_ins slaat users.id op, niet auth UUID)
+  const { data: userData } = await supabase
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .single()
+
+  const publicUserId = userData?.id
+
+  const [{ data: checkIns }, { data: commits }] = await Promise.all([
+    publicUserId
+      ? supabase.from("check_ins")
+          .select("sent_at")
+          .eq("user_id", publicUserId)
+          .eq("type", "evening")
+          .gte("sent_at", `${monday}T00:00:00`)
+      : Promise.resolve({ data: [] }),
+    supabase.from("commitments")
+      .select("date")
+      .eq("user_id", user.id)
+      .gte("date", monday)
+      .lte("date", today),
+  ])
+
+  setWeekCheckIns(new Set((checkIns || []).map(c => c.sent_at.split("T")[0])))
+  setWeekCommits(new Set((commits || []).map(c => c.date)))
 }
 
 function calculateProgress(list){
@@ -692,60 +739,115 @@ return(
 
     {/* WEEKGRID */}
     <div style={{ marginBottom: 32 }}>
+      <style>{`
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 8px #22c55e55, 0 0 16px #22c55e22; }
+          50%       { box-shadow: 0 0 12px #22c55e88, 0 0 24px #22c55e44; }
+        }
+      `}</style>
       <p style={{ fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", marginBottom: 16 }}>Deze week</p>
 
       {(() => {
         const dagNamen = ["ma", "di", "wo", "do", "vr", "za", "zo"]
-        const today = new Date()
-        const dayOfWeek = today.getDay()
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+        const today    = getNLDate()
+        const base     = new Date(today)
+        const dow      = base.getDay()
+        const monday   = new Date(base)
+        monday.setDate(base.getDate() + (dow === 0 ? -6 : 1 - dow))
 
         const weekDagen = Array.from({ length: 7 }, (_, i) => {
-          const d = new Date(today)
-          d.setHours(0, 0, 0, 0)
-          d.setDate(today.getDate() + mondayOffset + i)
-          return d.toISOString().split("T")[0]
+          const d = new Date(monday)
+          d.setDate(monday.getDate() + i)
+          return d.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
         })
 
         const scoreMap = {}
         history.forEach(d => { scoreMap[d.date] = Number(d.score) })
 
-        const actiefDagen = weekDagen.filter(d => {
-          const score = scoreMap[d]
-          return score !== undefined && score > 0
-        }).length
+        const actiefDagen = weekDagen.filter(d => weekCheckIns.has(d) && (scoreMap[d] ?? 0) > 0).length
 
         return (
           <>
             <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
               {weekDagen.map((datum, i) => {
-                const score = scoreMap[datum]
-                const heeftData = score !== undefined
-                const isToekomst = datum > today.toISOString().split("T")[0]
+                const isToekomst = datum > today
+                const isVandaag  = datum === today
+                const heeftCheckIn = weekCheckIns.has(datum)
+                const heeftCommit  = weekCommits.has(datum)
+                const score = scoreMap[datum] ?? null
+                const isGreen  = !isToekomst && !isVandaag && heeftCheckIn && score > 0
+                const isOranje = !isToekomst && !isVandaag && heeftCommit && !heeftCheckIn
+                const isRood   = !isToekomst && !isVandaag && !heeftCommit && !heeftCheckIn
 
-                let bg = "#1a1a1a"
-                let icon = ""
-                let textColor = "#333"
+                let boxStyle = {}
+                let content  = null
+                let labelColor  = "#444"
+                let labelWeight = "normal"
 
-                if (!isToekomst && heeftData) {
-                  if (score >= 80)      { bg = "#14532d"; icon = "✓";         textColor = "#22c55e" }
-                  else if (score >= 40) { bg = "#431407"; icon = `${score}%`; textColor = "#f97316" }
-                  else                  { bg = "#450a0a"; icon = "×";         textColor = "#ef4444" }
+                if (isToekomst) {
+                  boxStyle = { background: "#161616", border: "1px dashed #2a2a2a" }
+
+                } else if (isVandaag) {
+                  boxStyle = {
+                    background: "#0a1a0f", border: "1px solid #1a4d2a",
+                    animation: "pulseGlow 2.5s ease-in-out infinite",
+                  }
+                  labelColor  = "#22c55e"
+                  labelWeight = "bold"
+                  content = (
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      border: "2px solid #22c55e",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      {heeftCheckIn && score > 0 && (
+                        <span style={{ color: "#22c55e", fontSize: 11, fontWeight: "bold" }}>✓</span>
+                      )}
+                    </div>
+                  )
+
+                } else if (isGreen) {
+                  boxStyle = {
+                    background: "#0a1a0f", border: "1px solid #1a4d2a",
+                    boxShadow: "0 0 8px #22c55e66, 0 0 16px #22c55e22",
+                  }
+                  content = (
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      border: "2px solid #22c55e",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      <span style={{ color: "#22c55e", fontSize: 11, fontWeight: "bold" }}>✓</span>
+                    </div>
+                  )
+
+                } else if (isOranje) {
+                  boxStyle = { background: "#1a1500", border: "1px solid #3d3000" }
+                  content = (
+                    <div style={{
+                      width: 18, height: 18, borderRadius: "50%",
+                      border: "2px solid #3d3000",
+                      borderTopColor: "#c8900a",
+                    }} />
+                  )
+
+                } else if (isRood) {
+                  boxStyle = { background: "#1f0f0f", border: "1px solid #3d1a1a" }
+                  content = <span style={{ color: "#7a2020", fontSize: 16, fontWeight: "bold" }}>×</span>
+
+                } else {
+                  boxStyle = { background: "#161616", border: "1px solid #222" }
                 }
 
                 return (
                   <div key={datum} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <div style={{
-                      width: 36, height: 36, borderRadius: 8,
-                      background: bg,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: icon.length > 1 ? 9 : 14,
-                      color: textColor,
-                      fontWeight: "bold"
+                      width: 36, height: 36, borderRadius: 8, ...boxStyle,
+                      display: "flex", alignItems: "center", justifyContent: "center"
                     }}>
-                      {icon}
+                      {content}
                     </div>
-                    <span style={{ fontSize: 10, color: "#444" }}>{dagNamen[i]}</span>
+                    <span style={{ fontSize: 10, color: labelColor, fontWeight: labelWeight }}>{dagNamen[i]}</span>
                   </div>
                 )
               })}
