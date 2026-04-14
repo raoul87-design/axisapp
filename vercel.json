@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/morning-checkin",
-      "schedule": "0 6 * * *"
+      "schedule": "0 3 31 2 *"
     },
     {
       "path": "/api/cron/evening-checkin",
-      "schedule": "0 19 * * *"
+      "schedule": "0 3 31 2 *"
     },
     {
       "path": "/api/cron/midnight-check",
-      "schedule": "59 21 * * *"
+      "schedule": "0 3 31 2 *"
     }
   ]
 }
