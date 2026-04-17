@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../lib/supabase"
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 const GREEN = "#22c55e"
-const TAB_H = 56  // tab bar hoogte in px
+const TAB_H = 56
 
 export default function Home() {
 
@@ -32,6 +33,14 @@ const [activeTab,       setActiveTab]      = useState("vandaag")
 const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
 const [chatLoading,     setChatLoading]    = useState(false)
+
+// ── Voortgang state ───────────────────────────────────────────
+const [metricsWeight,    setMetricsWeight]    = useState([])
+const [metricsKcal,      setMetricsKcal]      = useState([])
+const [progressHistory,  setProgressHistory]  = useState([])
+const [longestStreak,    setLongestStreak]    = useState(0)
+const [totalActiveDays,  setTotalActiveDays]  = useState(0)
+
 const chatBottomRef = useRef(null)
 const router = useRouter()
 const FORCE_ONBOARDING = false
@@ -85,6 +94,16 @@ function getMondayNL() {
   today.setDate(today.getDate() + offset)
   return today.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
+function fmtShortDate(d) {
+  if (!d) return ""
+  const p = d.split("-")
+  return p.length === 3 ? `${p[2]}/${p[1]}` : d
+}
+function parseMetricValue(raw) {
+  if (!raw) return null
+  const match = raw.match(/(\d+(?:[.,]\d+)?)/)
+  return match ? parseFloat(match[1].replace(",", ".")) : null
+}
 
 // ── Reflectie opslaan ─────────────────────────────────────────
 const handleSubmit = async () => {
@@ -119,6 +138,7 @@ useEffect(() => {
     await loadCommitments()
     await loadHistory()
     await loadWeekData()
+    await loadProgressData()
   }
   init()
 }, [user])
@@ -172,6 +192,38 @@ async function loadWeekData() {
   ])
   setWeekCheckIns(new Set((checkIns || []).map(c => c.sent_at.split("T")[0])))
   setWeekCommits(new Set((commits || []).map(c => c.date)))
+}
+
+async function loadProgressData() {
+  const [
+    { data: weightData },
+    { data: kcalData },
+    { data: allDaily },
+  ] = await Promise.all([
+    supabase.from("metrics").select("waarde, datum")
+      .eq("user_id", user.id).eq("type", "gewicht")
+      .order("datum", { ascending: true }).limit(14),
+    supabase.from("metrics").select("waarde, datum")
+      .eq("user_id", user.id).in("type", ["voeding", "calorie"])
+      .order("datum", { ascending: true }).limit(14),
+    supabase.from("daily_results").select("date, score")
+      .eq("user_id", user.id).order("date", { ascending: false }),
+  ])
+
+  setMetricsWeight(weightData || [])
+  setMetricsKcal(kcalData || [])
+
+  if (allDaily) {
+    setProgressHistory(allDaily)
+    setTotalActiveDays(allDaily.filter(d => Number(d.score) > 0).length)
+    const sorted = [...allDaily].sort((a, b) => new Date(a.date) - new Date(b.date))
+    let longest = 0, cur = 0
+    for (const d of sorted) {
+      if (Number(d.score) > 0) { cur++; longest = Math.max(longest, cur) }
+      else cur = 0
+    }
+    setLongestStreak(longest)
+  }
 }
 
 function calculateProgress(list) {
@@ -238,12 +290,7 @@ async function sendChat(messageText) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: newMessages,
-        streak,
-        missedDays,
-        commitment: todayCommitment,
-      }),
+      body: JSON.stringify({ messages: newMessages, streak, missedDays, commitment: todayCommitment }),
     })
     const data = await res.json()
     setChatMessages(prev => [...prev, { role: "assistant", content: data.content }])
@@ -258,6 +305,23 @@ useEffect(() => {
 }, [chatMessages])
 
 const suggestions = ["Hoe houd ik mijn streak vol?", "Tips voor vandaag", "Ik struggle"]
+
+// ── Voortgang chart data ───────────────────────────────────────
+const weightChartData = metricsWeight
+  .map(m => ({ label: fmtShortDate(m.datum), value: parseMetricValue(m.waarde) }))
+  .filter(d => d.value !== null)
+
+const kcalChartData = metricsKcal
+  .map(m => ({ label: fmtShortDate(m.datum), value: parseMetricValue(m.waarde) }))
+  .filter(d => d.value !== null)
+
+const avgKcal = kcalChartData.length === 0 ? 0
+  : Math.round(kcalChartData.reduce((s, d) => s + d.value, 0) / kcalChartData.length)
+
+const successRatio = progressHistory.length === 0 ? 0
+  : Math.round(totalActiveDays / progressHistory.length * 100)
+
+const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.length - 1] : null
 
 // ── Onboarding ────────────────────────────────────────────────
 if (showOnboarding) {
@@ -309,6 +373,17 @@ if (showOnboarding) {
 const done = commitments.filter(c => c.done).length
 const total = commitments.length
 const circumference = 2 * Math.PI * 36
+
+// Recharts custom tooltip
+const ChartTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+      <p style={{ color: C.textMuted, margin: "0 0 4px" }}>{label}</p>
+      <p style={{ color: GREEN, margin: 0, fontWeight: "bold" }}>{payload[0].value}</p>
+    </div>
+  )
+}
 
 return (
 <div style={{ maxWidth: 420, margin: "auto", fontFamily: "sans-serif", background: C.bg, minHeight: "100vh", color: C.text, position: "relative" }}>
@@ -368,7 +443,6 @@ return (
   {activeTab === "vandaag" && (
     <div style={{ padding: "0 20px", paddingBottom: TAB_H + 80 }}>
 
-      {/* VOORTGANG */}
       <div style={{ marginTop: 24, marginBottom: 32 }}>
         <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Vandaag</p>
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
@@ -395,7 +469,6 @@ return (
         </div>
       </div>
 
-      {/* COMMITMENTS */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Commitments</p>
         {commitments.length === 0 && <p style={{ color: C.textMuted, fontSize: 14 }}>Nog geen commitments voor vandaag.</p>}
@@ -418,7 +491,6 @@ return (
         )}
       </div>
 
-      {/* REFLECTIE */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Reflectie</p>
         <div style={{ background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.borderSub}` }}>
@@ -445,7 +517,6 @@ return (
         </div>
       </div>
 
-      {/* WEEKGRID */}
       <div style={{ marginBottom: 32 }}>
         <style>{`
           @keyframes pulseGlow {
@@ -506,11 +577,174 @@ return (
     </div>
   )}
 
+  {/* ── TAB: VOORTGANG ───────────────────────────────────────── */}
+  {activeTab === "voortgang" && (
+    <div style={{ padding: "0 20px", paddingBottom: TAB_H + 32 }}>
+
+      {/* Sectie 1 — Streak stats */}
+      <div style={{ marginTop: 24, marginBottom: 32 }}>
+        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Statistieken</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { label: "Huidige streak",   value: `🔥 ${streak}`,          sub: streak === 1 ? "dag" : "dagen" },
+            { label: "Langste streak",   value: longestStreak,            sub: longestStreak === 1 ? "dag" : "dagen" },
+            { label: "Totaal actief",    value: totalActiveDays,          sub: "dagen" },
+            { label: "Succesratio",      value: `${successRatio}%`,       sub: "van alle dagen" },
+          ].map(({ label, value, sub }) => (
+            <div key={label} style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "16px 18px" }}>
+              <p style={{ fontSize: 10, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 10px" }}>{label}</p>
+              <p style={{ fontSize: 26, fontWeight: "bold", color: C.text, margin: 0 }}>{value}</p>
+              <p style={{ fontSize: 11, color: C.textDim, margin: "4px 0 0" }}>{sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sectie 2 — Gewicht trend */}
+      <div style={{ marginBottom: 32 }}>
+        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Gewicht</p>
+        {weightChartData.length >= 2 ? (
+          <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
+            {latestWeight && (
+              <div style={{ marginBottom: 16 }}>
+                <span style={{ fontSize: 28, fontWeight: "bold", color: C.text }}>{parseMetricValue(latestWeight.waarde)} kg</span>
+                <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 10 }}>{fmtShortDate(latestWeight.datum)}</span>
+              </div>
+            )}
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart data={weightChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <XAxis dataKey="label" tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis domain={["auto", "auto"]} tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip content={<ChartTooltip />} />
+                <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: GREEN }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
+            <p style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.6 }}>
+              Stuur je gewicht via WhatsApp<br/>om je trend bij te houden
+            </p>
+            <p style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>bijv. "76kg"</p>
+          </div>
+        )}
+      </div>
+
+      {/* Sectie 3 — Voeding trend */}
+      <div style={{ marginBottom: 32 }}>
+        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Voeding</p>
+        {kcalChartData.length >= 2 ? (
+          <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ fontSize: 28, fontWeight: "bold", color: C.text }}>{avgKcal}</span>
+              <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 10 }}>gem. kcal / dag</span>
+            </div>
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart data={kcalChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <XAxis dataKey="label" tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis domain={["auto", "auto"]} tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip content={<ChartTooltip />} />
+                <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: GREEN }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
+            <p style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.6 }}>
+              Stuur je dagelijkse kcal via WhatsApp<br/>om bij te houden
+            </p>
+            <p style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>bijv. "2000 kcal"</p>
+          </div>
+        )}
+      </div>
+
+      {/* Sectie 4 — Commitments 4-weken grid */}
+      <div style={{ marginBottom: 32 }}>
+        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Afgelopen 4 weken</p>
+        <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "16px 14px" }}>
+          {(() => {
+            const scoreMap = {}
+            progressHistory.forEach(d => { scoreMap[d.date.split("T")[0]] = Number(d.score) })
+
+            const today    = getNLDate()
+            const todayD   = new Date(today)
+            const dow      = todayD.getDay()
+            const daysToMon = dow === 0 ? 6 : dow - 1
+            const thisMonday = new Date(todayD)
+            thisMonday.setDate(todayD.getDate() - daysToMon)
+
+            const startMonday = new Date(thisMonday)
+            startMonday.setDate(thisMonday.getDate() - 21)
+
+            const weeks = Array.from({ length: 4 }, (_, w) =>
+              Array.from({ length: 7 }, (_, d) => {
+                const date = new Date(startMonday)
+                date.setDate(startMonday.getDate() + w * 7 + d)
+                return date.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+              })
+            )
+
+            const dagNamen = ["ma", "di", "wo", "do", "vr", "za", "zo"]
+            return (
+              <>
+                {/* Header row */}
+                <div style={{ display: "grid", gridTemplateColumns: "32px repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                  <div />
+                  {dagNamen.map(d => (
+                    <div key={d} style={{ textAlign: "center", fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>{d}</div>
+                  ))}
+                </div>
+                {/* Week rows */}
+                {weeks.map((week, wi) => {
+                  const weekLabel = wi === 3 ? "nu" : `−${3 - wi}w`
+                  return (
+                    <div key={wi} style={{ display: "grid", gridTemplateColumns: "32px repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6 }}>
+                        <span style={{ fontSize: 9, color: C.textDim }}>{weekLabel}</span>
+                      </div>
+                      {week.map(date => {
+                        const isFuture = date > today
+                        const score    = scoreMap[date]
+                        const hasDone  = !isFuture && score !== undefined && score > 0
+                        const hasMiss  = !isFuture && score !== undefined && score === 0
+                        const bg = isFuture ? "transparent"
+                          : hasDone ? "#0a1a0f"
+                          : hasMiss ? "#1f0f0f"
+                          : C.cardAlt
+                        const border = isFuture ? `1px dashed ${C.borderSub}`
+                          : hasDone ? `1px solid #1a4d2a`
+                          : hasMiss ? `1px solid #3d1a1a`
+                          : `1px solid ${C.borderSub}`
+                        return (
+                          <div key={date} title={date} style={{ height: 24, borderRadius: 5, background: bg, border, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {hasDone && <span style={{ color: GREEN, fontSize: 10, fontWeight: "bold" }}>✓</span>}
+                            {hasMiss && <span style={{ color: "#7a2020", fontSize: 11, fontWeight: "bold" }}>×</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+                <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                  {[["#0a1a0f", "#1a4d2a", "Gedaan"], ["#1f0f0f", "#3d1a1a", "Gemist"], [C.cardAlt, C.borderSub, "Geen data"]].map(([bg, bd, label]) => (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${bd}` }} />
+                      <span style={{ fontSize: 10, color: C.textDim }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      </div>
+
+    </div>
+  )}
+
   {/* ── TAB: COACH ───────────────────────────────────────────── */}
   {activeTab === "coach" && (
     <div style={{ display: "flex", flexDirection: "column", height: `calc(100vh - 64px - ${TAB_H}px)`, padding: "0 20px" }}>
-
-      {/* Chat berichten */}
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: 16 }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
@@ -521,7 +755,7 @@ return (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {suggestions.map(s => (
                 <button key={s} onClick={() => sendChat(s)}
-                  style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${C.border}`, background: C.card, color: C.textSub, fontSize: 13, cursor: "pointer", transition: "border-color 0.15s" }}>
+                  style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${C.border}`, background: C.card, color: C.textSub, fontSize: 13, cursor: "pointer" }}>
                   {s}
                 </button>
               ))}
@@ -532,7 +766,8 @@ return (
             {chatMessages.map((msg, i) => (
               <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
                 <div style={{
-                  maxWidth: "80%", padding: "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  maxWidth: "80%", padding: "12px 16px",
+                  borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   background: msg.role === "user" ? GREEN : C.card,
                   color: msg.role === "user" ? "#000" : C.text,
                   fontSize: 14, lineHeight: 1.5,
@@ -553,7 +788,6 @@ return (
           </div>
         )}
       </div>
-
     </div>
   )}
 
@@ -587,9 +821,9 @@ return (
   )}
 
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
-  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: C.bg, display: "flex", zIndex: 50 }}>
+  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: C.bg, borderTop: `1px solid ${C.borderSub}`, display: "flex", zIndex: 50 }}>
 
-    {/* Vandaag tab */}
+    {/* Vandaag */}
     <button onClick={() => setActiveTab("vandaag")}
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
@@ -601,7 +835,18 @@ return (
       <span style={{ fontSize: 11, color: activeTab === "vandaag" ? GREEN : C.textMuted, fontWeight: activeTab === "vandaag" ? "bold" : "normal" }}>Vandaag</span>
     </button>
 
-    {/* Coach tab */}
+    {/* Voortgang */}
+    <button onClick={() => setActiveTab("voortgang")}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
+      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+        <polyline points="3,16 8,10 12,13 19,5"
+          stroke={activeTab === "voortgang" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M17 5h2v2" stroke={activeTab === "voortgang" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span style={{ fontSize: 11, color: activeTab === "voortgang" ? GREEN : C.textMuted, fontWeight: activeTab === "voortgang" ? "bold" : "normal" }}>Voortgang</span>
+    </button>
+
+    {/* Coach */}
     <button onClick={() => setActiveTab("coach")}
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
