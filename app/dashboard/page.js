@@ -115,6 +115,7 @@ export default function Dashboard() {
   const [todayCommits, setTodayCommits] = useState([])
   const [weeklyData, setWeeklyData] = useState([])
   const [todayReflections, setTodayReflections] = useState([])
+  const [metricsData, setMetricsData] = useState([])
   const [clientSearch, setClientSearch] = useState("")
   const [clientSort,   setClientSort]   = useState("streak")
 
@@ -142,16 +143,19 @@ export default function Dashboard() {
       { data: commitsData },
       { data: checkinsData },
       { data: reflectionsData },
+      { data: metricsRaw },
     ] = await Promise.all([
       supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       supabase.from("reflections").select("user_id, completed, created_at").gte("created_at", `${today}T00:00:00`),
+      supabase.from("metrics").select("user_id, type, waarde, datum").order("datum", { ascending: false }).limit(300),
     ])
 
     setUsers(usersData || [])
     setTodayCommits(commitsData || [])
     setTodayReflections(reflectionsData || [])
+    setMetricsData(metricsRaw || [])
 
     // Weekly data: tel evening check-ins per dag
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -218,6 +222,41 @@ export default function Dashboard() {
   const shortNum = (n) => n ? n.replace("whatsapp:", "").replace("+31", "0") : "—"
   const displayName = (user) => user?.name || shortNum(user?.whatsapp_number)
 
+  // ── Metrics helpers ──
+  const today = new Date().toISOString().split("T")[0]
+
+  function getLatestWeight(authUserId) {
+    const entries = metricsData.filter(m => m.user_id === authUserId && m.type === "gewicht")
+    return entries[0] ?? null  // al gesorteerd op datum desc
+  }
+
+  function getWeightTrend(authUserId) {
+    const entries = metricsData.filter(m => m.user_id === authUserId && m.type === "gewicht").slice(0, 3)
+    if (entries.length < 2) return null
+    const latest   = parseFloat(entries[0].waarde)
+    const earliest = parseFloat(entries[entries.length - 1].waarde)
+    if (isNaN(latest) || isNaN(earliest)) return null
+    if (latest > earliest) return "up"
+    if (latest < earliest) return "down"
+    return "equal"
+  }
+
+  function hasTodayMetric(authUserId) {
+    return metricsData.some(m => m.user_id === authUserId && m.datum === today)
+  }
+
+  function getLatestMetricsByType(authUserId) {
+    const result = {}
+    metricsData.filter(m => m.user_id === authUserId).forEach(m => {
+      if (!result[m.type]) result[m.type] = m  // eerste = meest recent
+    })
+    return result
+  }
+
+  const metricSentToday = new Set(
+    users.filter(u => u.auth_user_id && hasTodayMetric(u.auth_user_id)).map(u => u.id)
+  )
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif" }}>
       <Sidebar active={activeNav} setActive={setActiveNav} />
@@ -263,7 +302,12 @@ export default function Dashboard() {
                     {users.map(user => (
                       <tr key={user.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
                         <td style={{ padding: "14px 20px" }}>
-                          <p style={{ fontSize: 13, color: "#fff", margin: 0 }}>{displayName(user)}</p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <p style={{ fontSize: 13, color: "#fff", margin: 0 }}>{displayName(user)}</p>
+                            {metricSentToday.has(user.id) && (
+                              <span title="Metric ingestuurd vandaag" style={{ fontSize: 14, lineHeight: 1 }}>📊</span>
+                            )}
+                          </div>
                           {user.name && <p style={{ fontSize: 11, color: "#444", margin: "2px 0 0" }}>{shortNum(user.whatsapp_number)}</p>}
                         </td>
                         <td style={{ padding: "14px 20px" }}>
@@ -335,7 +379,7 @@ export default function Dashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    {["Client", "Nummer", "Streak", "Gemist", "Volume", "Commitment", "Status"].map(h => (
+                    {["Client", "Nummer", "Streak", "Gemist", "Volume", "Gewicht", "Commitment", "Status"].map(h => (
                       <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#444", fontSize: 11, fontWeight: "normal", letterSpacing: 1, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -362,6 +406,26 @@ export default function Dashboard() {
                         <td style={{ padding: "12px 16px" }}>
                           <span style={{ background: toneColor[tone] + "22", color: toneColor[tone], fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>{tone}</span>
                         </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          {(() => {
+                            const w = getLatestWeight(user.auth_user_id)
+                            if (!w) return <span style={{ color: "#333", fontSize: 12 }}>—</span>
+                            const trend = getWeightTrend(user.auth_user_id)
+                            const arrow = trend === "up" ? { sym: "↑", color: "#ef4444" }
+                                        : trend === "down" ? { sym: "↓", color: GREEN }
+                                        : trend === "equal" ? { sym: "→", color: "#888" }
+                                        : null
+                            const dateParts = w.datum?.split("-") ?? []
+                            const dateLabel = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : w.datum
+                            return (
+                              <div>
+                                <span style={{ fontSize: 13, color: "#fff" }}>{w.waarde}</span>
+                                {arrow && <span style={{ fontSize: 12, color: arrow.color, marginLeft: 4 }}>{arrow.sym}</span>}
+                                <p style={{ fontSize: 10, color: "#444", margin: "2px 0 0" }}>{dateLabel}</p>
+                              </div>
+                            )
+                          })()}
+                        </td>
                         <td style={{ padding: "12px 16px", fontSize: 12, color: "#666", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {getTodayCommitment(user)}
                         </td>
@@ -372,7 +436,7 @@ export default function Dashboard() {
                     )
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={7} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>
+                    <tr><td colSpan={8} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>
                       {clientSearch ? "Geen clients gevonden voor deze zoekopdracht" : "Geen clients gevonden"}
                     </td></tr>
                   )}
@@ -454,6 +518,44 @@ export default function Dashboard() {
                 <p style={{ color: "#444", fontSize: 12, marginTop: 6 }}>streak &gt; 3 en geen gemiste dagen</p>
               </div>
 
+            </div>
+
+            {/* Metrics overzicht */}
+            <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 20 }}>Metrics overzicht</p>
+              {users.length === 0 ? (
+                <p style={{ color: "#333", fontSize: 13 }}>Geen clients</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {users.map(u => {
+                    const byType = getLatestMetricsByType(u.auth_user_id)
+                    const types = Object.keys(byType)
+                    return (
+                      <div key={u.id} style={{ display: "flex", alignItems: "flex-start", gap: 16, paddingBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
+                        <span style={{ color: "#ccc", fontSize: 12, width: 120, flexShrink: 0, paddingTop: 2 }}>{displayName(u)}</span>
+                        {types.length === 0 ? (
+                          <span style={{ color: "#333", fontSize: 12 }}>Nog geen metingen</span>
+                        ) : (
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                            {types.map(type => {
+                              const m = byType[type]
+                              const dateParts = m.datum?.split("-") ?? []
+                              const dateLabel = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : m.datum
+                              return (
+                                <div key={type} style={{ background: "#1a1a1a", borderRadius: 8, padding: "6px 12px" }}>
+                                  <p style={{ color: "#555", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, margin: 0 }}>{type}</p>
+                                  <p style={{ color: "#fff", fontSize: 13, margin: "3px 0 0" }}>{m.waarde}</p>
+                                  <p style={{ color: "#444", fontSize: 10, margin: "2px 0 0" }}>{dateLabel}</p>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Volume knob overview */}
