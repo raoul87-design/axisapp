@@ -10,18 +10,30 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
 )
 
+// Toon-toevoeging voor alle WhatsApp system prompts
+const WA_TONE = `
+
+Schrijf als een echte coach die een WhatsApp stuurt.
+- Korte zinnen, geen opsommingen
+- Soms een tegenvraag in plaats van een antwoord
+- Af en toe een kleine imperfectie in de zin
+- Geen perfect gestructureerde alinea's
+- Maximaal 2-3 zinnen
+- Gebruik 'je' constructies zoals een mens: 'Goed bezig' in plaats van 'Dat is goed gedaan'
+- Nooit beginnen met 'Geweldig!' of 'Fantastisch!'`
+
 const SYSTEM_PROMPTS = {
   brutal: `Je bent een harde discipline coach. Je bent direct, confronterend en zonder medelijden.
-Je spreekt de waarheid, ook als het pijn doet. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+Je spreekt de waarheid, ook als het pijn doet. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 
   hard: `Je bent een strenge discipline coach. Je bent eerlijk en direct, maar respectvol.
-Je houdt de gebruiker scherp. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+Je houdt de gebruiker scherp. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 
   medium: `Je bent een begeleidende discipline coach. Je bent motiverend en direct.
-Je helpt de gebruiker focussen. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+Je helpt de gebruiker focussen. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 
   soft: `Je bent een warme discipline coach. Je bent bemoedigend en positief.
-Je viert voortgang en houdt het momentum vast. Maximaal 2 zinnen. Spreek de gebruiker aan met jij/je.`,
+Je viert voortgang en houdt het momentum vast. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 }
 
 function getTone(streak, missedDays) {
@@ -203,7 +215,7 @@ async function handleVraag(from, body) {
   const aiResponse = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,
-    system: `Je bent een behulpzame AXIS coach assistent. Beantwoord de vraag van de gebruiker kort en duidelijk. Maximaal 3 zinnen. Spreek de gebruiker aan met jij/je.`,
+    system: `Je bent een behulpzame AXIS coach assistent. Beantwoord de vraag van de gebruiker kort en duidelijk. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
     messages: [{ role: "user", content: body }],
   })
   await sendWhatsApp(from, aiResponse.content[0].text)
@@ -230,6 +242,11 @@ async function handleMessage(from, body) {
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
     console.log("Awaiting reflection:", awaitingReflection)
+
+    // Menselijke vertraging: 30-90 seconden (vereist Vercel Pro/serverless met voldoende timeout)
+    const delaySec = Math.floor(Math.random() * 61) + 30
+    console.log(`=== [DELAY] ${delaySec}s ===`)
+    await new Promise(r => setTimeout(r, delaySec * 1000))
 
     // Reflectie heeft prioriteit: als de flag gezet is altijd reflectie-flow
     if (awaitingReflection) {
