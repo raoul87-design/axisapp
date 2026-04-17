@@ -251,7 +251,7 @@ export default function Dashboard() {
   const actionsNeeded = users.filter(u => (u.missed_days || 0) > 2 && !committedToday.has(u.auth_user_id))
 
   // ── Metrics helpers ──
-  const getLatestWeight = (uid) => metricsData.find(m => m.user_id === uid && m.type === "gewicht") ?? null
+  const getLatestWeight = (uid) => metricsData.find(m => m.user_id === uid && (m.type === "gewicht" || m.type === "weight")) ?? null
   const getWeightTrend  = (uid) => {
     const e = metricsData.filter(m => m.user_id === uid && m.type === "gewicht").slice(0, 3)
     if (e.length < 2) return null
@@ -328,11 +328,17 @@ export default function Dashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                      {["Client", "Streak", "Status"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      {["Client", "Streak", "Weight", "Status"].map(h => <th key={h} style={TH}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map(user => (
+                    {users.map(user => {
+                      const w     = getLatestWeight(user.auth_user_id)
+                      const trend = w ? getWeightTrend(user.auth_user_id) : null
+                      const arrow = trend === "down" ? { sym: "↓", color: GREEN }
+                                  : trend === "up"   ? { sym: "↑", color: "#ef4444" }
+                                  : trend === "equal" ? { sym: "→", color: "#888" } : null
+                      return (
                       <tr key={user.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
                         <td style={TD}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -346,10 +352,19 @@ export default function Dashboard() {
                         <td style={TD}>
                           <span style={{ color: (user.streak || 0) > 0 ? GREEN : "#444", fontSize: 13, fontWeight: "bold" }}>🔥 {user.streak || 0}</span>
                         </td>
+                        <td style={TD}>
+                          {w ? (
+                            <span style={{ fontSize: 13, color: "#ccc", whiteSpace: "nowrap" }}>
+                              {extractValue(w.waarde)} — {fmtDate(w.datum)}
+                              {arrow && <span style={{ color: arrow.color, marginLeft: 5 }}>{arrow.sym}</span>}
+                            </span>
+                          ) : <span style={{ color: "#333", fontSize: 13 }}>—</span>}
+                        </td>
                         <td style={TD}><Badge status={getClientStatus(user)} /></td>
                       </tr>
-                    ))}
-                    {users.length === 0 && <tr><td colSpan={3} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>No clients found</td></tr>}
+                      )
+                    })}
+                    {users.length === 0 && <tr><td colSpan={4} style={{ padding: 24, color: "#333", textAlign: "center", fontSize: 13 }}>No clients found</td></tr>}
                   </tbody>
                 </table>
               </div>
