@@ -6,7 +6,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
 )
 
-const MORNING_MESSAGE = "Goedemorgen! 🌅 Wat ga jij vandaag committen? Stuur je commitment en ik houd je scherp."
+const MORNING_MESSAGE = `Goedemorgen! 🌅 Stuur je check-in voor vandaag.
+
+Bijvoorbeeld:
+- Commitment: 45 min sporten
+- Gewicht: 76kg
+- Voeding: 2000 kcal
+
+Alles is optioneel — stuur wat voor jou werkt.`
 
 export async function GET(request) {
   // Vercel cron verificatie
