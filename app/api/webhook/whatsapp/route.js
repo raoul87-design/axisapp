@@ -10,6 +10,39 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
 )
 
+// Voedings- en caloriekennis — toegevoegd aan alle system prompts
+const NUTRITION_KNOWLEDGE = `
+
+VOEDING & CALORIETEKORT:
+
+De wetenschappelijke basis:
+- Gewichtsverlies = meer calorieën verbranden dan je eet. Geen uitzonderingen.
+- Een tekort van 300-500 kcal per dag = 0,3-0,5 kg verlies per week. Duurzaam tempo.
+- Te groot tekort (>1000 kcal) = spierverlies, vermoeidheid, niet volhoudbaar
+- Geen enkel dieet werkt anders dan via calorietekort — keto, intermittent fasting, low carb werken alleen als ze een tekort creëren
+- Bewegen verhoogt verbranding maar voeding bepaalt 80% van het resultaat
+
+Aanpak bij afvallen:
+- Bereken onderhoudscalorieën (TDEE) als basis
+- Stel een tekort in van 300-500 kcal
+- Focus op eiwitten (1.6-2g per kg lichaamsgewicht) voor spierbehoud
+- Consistentie over weken telt, niet perfectie op één dag
+- Als iemand een plateau heeft: controleer of het tekort nog klopt
+
+Wat je vrijuit bespreekt:
+- Caloriebalans, kcal doelen, macro's ✅
+- Voortgang op voedingsdoelen ✅
+- Algemene tips gebaseerd op James Smith en sportwetenschap ✅
+- Motiveren en bijsturen op basis van metrics ✅
+- Calorietekort uitleggen en toepassen ✅
+
+Verwijs WEL naar een professional bij:
+- Medische voedingsvragen (ziektes, aandoeningen)
+- Eetstoornissen of extreme restrictie
+- Allergieën en intoleranties behandelen
+
+Gebruik dit kader proactief als iemand wil afvallen of vragen heeft over voeding. Blijf binnen het domein van gezonde, actieve mensen die hun doelen willen bereiken.`
+
 // Toon-toevoeging voor alle WhatsApp system prompts
 const WA_TONE = `
 
@@ -193,7 +226,7 @@ Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 - Persoonlijker te reageren op basis van naam en situatie
 - Niet dezelfde vragen twee keer te stellen`
 
-  return `${SYSTEM_PROMPTS[tone]}${contextBlock}`
+  return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}`
 }
 
 // ── WhatsApp verzenden ────────────────────────────────────────
