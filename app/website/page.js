@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 
 const G = "#22c55e"
@@ -60,6 +60,96 @@ function ScreenFrame({ src, alt }) {
       </div>
       <img src={src} alt={alt} style={{ width: "100%", display: "block" }} />
     </div>
+  )
+}
+
+// ── Contact form ──────────────────────────────────────────────
+// Replace FORMSPREE_ENDPOINT with your endpoint from formspree.io
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID"
+
+function ContactForm() {
+  const [fields, setFields]   = useState({ name: "", email: "", message: "" })
+  const [status, setStatus]   = useState("idle") // idle | sending | success | error
+  const [focused, setFocused] = useState("")
+
+  const set = (k) => (e) => setFields(f => ({ ...f, [k]: e.target.value }))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setStatus("sending")
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(fields),
+      })
+      if (res.ok) { setStatus("success"); setFields({ name: "", email: "", message: "" }) }
+      else setStatus("error")
+    } catch {
+      setStatus("error")
+    }
+  }
+
+  const inputStyle = (key) => ({
+    width: "100%", padding: "12px 16px", borderRadius: 8,
+    background: "#0a0a0a", color: "#fff", fontSize: 14,
+    border: `1px solid ${focused === key ? G : "#2a2a2a"}`,
+    outline: "none", boxSizing: "border-box",
+    transition: "border-color 0.15s",
+  })
+
+  if (status === "success") {
+    return (
+      <div style={{ background: "#0a1a0f", border: `1px solid #1a4d2a`, borderRadius: 12, padding: "32px 28px" }}>
+        <p style={{ color: G, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Message sent.</p>
+        <p style={{ color: "#888", fontSize: 14 }}>We'll get back to you within one business day.</p>
+        <button onClick={() => setStatus("idle")} style={{ marginTop: 20, background: "none", border: "none", color: G, fontSize: 14, cursor: "pointer", padding: 0 }}>
+          Send another →
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Name</label>
+        <input
+          type="text" required value={fields.name} onChange={set("name")}
+          placeholder="Your name"
+          onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
+          style={inputStyle("name")}
+        />
+      </div>
+      <div>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Email</label>
+        <input
+          type="email" required value={fields.email} onChange={set("email")}
+          placeholder="your@email.com"
+          onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
+          style={inputStyle("email")}
+        />
+      </div>
+      <div>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Message</label>
+        <textarea
+          required value={fields.message} onChange={set("message")}
+          placeholder="Tell us about your coaching practice..."
+          rows={5}
+          onFocus={() => setFocused("message")} onBlur={() => setFocused("")}
+          style={{ ...inputStyle("message"), resize: "vertical", fontFamily: "inherit" }}
+        />
+      </div>
+      {status === "error" && (
+        <p style={{ color: "#ef4444", fontSize: 13 }}>Something went wrong. Please try again or email us directly.</p>
+      )}
+      <button
+        type="submit" disabled={status === "sending"}
+        style={{ padding: "13px 28px", background: status === "sending" ? "#1a4d2a" : G, color: "#000", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: status === "sending" ? "default" : "pointer", transition: "opacity 0.15s", alignSelf: "flex-start", opacity: status === "sending" ? 0.7 : 1 }}
+      >
+        {status === "sending" ? "Sending..." : "Send message"}
+      </button>
+    </form>
   )
 }
 
@@ -380,8 +470,25 @@ export default function Website() {
         </Section>
       </div>
 
+      {/* ── CONTACT ─────────────────────────────────────────── */}
+      <div id="contact" style={{ borderTop: `1px solid ${BORDER}` }}>
+        <Section>
+          <div style={{ maxWidth: 560 }}>
+            <Badge>Contact</Badge>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
+              Get in touch.
+            </h2>
+            <p style={{ color: SUB, fontSize: 16, marginBottom: 40, lineHeight: 1.7 }}>
+              Questions about AXIS or want to get started? Send a message and we'll get back to you within one business day.
+            </p>
+
+            <ContactForm />
+          </div>
+        </Section>
+      </div>
+
       {/* ── FOOTER ──────────────────────────────────────────── */}
-      <footer id="contact" style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
+      <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>AXIS</span>
