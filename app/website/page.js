@@ -65,7 +65,7 @@ function ScreenFrame({ src, alt }) {
 
 // ── Contact form ──────────────────────────────────────────────
 // Replace FORMSPREE_ENDPOINT with your endpoint from formspree.io
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID"
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjgjwdeo"
 
 function ContactForm() {
   const [fields, setFields]   = useState({ name: "", email: "", message: "" })
