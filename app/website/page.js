@@ -104,9 +104,9 @@ export default function Website() {
         <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
           <div className="nav-links" style={{ display: "flex", gap: 32 }}>
-            <a href="#probleem">Over</a>
-            <a href="#oplossing">Oplossing</a>
-            <a href="#prijzen">Prijzen</a>
+            <a href="#probleem">About</a>
+            <a href="#oplossing">Solution</a>
+            <a href="#prijzen">Pricing</a>
             <a href="#contact">Contact</a>
           </div>
           <Link href="/" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
