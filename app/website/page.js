@@ -120,11 +120,11 @@ export default function Website() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <Badge>Discipline System for Coaches</Badge>
             <h1 style={{ fontSize: "clamp(36px, 5vw, 60px)", fontWeight: 800, lineHeight: 1.1, margin: "24px 0 20px", letterSpacing: "-0.02em" }}>
-              Your clients know<br />
-              <span style={{ color: G }}>what to do.</span>
+              Stop chasing<br />
+              <span style={{ color: G }}>your clients.</span>
             </h1>
             <p style={{ fontSize: 22, color: "#ccc", marginBottom: 12, fontWeight: 500 }}>
-              Axis makes sure they actually do it.
+              Let AXIS do it.
             </p>
             <p style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>
               A daily accountability system for personal trainers.<br />Built on WhatsApp and AI.
@@ -184,15 +184,17 @@ export default function Website() {
             Axis fills the gap between sessions.
           </h2>
           <p style={{ color: SUB, fontSize: 16, marginBottom: 48, maxWidth: 560 }}>
-            Three things that keep clients accountable every single day.
+            Everything your clients need to stay consistent — without extra apps or manual follow-up.
           </p>
-          <div className="feature-grid" style={{ display: "flex", gap: 20 }}>
+          <div className="feature-grid" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {[
               { num: "01", title: "Daily commitment", desc: "Clients commit to what they will do today. One clear intention — set every morning via WhatsApp." },
               { num: "02", title: "Execution tracking", desc: "Axis checks whether commitments are executed. Streaks, missed days, and patterns — visible to the coach." },
-              { num: "03", title: "AI reflection", desc: "When clients struggle, Axis helps them reflect and recover. Based on their personal progress, not generic advice." },
+              { num: "03", title: "Metrics tracking", desc: "Weight, kcal and macros tracked daily via WhatsApp. No manual entry, no separate app." },
+              { num: "04", title: "AI coach", desc: "Remembers your client's history and responds like a real coach. Adjusts tone based on streak and progress." },
+              { num: "05", title: "Progress insights", desc: "Trends, streaks and patterns visible for both coach and client. Spot who needs support before they drop off." },
             ].map(f => (
-              <div key={f.num} className="feature-card">
+              <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
                 <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{f.num}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{f.title}</h3>
                 <p style={{ color: SUB, fontSize: 14, lineHeight: 1.7 }}>{f.desc}</p>
@@ -241,7 +243,7 @@ export default function Website() {
                 Discipline without<br />opening an app.
               </h2>
               <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>
-                Axis runs directly inside WhatsApp. Clients don't install anything. They simply respond. Daily.
+                Clients don't install anything. They simply respond. Commitments, weight, calories, questions — all via WhatsApp. Daily.
               </p>
             </div>
           </div>
@@ -260,6 +262,17 @@ export default function Website() {
               <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>
                 Axis gives coaches visibility into what happens between sessions. See which clients stay consistent. See who needs support. Spend less time chasing updates — and more time coaching.
               </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
+                {[
+                  "See daily metrics — weight trends, kcal targets and macro progress",
+                  "Full client history — commitments, metrics and conversations in one place",
+                ].map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: SUB, lineHeight: 1.5 }}>
+                    <span style={{ color: G, flexShrink: 0 }}>✓</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <ScreenFrame src="/screenshot-dashboard.png" alt="Coach dashboard" />
           </div>
@@ -291,7 +304,7 @@ export default function Website() {
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect for independent coaches just getting started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Daily WhatsApp check-ins, morning and evening", "Clients commit to their goal every day", "AI coach responds based on progress", "Streak & missed days tracking", "Basic client overview — streak and status per client"].map(f => (
+                {["Daily WhatsApp check-ins, morning and evening", "Clients commit to their goal every day", "Metrics tracking — weight, kcal and macros via WhatsApp", "AI coach with memory — remembers your client's history", "Streak & missed days tracking", "Basic client overview — streak and status per client"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -316,7 +329,7 @@ export default function Website() {
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For coaches who want visibility and a partner to get started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Everything from Starter", "Full coach dashboard with weekly progress", "Client insights — consistency, volume and risk signals", "WhatsApp support from the Axis team", "Onboarding help for your first clients"].map(f => (
+                {["Everything from Starter", "Full coach dashboard with weekly progress", "Client insights — consistency, volume and risk signals", "Nutrition goals per client — set kcal and macro targets", "Client detail page — full history, trends and conversations", "WhatsApp support from the Axis team", "Onboarding help for your first clients"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
