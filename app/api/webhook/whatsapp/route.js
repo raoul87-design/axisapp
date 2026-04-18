@@ -52,10 +52,12 @@ function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
+// ── Data helpers ──────────────────────────────────────────────
+
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, streak, missed_days, awaiting_reflection")
+    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -78,6 +80,124 @@ async function saveWhatsappNumber(whatsappNumber) {
   }
 }
 
+// Haal de laatste 10 gespreksmomenten op (5 user + 5 assistant, gesorteerd oud→nieuw)
+async function getConversationHistory(publicUserId) {
+  if (!publicUserId) return []
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("role, content")
+    .eq("user_id", publicUserId)
+    .order("created_at", { ascending: false })
+    .limit(10)
+
+  if (error) {
+    console.error("Conversation history ophalen mislukt:", error.message)
+    return []
+  }
+
+  // Omkeren naar oud→nieuw en zorgen voor geldige alternerende volgorde
+  const sorted = (data || []).reverse()
+  const valid = []
+  let lastRole = null
+  for (const msg of sorted) {
+    if (msg.role !== lastRole) {
+      valid.push({ role: msg.role, content: msg.content })
+      lastRole = msg.role
+    }
+  }
+  // Anthropic vereist dat de array begint met 'user'
+  while (valid.length > 0 && valid[0].role !== "user") valid.shift()
+  return valid
+}
+
+// Sla één gespreksbericht op in de conversations tabel
+async function saveConversation(publicUserId, role, content) {
+  if (!publicUserId) return
+  const { error } = await supabase
+    .from("conversations")
+    .insert({ user_id: publicUserId, role, content })
+  if (error) console.error("Conversation opslaan mislukt:", error.message)
+  else console.log("Conversation opgeslagen | role:", role)
+}
+
+// Haal client-specifieke context op: commitments, gewicht, kcal
+async function getClientContext(userData) {
+  const userId = userData?.auth_user_id
+  if (!userId) return { recentCommits: [], latestWeight: null, latestKcal: null }
+
+  const [
+    { data: recentCommits },
+    { data: weightData },
+    { data: kcalData },
+  ] = await Promise.all([
+    supabase.from("commitments")
+      .select("text, date, done")
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+      .limit(3),
+    supabase.from("metrics")
+      .select("waarde, datum")
+      .eq("user_id", userId)
+      .in("type", ["gewicht", "weight"])
+      .order("datum", { ascending: false })
+      .limit(1),
+    supabase.from("metrics")
+      .select("waarde, datum")
+      .eq("user_id", userId)
+      .in("type", ["voeding", "calorie", "kcal"])
+      .order("datum", { ascending: false })
+      .limit(1),
+  ])
+
+  return {
+    recentCommits: recentCommits || [],
+    latestWeight:  weightData?.[0] ?? null,
+    latestKcal:    kcalData?.[0]   ?? null,
+  }
+}
+
+// Bouw een rijke system prompt met clientcontext en geheugeninstructies
+function buildSystemPrompt(tone, userData, clientContext) {
+  const name       = userData?.name || null
+  const streak     = userData?.streak     ?? 0
+  const missedDays = userData?.missed_days ?? 0
+
+  const commitLines = clientContext.recentCommits.length > 0
+    ? clientContext.recentCommits
+        .map(c => `- ${c.date}: "${c.text}" (${c.done ? "afgerond" : "niet afgerond"})`)
+        .join("\n")
+    : "Geen recente commitments beschikbaar"
+
+  const weightLine = clientContext.latestWeight
+    ? `${clientContext.latestWeight.waarde} (${clientContext.latestWeight.datum})`
+    : "Onbekend"
+
+  const kcalLine = clientContext.latestKcal
+    ? `${clientContext.latestKcal.waarde} (${clientContext.latestKcal.datum})`
+    : "Onbekend"
+
+  const contextBlock = `
+
+CLIENTCONTEXT:
+${name ? `Naam: ${name}` : ""}
+Streak: ${streak} ${streak === 1 ? "dag" : "dagen"}
+Gemiste dagen: ${missedDays}
+Recente commitments:
+${commitLines}
+Laatste gewicht: ${weightLine}
+Laatste kcal/voeding: ${kcalLine}
+
+Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
+- Te onthouden wat de client eerder heeft gezegd
+- Patronen te herkennen (altijd moe op maandag, struggelt met voeding in het weekend)
+- Persoonlijker te reageren op basis van naam en situatie
+- Niet dezelfde vragen twee keer te stellen`
+
+  return `${SYSTEM_PROMPTS[tone]}${contextBlock}`
+}
+
+// ── WhatsApp verzenden ────────────────────────────────────────
+
 async function sendWhatsApp(to, body) {
   const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
   const message = await client.messages.create({
@@ -88,10 +208,8 @@ async function sendWhatsApp(to, body) {
   console.log("Twilio SID:", message.sid, "| Status:", message.status)
 }
 
-// Splits het bericht in onderdelen en classificeert elk apart.
-// Returnt een array van items, bv:
-// [{ categorie: "METRIC", metric_type: "gewicht", waarde: "76kg" },
-//  { categorie: "COMMITMENT", tekst: "45 min fietsen" }]
+// ── Bericht parseren ──────────────────────────────────────────
+
 async function parseCheckin(body) {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -104,22 +222,37 @@ Splits het op in losse onderdelen en classificeer elk onderdeel.
 
 Geef terug als JSON array. Elk object heeft:
 - "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "OVERIG"
-- Voor METRIC ook: "metric_type" (kies uit: gewicht/voeding/stappen/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
+- Voor METRIC ook: "metric_type" (kies uit: gewicht/kcal/eiwitten/koolhydraten/vetten/bloeddruk/hartslag/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
 - Voor alle andere categorieën ook: "tekst" (de originele tekst van dit onderdeel)
 
-Richtlijnen:
-- gewicht: alles met kg of een getal + gewichtsindicatie
-- voeding: calorieën, kcal, gegeten, voeding
-- stappen: stappen, steps, gelopen km
-- slaap: slaap, geslapen, uur geslapen
-- COMMITMENT: een belofte of plan voor vandaag (sporten, mediteren, taken, etc.)
-- VRAAG: een vraagzin
-- REFLECTIE: alleen een "ja" of "nee" als antwoord
+Regels — lees deze zorgvuldig:
+
+COMMITMENT = alles wat met beweging of een actie/plan te maken heeft:
+- Alle vormen van sport en beweging: hardlopen, fietsen, zwemmen, wandelen, sporten, gym, krachttraining, yoga, padellen, voetbal, stretchen, dansen, klimmen, roeien, skiën, etc.
+- Ook als er een getal bij staat: "10.000 stappen", "5km hardlopen", "1 uur fietsen", "45 min yoga"
+- Stappen met een doelgetal = COMMITMENT (geen METRIC!)
+- Andere acties/plannen voor vandaag: mediteren, lezen, koud douchen, vroeg opstaan, etc.
+
+METRIC = uitsluitend metingen van je lichaam of inname (geen beweging!):
+- Gewicht in kg: "76kg", "75.5 kg"
+- Calorie-inname: "2000 kcal", "1800 cal"
+- Macros: eiwitten (g), koolhydraten (g), vetten (g)
+- Biometrie: bloeddruk, hartslag
+- Slaap: aantal uren geslapen (niet plan om te slapen)
+
+VRAAG = bevat een vraagteken of is duidelijk een vraag
+
+REFLECTIE = alleen een kaal "ja" of "nee" (of "yes"/"no") als antwoord op een check-out vraag
+
+OVERIG = alles wat niet in bovenstaande categorieën past
 
 Voorbeelden:
 - "76kg" → [{"categorie":"METRIC","metric_type":"gewicht","waarde":"76kg"}]
-- "2000 kcal, 45 min fietsen" → [{"categorie":"METRIC","metric_type":"voeding","waarde":"2000 kcal"},{"categorie":"COMMITMENT","tekst":"45 min fietsen"}]
+- "10.000 stappen" → [{"categorie":"COMMITMENT","tekst":"10.000 stappen"}]
+- "5km hardlopen, 2000 kcal" → [{"categorie":"COMMITMENT","tekst":"5km hardlopen"},{"categorie":"METRIC","metric_type":"kcal","waarde":"2000 kcal"}]
+- "1 uur fietsen, gewicht 78kg, 150g eiwit" → [{"categorie":"COMMITMENT","tekst":"1 uur fietsen"},{"categorie":"METRIC","metric_type":"gewicht","waarde":"78kg"},{"categorie":"METRIC","metric_type":"eiwitten","waarde":"150g"}]
 - "Hoeveel water?" → [{"categorie":"VRAAG","tekst":"Hoeveel water?"}]
+- "ja" → [{"categorie":"REFLECTIE","tekst":"ja"}]
 
 Bericht: "${body.replace(/"/g, "'")}"
 
@@ -133,43 +266,41 @@ Antwoord ALLEEN met de JSON array, geen andere tekst.`,
 
   try {
     const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Hardcoded override: alles met "stappen" = altijd COMMITMENT
+      return parsed.map(item => {
+        const isMetric = item.categorie === "METRIC"
+        const type     = (item.metric_type || "").toLowerCase()
+        const waarde   = (item.waarde || "").toLowerCase()
+        const tekst    = (item.tekst   || "").toLowerCase()
+        const hasStap  = type.includes("stap") || waarde.includes("stap") || tekst.includes("stap")
+        if (isMetric && hasStap) {
+          const display = item.waarde || item.tekst || ""
+          console.log(`[OVERRIDE] "${display}" — METRIC(${item.metric_type}) → COMMITMENT`)
+          return { categorie: "COMMITMENT", tekst: display }
+        }
+        return item
+      })
+    }
   } catch (e) {
     console.error("JSON parse fout:", e.message, "| raw:", raw)
   }
 
-  // Fallback: behandel als OVERIG
   return [{ categorie: "OVERIG", tekst: body }]
 }
 
 // Bouw het overzichtsbericht op basis van opgeslagen items
 function buildConfirmation(savedItems) {
-  const METRIC_ICONS = {
-    gewicht: "⚖️",
-    voeding: "🍽️",
-    stappen: "👟",
-    slaap: "😴",
-    anders: "📊",
-  }
-  const METRIC_LABELS = {
-    gewicht: "Gewicht",
-    voeding: "Voeding",
-    stappen: "Stappen",
-    slaap: "Slaap",
-    anders: "Meting",
-  }
+  const METRIC_ICONS  = { gewicht: "⚖️", kcal: "🍽️", voeding: "🍽️", eiwitten: "🥩", koolhydraten: "🍞", vetten: "🫒", bloeddruk: "🩺", hartslag: "❤️", slaap: "😴", anders: "📊" }
+  const METRIC_LABELS = { gewicht: "Gewicht", kcal: "Kcal", voeding: "Kcal", eiwitten: "Eiwitten", koolhydraten: "Koolhydraten", vetten: "Vetten", bloeddruk: "Bloeddruk", hartslag: "Hartslag", slaap: "Slaap", anders: "Meting" }
 
   const lines = savedItems
     .map((item) => {
       if (item.categorie === "METRIC") {
         const type = item.metric_type || "anders"
-        const icon = METRIC_ICONS[type] || "📊"
-        const label = METRIC_LABELS[type] || type
-        return `${icon} ${label}: ${item.waarde}`
+        return `${METRIC_ICONS[type] || "📊"} ${METRIC_LABELS[type] || type}: ${item.waarde}`
       }
-      if (item.categorie === "COMMITMENT") {
-        return `💪 ${item.tekst}`
-      }
+      if (item.categorie === "COMMITMENT") return `💪 ${item.tekst}`
       return null
     })
     .filter(Boolean)
@@ -178,22 +309,20 @@ function buildConfirmation(savedItems) {
   return `✅ Check-in ontvangen:\n${lines.join("\n")}\n\nGo! 🔥`
 }
 
+// ── Handlers ──────────────────────────────────────────────────
+
 async function handleReflection(from, body, userData) {
   console.log("=== [3] REFLECTIE VERWERKEN ===")
   const { streak, missed_days: missedDays, auth_user_id: authUserId, id } = userData
   const normalized = body.trim().toLowerCase()
-  const completed = normalized === "ja" || normalized === "yes"
+  const completed  = normalized === "ja" || normalized === "yes"
 
   if (authUserId) {
-    await supabase.from("reflections").insert({
-      user_id: authUserId,
-      completed,
-      answer: body,
-    })
+    await supabase.from("reflections").insert({ user_id: authUserId, completed, answer: body })
     console.log("Reflectie opgeslagen:", completed)
   }
 
-  const newStreak = completed ? streak + 1 : 0
+  const newStreak     = completed ? streak + 1 : 0
   const newMissedDays = completed ? 0 : missedDays + 1
   await supabase
     .from("users")
@@ -210,15 +339,27 @@ async function handleReflection(from, body, userData) {
   console.log("Reflectie reply verstuurd")
 }
 
-async function handleVraag(from, body) {
+async function handleVraag(from, body, userData, history, clientContext) {
   console.log("=== [3] VRAAG BEANTWOORDEN ===")
+  const tone       = getTone(userData?.streak ?? 0, userData?.missed_days ?? 0)
+  const systemPrompt = buildSystemPrompt(tone, userData, clientContext)
+  const messages   = [...history, { role: "user", content: body }]
+
   const aiResponse = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,
-    system: `Je bent een behulpzame AXIS coach assistent. Beantwoord de vraag van de gebruiker kort en duidelijk. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
-    messages: [{ role: "user", content: body }],
+    system: systemPrompt,
+    messages,
   })
-  await sendWhatsApp(from, aiResponse.content[0].text)
+  const reply = aiResponse.content[0].text
+
+  // Geheugen opslaan
+  await Promise.all([
+    saveConversation(userData?.id, "user", body),
+    saveConversation(userData?.id, "assistant", reply),
+  ])
+
+  await sendWhatsApp(from, reply)
 }
 
 async function handleOverig(from) {
@@ -229,76 +370,118 @@ async function handleOverig(from) {
   )
 }
 
+// ── Hoofdflow ─────────────────────────────────────────────────
+
 async function handleMessage(from, body) {
   try {
     console.log("=== [2] GEBRUIKER OPHALEN / OPSLAAN ===")
     await saveWhatsappNumber(from)
 
     const userData = await getUserData(from)
-    const streak = userData?.streak ?? 0
-    const missedDays = userData?.missed_days ?? 0
-    const tone = getTone(streak, missedDays)
+    const streak          = userData?.streak          ?? 0
+    const missedDays      = userData?.missed_days     ?? 0
+    const tone            = getTone(streak, missedDays)
     const awaitingReflection = userData?.awaiting_reflection ?? false
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
     console.log("Awaiting reflection:", awaitingReflection)
 
-    // Menselijke vertraging: 30-90 seconden (vereist Vercel Pro/serverless met voldoende timeout)
+    // Menselijke vertraging: 30-90 seconden (vereist Vercel Pro timeout > 90s)
     const delaySec = Math.floor(Math.random() * 61) + 30
     console.log(`=== [DELAY] ${delaySec}s ===`)
     await new Promise(r => setTimeout(r, delaySec * 1000))
 
-    // Reflectie heeft prioriteit: als de flag gezet is altijd reflectie-flow
+    // Reflectie heeft prioriteit — geen AI, geen geheugen nodig
     if (awaitingReflection) {
       await handleReflection(from, body, userData)
       return
     }
 
-    // Parse het bericht — returnt altijd een array van onderdelen
+    // Parse het bericht (override zit al in parseCheckin)
     console.log("=== [3] BERICHT PARSEN ===")
+    console.log("Ruwe berichttekst voor classificatie:", body)
     const items = await parseCheckin(body)
-    console.log("Gevonden items:", JSON.stringify(items))
+    console.log("Items na classificatie + override:", JSON.stringify(items))
 
     const metrics     = items.filter((i) => i.categorie === "METRIC")
     const commitments = items.filter((i) => i.categorie === "COMMITMENT")
     const vragen      = items.filter((i) => i.categorie === "VRAAG")
 
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length}`)
+
     // Enkelvoudige speciale gevallen
     if (items.length === 1) {
       if (vragen.length === 1) {
-        await handleVraag(from, body)
+        // Laad geheugen + context parallel
+        const [history, clientContext] = await Promise.all([
+          getConversationHistory(userData?.id),
+          getClientContext(userData),
+        ])
+        await handleVraag(from, body, userData, history, clientContext)
         return
       }
       if (items[0].categorie === "REFLECTIE" || items[0].categorie === "OVERIG") {
         await handleOverig(from)
         return
       }
-      // Enkel commitment → AI coach reply (bestaand gedrag)
+      // Enkel commitment → AI coach reply met geheugen
       if (commitments.length === 1 && metrics.length === 0) {
-        console.log("=== [4] ENKEL COMMITMENT — AI COACH REPLY ===")
-        const userId = userData?.auth_user_id || userData?.id
+        console.log("=== [4] ENKEL COMMITMENT — AI COACH REPLY MET GEHEUGEN ===")
+        const userId = userData?.auth_user_id
         const today  = getNLDate()
-        const { error } = await supabase
-          .from("commitments")
-          .insert({ user_id: userId, text: commitments[0].tekst, date: today, done: false })
-        if (error) console.error("Commitment opslaan mislukt:", error.message)
-        else console.log("Commitment opgeslagen:", commitments[0].tekst)
+
+        console.log("auth_user_id:", userId)
+        console.log("Saving commitment:", commitments[0].tekst, "| date:", today)
+
+        if (!userId) {
+          console.error("Geen auth_user_id — commitment niet opgeslagen")
+          await sendWhatsApp(from, "Koppel eerst je account via de app om je commitments bij te houden.")
+          return
+        }
+
+        const [insertResult, history, clientContext] = await Promise.all([
+          supabase.from("commitments").insert({ user_id: userId, text: commitments[0].tekst, date: today, done: false }),
+          getConversationHistory(userData?.id),
+          getClientContext(userData),
+        ])
+
+        if (insertResult.error) {
+          console.error("Commitment INSERT error:", insertResult.error.message, "| code:", insertResult.error.code, "| details:", insertResult.error.details)
+        } else {
+          console.log("Commitment saved OK | user_id:", userId, "| text:", commitments[0].tekst)
+        }
+
+        const systemPrompt = buildSystemPrompt(tone, userData, clientContext)
+        const messages     = [...history, { role: "user", content: body }]
 
         const aiResponse = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 256,
-          system: SYSTEM_PROMPTS[tone],
-          messages: [{ role: "user", content: body }],
+          system: systemPrompt,
+          messages,
         })
-        await sendWhatsApp(from, aiResponse.content[0].text)
+        const reply = aiResponse.content[0].text
+
+        await Promise.all([
+          saveConversation(userData?.id, "user", body),
+          saveConversation(userData?.id, "assistant", reply),
+        ])
+
+        await sendWhatsApp(from, reply)
         return
       }
     }
 
-    // Multi-part of bevat metrics → alles opslaan + bevestiging sturen
+    // Multi-part of bevat metrics → alles opslaan + bevestiging (geen AI)
     console.log("=== [4] MULTI-PART CHECK-IN VERWERKEN ===")
-    const userId = userData?.auth_user_id || userData?.id
+    const userId = userData?.auth_user_id
     const today  = getNLDate()
+
+    if (!userId) {
+      console.error("Geen auth_user_id beschikbaar — data kan niet opgeslagen worden voor app-zichtbaarheid")
+      await sendWhatsApp(from, "Koppel eerst je account via de app om je check-ins bij te houden.")
+      return
+    }
     const savedItems = []
 
     for (const item of metrics) {
@@ -308,35 +491,26 @@ async function handleMessage(from, body) {
         waarde:  item.waarde,
         datum:   today,
       })
-      if (error) {
-        console.error("Metric opslaan mislukt:", error.message)
-      } else {
-        console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde)
-        savedItems.push(item)
-      }
+      if (error) console.error("Metric opslaan mislukt:", error.message)
+      else { console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde); savedItems.push(item) }
     }
 
     for (const item of commitments) {
+      console.log("Saving commitment (multi-part):", item.tekst, "| user_id:", userId)
       const { error } = await supabase.from("commitments").insert({
         user_id: userId,
         text:    item.tekst,
         date:    today,
         done:    false,
       })
-      if (error) {
-        console.error("Commitment opslaan mislukt:", error.message)
-      } else {
-        console.log("Commitment opgeslagen:", item.tekst)
-        savedItems.push(item)
-      }
+      if (error) console.error("Commitment INSERT error:", error.message, "| code:", error.code, "| details:", error.details)
+      else { console.log("Commitment saved OK:", item.tekst); savedItems.push(item) }
     }
 
     const confirmation = buildConfirmation(savedItems)
-    if (confirmation) {
-      await sendWhatsApp(from, confirmation)
-    } else {
-      await handleOverig(from)
-    }
+    if (confirmation) await sendWhatsApp(from, confirmation)
+    else await handleOverig(from)
+
   } catch (error) {
     console.error("=== [ERROR] ===")
     console.error("Naam:", error.name)
