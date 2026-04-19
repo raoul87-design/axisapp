@@ -63,6 +63,73 @@ function ScreenFrame({ src, alt }) {
   )
 }
 
+// ── Nav ───────────────────────────────────────────────────────
+const NAV_LINKS = [
+  { label: "About",    href: "#probleem" },
+  { label: "Solution", href: "#oplossing" },
+  { label: "Pricing",  href: "#prijzen" },
+  { label: "Contact",  href: "#contact" },
+]
+
+function Nav() {
+  const [open, setOpen] = useState(false)
+  const close = () => setOpen(false)
+
+  return (
+    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
+
+        {/* Desktop links */}
+        <div className="nav-links" style={{ display: "flex", gap: 32 }}>
+          {NAV_LINKS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+        </div>
+
+        {/* Desktop CTA */}
+        <Link href="/" className="btn-green nav-cta" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
+
+        {/* Mobile hamburger */}
+        <button
+          className="nav-hamburger"
+          onClick={() => setOpen(o => !o)}
+          aria-label="Menu"
+          style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+        >
+          {open ? (
+            <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+              <path d="M4 4l14 14M18 4L4 18" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+              <path d="M3 6h16M3 11h16M3 16h16" stroke={G} strokeWidth={1.8} strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile dropdown */}
+      {open && (
+        <div style={{ background: "#0a0a0a", borderTop: `1px solid ${BORDER}`, padding: "8px 0 16px" }}>
+          {NAV_LINKS.map(l => (
+            <a key={l.href} href={l.href} onClick={close} style={{
+              display: "block", padding: "12px 24px",
+              color: "#ccc", fontSize: 15, textDecoration: "none",
+              borderBottom: `1px solid ${BORDER}`,
+            }}>
+              {l.label}
+            </a>
+          ))}
+          <div style={{ padding: "14px 24px 0" }}>
+            <Link href="/" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+              Start gratis
+            </Link>
+          </div>
+        </div>
+      )}
+    </nav>
+  )
+}
+
 // ── Contact form ──────────────────────────────────────────────
 // Replace FORMSPREE_ENDPOINT with your endpoint from formspree.io
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjgjwdeo"
@@ -186,22 +253,13 @@ export default function Website() {
           .steps-grid { flex-wrap: wrap !important; }
           .feature-grid { flex-direction: column !important; }
           .nav-links { display: none !important; }
+          .nav-cta { display: none !important; }
+          .nav-hamburger { display: block !important; }
         }
       `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
-          <div className="nav-links" style={{ display: "flex", gap: 32 }}>
-            <a href="#probleem">About</a>
-            <a href="#oplossing">Solution</a>
-            <a href="#prijzen">Pricing</a>
-            <a href="#contact">Contact</a>
-          </div>
-          <Link href="/" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
-        </div>
-      </nav>
+      <Nav />
 
       {/* ── HERO ────────────────────────────────────────────── */}
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "96px 24px 80px" }}>
