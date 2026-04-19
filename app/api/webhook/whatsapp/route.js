@@ -69,6 +69,13 @@ Je helpt de gebruiker focussen. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 Je viert voortgang en houdt het momentum vast. Spreek de gebruiker aan met jij/je.${WA_TONE}`,
 }
 
+function classifyCommitmentCategory(text) {
+  const t = (text || "").toLowerCase()
+  if (/sport|loop|lopen|fiets|gym|zwem|wandel|yoga|train|hardloop|stap|krachttraining|padel|voetbal|basket|tennis|dans|rennen|beweging|fitness/.test(t)) return "beweging"
+  if (/eet|kcal|calorie|voeding|kook|groente|proteïne|eiwit|water|drinken|maaltijd|ontbijt|lunch|dieet|macro/.test(t)) return "voeding"
+  return "overig"
+}
+
 function getTone(streak, missedDays) {
   if (missedDays >= 4) return "brutal"
   if (missedDays >= 2) return "hard"
@@ -476,7 +483,7 @@ async function handleMessage(from, body) {
         }
 
         const [insertResult, history, clientContext] = await Promise.all([
-          supabase.from("commitments").insert({ user_id: userId, text: commitments[0].tekst, date: today, done: false }),
+          supabase.from("commitments").insert({ user_id: userId, text: commitments[0].tekst, date: today, done: false, category: classifyCommitmentCategory(commitments[0].tekst) }),
           getConversationHistory(userData?.id),
           getClientContext(userData),
         ])
@@ -534,10 +541,11 @@ async function handleMessage(from, body) {
     for (const item of commitments) {
       console.log("Saving commitment (multi-part):", item.tekst, "| user_id:", userId)
       const { error } = await supabase.from("commitments").insert({
-        user_id: userId,
-        text:    item.tekst,
-        date:    today,
-        done:    false,
+        user_id:  userId,
+        text:     item.tekst,
+        date:     today,
+        done:     false,
+        category: classifyCommitmentCategory(item.tekst),
       })
       if (error) console.error("Commitment INSERT error:", error.message, "| code:", error.code, "| details:", error.details)
       else { console.log("Commitment saved OK:", item.tekst); savedItems.push(item) }

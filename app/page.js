@@ -30,6 +30,9 @@ const [weekCheckIns,    setWeekCheckIns]   = useState(new Set())
 const [weekCommits,     setWeekCommits]    = useState(new Set())
 const [theme,           setTheme]          = useState("dark")
 const [activeTab,       setActiveTab]      = useState("vandaag")
+const [selectedGoal,    setSelectedGoal]   = useState("")
+const [currentWeightInput, setCurrentWeightInput] = useState("")
+const [targetWeightInput,  setTargetWeightInput]  = useState("")
 const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
 const [chatLoading,     setChatLoading]    = useState(false)
@@ -105,6 +108,24 @@ function parseMetricValue(raw) {
   return match ? parseFloat(match[1].replace(",", ".")) : null
 }
 
+const GOALS = ["Afvallen", "Aankomen", "Spiermassa", "Fitter worden"]
+
+const GOAL_SUGGESTIONS = {
+  "Afvallen":      ["30 min wandelen of fietsen", "Onder 1800 kcal blijven vandaag", "1,5 liter water drinken"],
+  "Aankomen":      ["45 min krachttraining", "Minstens 150g eiwit eten vandaag", "Extra maaltijd voor het slapengaan"],
+  "Spiermassa":    ["1 uur gym — compound oefeningen", "160g eiwit halen vandaag", "8 uur slapen"],
+  "Fitter worden": ["20 min bewegen — wandelen telt ook", "Geen snacks na 20:00", "Vroeg naar bed — voor 23:00"],
+}
+
+const CATEGORY_ICON = { beweging: "🏃", voeding: "🥗" }
+
+function classifyCommitment(text) {
+  const t = (text || "").toLowerCase()
+  if (/sport|loop|lopen|fiets|gym|zwem|wandel|yoga|train|hardloop|stap|krachttraining|padel|voetbal|basket|tennis|dans|rennen|beweging|fitness/.test(t)) return "beweging"
+  if (/eet|kcal|calorie|voeding|kook|groente|proteïne|eiwit|water|drinken|maaltijd|ontbijt|lunch|dieet|macro/.test(t)) return "voeding"
+  return "overig"
+}
+
 function renderMarkdown(text) {
   if (!text) return ""
   const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -161,8 +182,18 @@ async function loadCommitments() {
 }
 
 async function checkFirstUse() {
-  const { data } = await supabase.from("commitments").select("id").eq("user_id", user.id).limit(1)
-  if (FORCE_ONBOARDING || !data || data.length === 0) setShowOnboarding(true)
+  const { data } = await supabase.from("users").select("goal").eq("auth_user_id", user.id).single()
+  if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
+}
+
+async function saveGoalData(goal, cw, tw) {
+  const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).single()
+  const payload = { goal, current_weight: cw ? parseFloat(cw) : null, target_weight: tw ? parseFloat(tw) : null }
+  if (existing) {
+    await supabase.from("users").update(payload).eq("auth_user_id", user.id)
+  } else {
+    await supabase.from("users").insert({ ...payload, auth_user_id: user.id })
+  }
 }
 
 async function loadHistory() {
@@ -257,10 +288,11 @@ async function saveDailyScore(score) {
   await supabase.from("daily_results").upsert({ user_id: user.id, date: getNLDate(), score })
 }
 
-async function addCommitment() {
-  if (!text || !user) return
-  await supabase.from("commitments").insert({ text, user_id: user.id, date: getNLDate(), done: false })
-  setText("")
+async function addCommitment(customText) {
+  const t = customText || text
+  if (!t || !user) return
+  await supabase.from("commitments").insert({ text: t, user_id: user.id, date: getNLDate(), done: false, category: classifyCommitment(t) })
+  if (!customText) setText("")
   loadCommitments()
 }
 
@@ -333,41 +365,109 @@ const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.leng
 
 // ── Onboarding ────────────────────────────────────────────────
 if (showOnboarding) {
+  const totalSteps = 4
+  const inputStyle = { width: "100%", padding: "13px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, boxSizing: "border-box", outline: "none" }
+  const btnPrimary = { width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }
+  const btnGhost   = { width: "100%", padding: "12px", background: "transparent", border: "none", color: C.textSub, cursor: "pointer", fontSize: 13 }
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, padding: "20px" }}>
       <div style={{ width: "100%", maxWidth: 420, background: C.card, padding: 40, borderRadius: 12 }}>
-        <p style={{ color: C.textMuted, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32 }}>
-          Stap {onboardingStep} van 2
+        <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32 }}>
+          Stap {onboardingStep} van {totalSteps}
         </p>
+
+        {/* Stap 1 — Doel kiezen */}
         {onboardingStep === 1 && (
           <>
-            <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Waar ga jij vandaag voor?</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Eén commitment. Maak het concreet.</p>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat is je doel?</h2>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Kies het doel waar je nu op focust.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+              {GOALS.map(g => (
+                <button key={g} onClick={() => setSelectedGoal(g)} style={{
+                  padding: "14px", borderRadius: 8, border: `2px solid ${selectedGoal === g ? GREEN : C.inputBorder}`,
+                  background: selectedGoal === g ? "#0a1a0f" : C.inputBg,
+                  color: selectedGoal === g ? GREEN : C.text,
+                  fontSize: 15, cursor: "pointer", textAlign: "left", fontWeight: selectedGoal === g ? "bold" : "normal",
+                }}>
+                  {g}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => selectedGoal && setOnboardingStep(2)} style={{ ...btnPrimary, opacity: selectedGoal ? 1 : 0.4, cursor: selectedGoal ? "pointer" : "default" }}>
+              Volgende →
+            </button>
+          </>
+        )}
+
+        {/* Stap 2 — Gewicht (optioneel) */}
+        {onboardingStep === 2 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Jouw gewicht</h2>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Optioneel — helpt AXIS je voortgang bij te houden.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <div>
+                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Huidig gewicht (kg)</p>
+                <input type="number" value={currentWeightInput} onChange={e => setCurrentWeightInput(e.target.value)}
+                  placeholder="bijv. 78" style={inputStyle} />
+              </div>
+              <div>
+                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Doelgewicht (kg)</p>
+                <input type="number" value={targetWeightInput} onChange={e => setTargetWeightInput(e.target.value)}
+                  placeholder="bijv. 72" style={inputStyle} />
+              </div>
+            </div>
+            <button onClick={async () => { await saveGoalData(selectedGoal, currentWeightInput, targetWeightInput); setOnboardingStep(3) }} style={btnPrimary}>
+              Volgende →
+            </button>
+            <button onClick={async () => { await saveGoalData(selectedGoal, null, null); setOnboardingStep(3) }} style={btnGhost}>
+              Sla over
+            </button>
+          </>
+        )}
+
+        {/* Stap 3 — Eerste commitment kiezen */}
+        {onboardingStep === 3 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat ga jij vandaag doen?</h2>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 20 }}>Kies een suggestie of typ je eigen commitment.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              {(GOAL_SUGGESTIONS[selectedGoal] || []).map(s => (
+                <button key={s} onClick={async () => { await addCommitment(s); setOnboardingStep(4) }} style={{
+                  padding: "13px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`,
+                  background: C.inputBg, color: C.text, fontSize: 14, cursor: "pointer", textAlign: "left",
+                }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>Of typ zelf:</p>
             <input autoFocus value={text} onChange={e => setText(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && text && (addCommitment().then(() => setOnboardingStep(2)))}
+              onKeyDown={e => e.key === "Enter" && text && addCommitment().then(() => setOnboardingStep(4))}
               placeholder="bijv. 30 minuten sporten"
-              style={{ width: "100%", padding: "14px", marginBottom: 16, borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15 }}
+              style={{ ...inputStyle, marginBottom: 12 }}
             />
-            <button onClick={async () => { if (!text) return; await addCommitment(); setOnboardingStep(2) }}
-              style={{ width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+            <button onClick={async () => { if (!text) return; await addCommitment(); setOnboardingStep(4) }}
+              style={{ ...btnPrimary, opacity: text ? 1 : 0.4, cursor: text ? "pointer" : "default" }}>
               Dit is mijn commitment →
             </button>
           </>
         )}
-        {onboardingStep === 2 && (
+
+        {/* Stap 4 — WhatsApp koppelen */}
+        {onboardingStep === 4 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Blijf op koers via WhatsApp</h2>
             <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS stuurt je dagelijks een check-in.<br/>Geen app nodig — gewoon reageren.</p>
             <input autoFocus value={whatsappInput} onChange={e => setWhatsappInput(e.target.value)}
               placeholder="+31612345678"
-              style={{ width: "100%", padding: "14px", marginBottom: 16, borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15 }}
+              style={{ ...inputStyle, marginBottom: 12 }}
             />
             <button onClick={async () => { if (!whatsappInput) return; const ok = await linkWhatsapp(whatsappInput); if (ok) { setInteractionMode("whatsapp"); setShowOnboarding(false) } }}
-              style={{ width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000", marginBottom: 10 }}>
+              style={{ ...btnPrimary, marginBottom: 10 }}>
               Koppel WhatsApp (aanbevolen)
             </button>
-            <button onClick={() => { setInteractionMode("app"); setShowOnboarding(false) }}
-              style={{ width: "100%", padding: "12px", background: "transparent", border: "none", color: C.textSub, cursor: "pointer", fontSize: 13 }}>
+            <button onClick={() => { setInteractionMode("app"); setShowOnboarding(false) }} style={btnGhost}>
               Sla over, ik gebruik de app
             </button>
           </>
@@ -486,6 +586,9 @@ return (
             <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : `2px solid ${C.border}`, background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {c.done && <span style={{ color: "#000", fontSize: 13, fontWeight: "bold" }}>✓</span>}
             </div>
+            {CATEGORY_ICON[c.category] && (
+              <span style={{ fontSize: 14, flexShrink: 0 }}>{CATEGORY_ICON[c.category]}</span>
+            )}
             <span style={{ fontSize: 15, color: c.done ? C.textMuted : C.text, textDecoration: c.done ? "line-through" : "none" }}>
               {c.text}
             </span>

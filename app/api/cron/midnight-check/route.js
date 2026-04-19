@@ -1,3 +1,4 @@
+import twilio from "twilio"
 import { createClient } from "@supabase/supabase-js"
 
 const supabase = createClient(
@@ -17,7 +18,7 @@ export async function GET(request) {
     // Haal users op die de avond check-in NIET hebben beantwoord
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, streak, missed_days, awaiting_reflection")
+      .select("id, streak, missed_days, awaiting_reflection, whatsapp_number, name")
       .eq("awaiting_reflection", true)
 
     if (error) {
@@ -41,6 +42,23 @@ export async function GET(request) {
         .eq("id", user.id)
 
       console.log(`User ${user.id}: streak → ${newStreak}, missed_days → ${newMissedDays}`)
+
+      // Stuur motiverend WhatsApp bericht bij streak reset
+      if (user.whatsapp_number) {
+        try {
+          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+          const fn = user.name?.trim().split(/\s+/)[0]
+          const greeting = fn ? `Hey ${fn}` : "Hey"
+          await twilioClient.messages.create({
+            from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+            to: user.whatsapp_number,
+            body: `${greeting}, geen check-out gisteren — streak gereset. Vandaag opnieuw beginnen. Kleine stappen tellen.`,
+          })
+          console.log(`Streak reset bericht verstuurd naar ${user.whatsapp_number}`)
+        } catch (err) {
+          console.error(`WhatsApp fout voor ${user.whatsapp_number}:`, err.message)
+        }
+      }
     }
 
     console.log("=== [MIDNIGHT CHECK] KLAAR ===")
