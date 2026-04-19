@@ -224,7 +224,10 @@ Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 - Te onthouden wat de client eerder heeft gezegd
 - Patronen te herkennen (altijd moe op maandag, struggelt met voeding in het weekend)
 - Persoonlijker te reageren op basis van naam en situatie
-- Niet dezelfde vragen twee keer te stellen`
+- Niet dezelfde vragen twee keer te stellen
+
+GEBRUIK VAN DE NAAM:
+${name ? `De client heet ${name}. Gebruik de voornaam maximaal 1x per gesprek — aan het begin of bij een belangrijk moment. Niet bij elk bericht herhalen.` : "Naam onbekend — spreek de client niet bij naam aan."}`
 
   return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}`
 }

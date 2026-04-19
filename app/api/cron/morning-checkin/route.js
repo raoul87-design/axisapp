@@ -6,7 +6,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
 )
 
-const MORNING_MESSAGE = `Goedemorgen! 🌅 Stuur je check-in voor vandaag.
+function firstName(name) {
+  if (!name || !name.trim()) return null
+  return name.trim().split(/\s+/)[0]
+}
+
+function morningMessage(name) {
+  const fn = firstName(name)
+  const greeting = fn ? `Goedemorgen ${fn}! 🌅` : `Goedemorgen! 🌅`
+  return `${greeting} Stuur je check-in voor vandaag.
 
 Bijvoorbeeld:
 - Commitment: 45 min sporten
@@ -14,6 +22,7 @@ Bijvoorbeeld:
 - Voeding: 2000 kcal
 
 Alles is optioneel — stuur wat voor jou werkt.`
+}
 
 export async function GET(request) {
   // Vercel cron verificatie
@@ -30,7 +39,7 @@ export async function GET(request) {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, whatsapp_number, auth_user_id")
+      .select("id, whatsapp_number, auth_user_id, name")
       .not("whatsapp_number", "is", null)
 
     if (error) {
@@ -51,7 +60,7 @@ export async function GET(request) {
         const message = await client.messages.create({
           from,
           to: user.whatsapp_number,
-          body: MORNING_MESSAGE,
+          body: morningMessage(user.name),
         })
 
         console.log(`[${user.whatsapp_number}] SID: ${message.sid}`)

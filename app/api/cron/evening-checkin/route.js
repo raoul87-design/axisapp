@@ -6,7 +6,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
 )
 
-const EVENING_MESSAGE = "Hoe ging je dag? 💪 Heb je je commitments gehaald?\n\nAntwoord met *Ja* of *Nee*."
+function firstName(name) {
+  if (!name || !name.trim()) return null
+  return name.trim().split(/\s+/)[0]
+}
+
+function eveningMessage(name) {
+  const fn = firstName(name)
+  const greeting = fn ? `Hey ${fn}, hoe ging je dag?` : `Hey, hoe ging je dag?`
+  return `${greeting} 💪 Heb je je commitments gehaald?\n\nAntwoord met *Ja* of *Nee*.`
+}
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization")
@@ -19,7 +28,7 @@ export async function GET(request) {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, whatsapp_number")
+      .select("id, whatsapp_number, name")
       .not("whatsapp_number", "is", null)
 
     if (error) {
@@ -39,7 +48,7 @@ export async function GET(request) {
         const message = await client.messages.create({
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
           to: user.whatsapp_number,
-          body: EVENING_MESSAGE,
+          body: eveningMessage(user.name),
         })
 
         console.log(`Verstuurd naar ${user.whatsapp_number} — SID: ${message.sid}`)
