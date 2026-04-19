@@ -120,6 +120,25 @@ async function saveWhatsappNumber(whatsappNumber) {
   }
 }
 
+const DAILY_QUESTION_LIMIT = 5
+
+// Tel het aantal vragen (user-rol) dat vandaag al beantwoord is voor deze user
+async function getDailyQuestionCount(publicUserId) {
+  if (!publicUserId) return 0
+  const today = getNLDate()
+  const { count, error } = await supabase
+    .from("conversations")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", publicUserId)
+    .eq("role", "user")
+    .gte("created_at", `${today}T00:00:00+02:00`)
+  if (error) {
+    console.error("Dagelijks vraag-count ophalen mislukt:", error.message)
+    return 0 // fail open — geen onterechte blokkering
+  }
+  return count ?? 0
+}
+
 // Haal de laatste 10 gespreksmomenten op (5 user + 5 assistant, gesorteerd oud→nieuw)
 async function getConversationHistory(publicUserId) {
   if (!publicUserId) return []
@@ -456,6 +475,14 @@ async function handleMessage(from, body) {
     // Enkelvoudige speciale gevallen
     if (items.length === 1) {
       if (vragen.length === 1) {
+        // Dagelijkse vragenlimiet controleren
+        const questionCount = await getDailyQuestionCount(userData?.id)
+        console.log(`Dagelijks vraag-count: ${questionCount}/${DAILY_QUESTION_LIMIT}`)
+        if (questionCount >= DAILY_QUESTION_LIMIT) {
+          console.log("Vragenlimiet bereikt — bericht geblokkeerd")
+          await sendWhatsApp(from, "Je hebt vandaag je vragenlimiet bereikt. Open de AXIS app voor meer coaching.")
+          return
+        }
         // Laad geheugen + context parallel
         const [history, clientContext] = await Promise.all([
           getConversationHistory(userData?.id),
