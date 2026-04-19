@@ -105,6 +105,14 @@ function parseMetricValue(raw) {
   return match ? parseFloat(match[1].replace(",", ".")) : null
 }
 
+function renderMarkdown(text) {
+  if (!text) return ""
+  const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+}
+
 // ── Reflectie opslaan ─────────────────────────────────────────
 const handleSubmit = async () => {
   if (!answer) { alert("Please add a reflection"); return }
@@ -204,7 +212,7 @@ async function loadProgressData() {
       .eq("user_id", user.id).eq("type", "gewicht")
       .order("datum", { ascending: true }).limit(14),
     supabase.from("metrics").select("waarde, datum")
-      .eq("user_id", user.id).in("type", ["voeding", "calorie"])
+      .eq("user_id", user.id).in("type", ["voeding", "calorie", "kcal"])
       .order("datum", { ascending: true }).limit(14),
     supabase.from("daily_results").select("date, score")
       .eq("user_id", user.id).order("date", { ascending: false }),
@@ -765,16 +773,17 @@ return (
           <div style={{ paddingTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
-                <div style={{
-                  maxWidth: "80%", padding: "12px 16px",
-                  borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: msg.role === "user" ? GREEN : C.card,
-                  color: msg.role === "user" ? "#000" : C.text,
-                  fontSize: 14, lineHeight: 1.5,
-                  border: msg.role === "assistant" ? `1px solid ${C.borderSub}` : "none",
-                }}>
-                  {msg.content}
-                </div>
+                <div
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                  style={{
+                    maxWidth: "80%", padding: "12px 16px",
+                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                    background: msg.role === "user" ? GREEN : C.card,
+                    color: msg.role === "user" ? "#000" : C.text,
+                    fontSize: 14, lineHeight: 1.5,
+                    border: msg.role === "assistant" ? `1px solid ${C.borderSub}` : "none",
+                  }}
+                />
               </div>
             ))}
             {chatLoading && (
