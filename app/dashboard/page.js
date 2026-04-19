@@ -139,6 +139,7 @@ export default function Dashboard() {
   const [historyDateFilter, setHistoryDateFilter]     = useState("")
 
   const [deactivatedIds, setDeactivatedIds] = useState(new Set())
+  const [conversations, setConversations]   = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -169,6 +170,7 @@ export default function Dashboard() {
       { data: checkinsData },
       { data: reflectionsData },
       { data: metricsRaw },
+      { data: conversationsRaw },
     ] = await Promise.all([
       supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
@@ -176,6 +178,7 @@ export default function Dashboard() {
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       supabase.from("reflections").select("user_id, completed, created_at").gte("created_at", `${today}T00:00:00`),
       supabase.from("metrics").select("user_id, type, waarde, datum").order("datum", { ascending: false }).limit(300),
+      supabase.from("conversations").select("user_id, role, content, created_at").order("created_at", { ascending: false }).limit(200),
     ])
 
     setUsers(usersData || [])
@@ -183,6 +186,7 @@ export default function Dashboard() {
     setRecentCommits(recentCommitsData || [])
     setTodayReflections(reflectionsData || [])
     setMetricsData(metricsRaw || [])
+    setConversations(conversationsRaw || [])
 
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date()
@@ -684,6 +688,91 @@ export default function Dashboard() {
                 })}
               </div>
             </div>
+
+            {/* ── CLIENT QUESTIONS ── */}
+            {(() => {
+              const QUESTION_RE = /\?|^(hoe|wat|waarom|hoeveel|kan ik|mag ik|wanneer)\b/i
+
+              // Build ordered list of conversations chronologically for reply lookup
+              const allConvos = [...conversations].reverse() // oldest first
+
+              // Extract user questions with their AI reply
+              const questions = []
+              for (let i = 0; i < allConvos.length; i++) {
+                const msg = allConvos[i]
+                if (msg.role !== "user") continue
+                if (!QUESTION_RE.test(msg.content.trim())) continue
+                const reply = allConvos[i + 1]?.role === "assistant" ? allConvos[i + 1] : null
+                const user  = users.find(u => u.id === msg.user_id)
+                questions.push({ ...msg, reply, user })
+              }
+
+              // Sort most recent first, cap at 20
+              const sorted = questions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20)
+
+              // Weekly stats
+              const weekAgo = new Date(Date.now() - 7 * 86400000)
+              const questionsThisWeek = questions.filter(q => new Date(q.created_at) > weekAgo)
+
+              const questionsByUser = {}
+              questions.forEach(q => {
+                const uid = q.user_id
+                questionsByUser[uid] = (questionsByUser[uid] || 0) + 1
+              })
+              const mostActiveId  = Object.entries(questionsByUser).sort((a, b) => b[1] - a[1])[0]?.[0]
+              const mostActiveUser = mostActiveId ? users.find(u => u.id === mostActiveId) : null
+
+              const fmtTs = (ts) => {
+                if (!ts) return "—"
+                return new Date(ts).toLocaleDateString("nl-NL", { day: "numeric", month: "short" }) + " " +
+                       new Date(ts).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+              }
+
+              return (
+                <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+                  <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0, flex: 1 }}>Client Questions</p>
+                    <div style={{ display: "flex", gap: 20 }}>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ color: "#fff", fontSize: 18, fontWeight: "bold", margin: 0 }}>{questionsThisWeek.length}</p>
+                        <p style={{ color: "#444", fontSize: 10, margin: "2px 0 0" }}>this week</p>
+                      </div>
+                      {mostActiveUser && (
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ color: GREEN, fontSize: 13, fontWeight: "bold", margin: 0 }}>{displayName(mostActiveUser)}</p>
+                          <p style={{ color: "#444", fontSize: 10, margin: "2px 0 0" }}>most active · {questionsByUser[mostActiveId]}q</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {sorted.length === 0 ? (
+                    <p style={{ padding: 24, color: "#333", fontSize: 13, textAlign: "center" }}>No client questions yet</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {sorted.map((q, i) => (
+                        <div key={i} style={{ padding: "16px 24px", borderBottom: `1px solid ${BORDER}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                            <button onClick={() => q.user && router.push(`/dashboard/clients/${q.user.id}`)}
+                              style={{ background: "none", border: "none", padding: 0, cursor: q.user ? "pointer" : "default" }}>
+                              <span style={{ color: GREEN, fontSize: 12, fontWeight: "bold" }}>{q.user ? displayName(q.user) : "Unknown"}</span>
+                            </button>
+                            <span style={{ color: "#333", fontSize: 11 }}>·</span>
+                            <span style={{ color: "#444", fontSize: 11 }}>{fmtTs(q.created_at)}</span>
+                          </div>
+                          <p style={{ color: "#fff", fontSize: 13, margin: "0 0 8px", lineHeight: 1.5 }}>{q.content}</p>
+                          {q.reply && (
+                            <p style={{ color: "#555", fontSize: 12, margin: 0, lineHeight: 1.5, borderLeft: `2px solid #2a2a2a`, paddingLeft: 10 }}>
+                              {q.reply.content.length > 160 ? q.reply.content.slice(0, 160) + "…" : q.reply.content}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
           </div>
         )}
