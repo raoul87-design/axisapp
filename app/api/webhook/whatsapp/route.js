@@ -266,6 +266,7 @@ Splits het op in losse onderdelen en classificeer elk onderdeel.
 Geef terug als JSON array. Elk object heeft:
 - "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "OVERIG"
 - Voor METRIC ook: "metric_type" (kies uit: gewicht/kcal/eiwitten/koolhydraten/vetten/bloeddruk/hartslag/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
+- Voor COMMITMENT ook: "tekst" als bondige actie (max 8 woorden) — verwijder dagaanduidingen ("vandaag", "vandaag ga ik", "ga ik"), verbindingswoorden ("daarom", "dus"), en houd alleen de kern. Bijv. "30 min hardlopen" niet "Vandaag ga ik 30 min hardlopen"
 - Voor alle andere categorieën ook: "tekst" (de originele tekst van dit onderdeel)
 
 Regels — lees deze zorgvuldig:

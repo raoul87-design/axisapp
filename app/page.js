@@ -586,8 +586,10 @@ return (
             <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : `2px solid ${C.border}`, background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {c.done && <span style={{ color: "#000", fontSize: 13, fontWeight: "bold" }}>✓</span>}
             </div>
-            {CATEGORY_ICON[c.category] && (
-              <span style={{ fontSize: 14, flexShrink: 0 }}>{CATEGORY_ICON[c.category]}</span>
+            {(CATEGORY_ICON[c.category] || CATEGORY_ICON[classifyCommitment(c.text)]) && (
+              <span style={{ fontSize: 14, flexShrink: 0 }}>
+                {CATEGORY_ICON[c.category] || CATEGORY_ICON[classifyCommitment(c.text)]}
+              </span>
             )}
             <span style={{ fontSize: 15, color: c.done ? C.textMuted : C.text, textDecoration: c.done ? "line-through" : "none" }}>
               {c.text}
