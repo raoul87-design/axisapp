@@ -298,6 +298,11 @@ COMMITMENT = alles wat met beweging of een actie/plan te maken heeft:
 - Stappen met een doelgetal = COMMITMENT (geen METRIC!)
 - Andere acties/plannen voor vandaag: mediteren, lezen, koud douchen, vroeg opstaan, etc.
 
+RUSTDAG = bewuste dag van rust of herstel (geen sport, geen training):
+- Sleutelwoorden: "rustdag", "dagje rust", "rust vandaag", "hersteldag", "recovery", "geen sport", "geen training", "dag vrij", "rusten vandaag"
+- Geef terug als: {"categorie":"RUSTDAG","tekst":"Rustdag"}
+- Let op: RUSTDAG kan gecombineerd worden met METRIC in hetzelfde bericht
+
 METRIC = uitsluitend metingen van je lichaam of inname (geen beweging!):
 - Gewicht in kg: "76kg", "75.5 kg"
 - Calorie-inname: "2000 kcal", "1800 cal"
@@ -318,6 +323,8 @@ Voorbeelden:
 - "1 uur fietsen, gewicht 78kg, 150g eiwit" → [{"categorie":"COMMITMENT","tekst":"1 uur fietsen"},{"categorie":"METRIC","metric_type":"gewicht","waarde":"78kg"},{"categorie":"METRIC","metric_type":"eiwitten","waarde":"150g"}]
 - "Hoeveel water?" → [{"categorie":"VRAAG","tekst":"Hoeveel water?"}]
 - "ja" → [{"categorie":"REFLECTIE","tekst":"ja"}]
+- "rustdag" → [{"categorie":"RUSTDAG","tekst":"Rustdag"}]
+- "Dagje rust. Gewicht is 78.2 en 1750 kcal" → [{"categorie":"RUSTDAG","tekst":"Rustdag"},{"categorie":"METRIC","metric_type":"gewicht","waarde":"78.2kg"},{"categorie":"METRIC","metric_type":"kcal","waarde":"1750 kcal"}]
 
 Bericht: "${body.replace(/"/g, "'")}"
 
@@ -366,6 +373,7 @@ function buildConfirmation(savedItems) {
         return `${METRIC_ICONS[type] || "📊"} ${METRIC_LABELS[type] || type}: ${item.waarde}`
       }
       if (item.categorie === "COMMITMENT") return `💪 ${item.tekst}`
+      if (item.categorie === "RUSTDAG")   return `😴 Rustdag genoteerd`
       return null
     })
     .filter(Boolean)
@@ -427,12 +435,18 @@ async function handleVraag(from, body, userData, history, clientContext) {
   await sendWhatsApp(from, reply)
 }
 
-async function handleOverig(from) {
-  console.log("=== [3] OVERIG — VRIENDELIJK ANTWOORD ===")
-  await sendWhatsApp(
-    from,
-    `Hmm, ik weet niet goed wat ik daarmee moet. Stuur me een commitment voor vandaag, een meting, of stel een vraag!`
-  )
+async function handleOverig(from, body, userData) {
+  console.log("=== [3] OVERIG — AI DOORVRAAG ===")
+  const tone = getTone(userData?.streak ?? 0, userData?.missed_days ?? 0)
+  const aiResponse = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 128,
+    system: `${SYSTEM_PROMPTS[tone]}
+
+Je ontvangt een bericht dat je niet precies begrijpt. Reageer menselijk en nieuwsgierig. Stel één korte doorvraag om te begrijpen wat de gebruiker bedoelt of wat ze nodig hebben. Geen opsommingen, geen uitleg over wat je kunt doen.`,
+    messages: [{ role: "user", content: body }],
+  })
+  await sendWhatsApp(from, aiResponse.content[0].text)
 }
 
 // ── Hoofdflow ─────────────────────────────────────────────────
@@ -471,8 +485,9 @@ async function handleMessage(from, body) {
     const metrics     = items.filter((i) => i.categorie === "METRIC")
     const commitments = items.filter((i) => i.categorie === "COMMITMENT")
     const vragen      = items.filter((i) => i.categorie === "VRAAG")
+    const rustdagen   = items.filter((i) => i.categorie === "RUSTDAG")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length}`)
 
     // Enkelvoudige speciale gevallen
     if (items.length === 1) {
@@ -494,7 +509,39 @@ async function handleMessage(from, body) {
         return
       }
       if (items[0].categorie === "REFLECTIE" || items[0].categorie === "OVERIG") {
-        await handleOverig(from)
+        await handleOverig(from, body, userData)
+        return
+      }
+      // Enkel rustdag → opslaan als commitment + AI reactie over herstel
+      if (rustdagen.length === 1 && metrics.length === 0 && commitments.length === 0) {
+        console.log("=== [4] RUSTDAG — OPSLAAN + AI REPLY ===")
+        const userId = userData?.auth_user_id
+        const today  = getNLDate()
+        if (userId) {
+          const { error } = await supabase.from("commitments").insert({
+            user_id: userId, text: "Rustdag", date: today, done: false, category: "herstel",
+          })
+          if (error) console.error("Rustdag INSERT error:", error.message)
+          else console.log("Rustdag commitment opgeslagen")
+        }
+        const [history, clientContext] = await Promise.all([
+          getConversationHistory(userData?.id),
+          getClientContext(userData),
+        ])
+        const systemPrompt = buildSystemPrompt(tone, userData, clientContext) +
+          `\n\nDe client meldt een rustdag. Bevestig in 1-2 zinnen dat rust essentieel is voor herstel en progressie. Vraag daarna vriendelijk of ze nog hun gewicht of calorieën willen doorgeven.`
+        const aiResponse = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 200,
+          system: systemPrompt,
+          messages: [...history, { role: "user", content: body }],
+        })
+        const reply = aiResponse.content[0].text
+        await Promise.all([
+          saveConversation(userData?.id, "user", body),
+          saveConversation(userData?.id, "assistant", reply),
+        ])
+        await sendWhatsApp(from, reply)
         return
       }
       // Enkel commitment → AI coach reply met geheugen
@@ -568,6 +615,15 @@ async function handleMessage(from, body) {
       else { console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde); savedItems.push(item) }
     }
 
+    for (const item of rustdagen) {
+      console.log("Saving rustdag (multi-part) | user_id:", userId)
+      const { error } = await supabase.from("commitments").insert({
+        user_id: userId, text: "Rustdag", date: today, done: false, category: "herstel",
+      })
+      if (error) console.error("Rustdag INSERT error:", error.message)
+      else { console.log("Rustdag opgeslagen"); savedItems.push(item) }
+    }
+
     for (const item of commitments) {
       console.log("Saving commitment (multi-part):", item.tekst, "| user_id:", userId)
       const { error } = await supabase.from("commitments").insert({
@@ -583,7 +639,7 @@ async function handleMessage(from, body) {
 
     const confirmation = buildConfirmation(savedItems)
     if (confirmation) await sendWhatsApp(from, confirmation)
-    else await handleOverig(from)
+    else await handleOverig(from, body, userData)
 
   } catch (error) {
     console.error("=== [ERROR] ===")
