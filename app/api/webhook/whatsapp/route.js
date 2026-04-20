@@ -97,7 +97,7 @@ function getNLDate() {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection")
+    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -241,6 +241,8 @@ CLIENTCONTEXT:
 ${name ? `Naam: ${name}` : ""}
 Streak: ${streak} ${streak === 1 ? "dag" : "dagen"}
 Gemiste dagen: ${missedDays}
+Trainingslocatie: ${userData?.training_location || "onbekend"}
+Fitnessniveau: ${userData?.fitness_level || "onbekend"}
 Recente commitments:
 ${commitLines}
 Laatste gewicht: ${weightLine}

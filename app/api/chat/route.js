@@ -4,7 +4,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(request) {
   try {
-    const { messages, streak, missedDays, commitment } = await request.json()
+    const { messages, streak, missedDays, commitment, trainingLocation, fitnessLevel } = await request.json()
 
     const system = `Je bent de AXIS discipline coach. Geen quick fixes, geen excuses — alleen eerlijke, wetenschappelijk onderbouwde begeleiding bij het opbouwen van duurzame gewoontes.
 
@@ -65,7 +65,9 @@ GRENZEN:
 GEBRUIKERSCONTEXT:
 Streak: ${streak} ${streak === 1 ? "dag" : "dagen"}
 Gemiste dagen: ${missedDays}
-Commitment vandaag: ${commitment || "niet ingesteld"}`
+Commitment vandaag: ${commitment || "niet ingesteld"}
+Trainingslocatie: ${trainingLocation || "onbekend"}
+Fitnessniveau: ${fitnessLevel || "onbekend"}`
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
