@@ -341,6 +341,7 @@ export default function Website() {
               { num: "03", title: "Metrics tracking", desc: "Weight, kcal and macros tracked daily via WhatsApp. No manual entry, no separate app." },
               { num: "04", title: "AI coach", desc: "Remembers your client's history and responds like a real coach. Adjusts tone based on streak and progress." },
               { num: "05", title: "Progress insights", desc: "Trends, streaks and patterns visible for both coach and client. Spot who needs support before they drop off." },
+              { num: "06", title: "Personal reminders", desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
             ].map(f => (
               <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
                 <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{f.num}</div>
@@ -445,14 +446,14 @@ export default function Website() {
               <div>
                 <p style={{ color: SUB, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Starter</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€99</span>
+                  <span style={{ fontSize: 40, fontWeight: 800 }}>€149</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 15 clients</p>
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect for independent coaches just getting started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Daily WhatsApp check-ins, morning and evening", "Clients commit to their goal every day", "Metrics tracking — weight, kcal and macros via WhatsApp", "AI coach with memory — remembers your client's history", "Streak & missed days tracking", "Basic client overview — streak and status per client"].map(f => (
+                {["Daily WhatsApp check-ins, morning and evening", "Clients commit to their goal every day", "Metrics tracking — weight, kcal and macros via WhatsApp", "AI coach with memory — remembers your client's history", "Reminders — clients set personal reminders via WhatsApp", "Streak & missed days tracking", "Basic client overview — streak and status per client"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -470,7 +471,7 @@ export default function Website() {
               <div>
                 <p style={{ color: G, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Growth</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€299</span>
+                  <span style={{ fontSize: 40, fontWeight: 800 }}>€399</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 50 clients</p>
