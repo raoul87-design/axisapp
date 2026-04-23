@@ -15,7 +15,11 @@ function getNLTime() {
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = request.headers.get("x-cron-secret")
+  const validBearer = authHeader === `Bearer ${process.env.CRON_SECRET}`
+  const validSecret = cronSecret === process.env.CRON_SECRET
+  if (!validBearer && !validSecret) {
+    console.error("Auth mislukt — authorization:", authHeader, "| x-cron-secret:", cronSecret)
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } })
   }
 
