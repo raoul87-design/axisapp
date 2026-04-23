@@ -307,7 +307,7 @@ async function parseCheckin(body) {
 Splits het op in losse onderdelen en classificeer elk onderdeel.
 
 Geef terug als JSON array. Elk object heeft:
-- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "REMINDER" | "STOP_REMINDER" | "OVERIG"
+- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "REMINDER" | "STOP_REMINDER" | "REMINDER_LIJST" | "OVERIG"
 - Voor METRIC ook: "metric_type" (kies uit: gewicht/kcal/eiwitten/koolhydraten/vetten/bloeddruk/hartslag/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
 - Voor COMMITMENT ook: "tekst" als bondige actie (max 8 woorden) — verwijder dagaanduidingen ("vandaag", "vandaag ga ik", "ga ik"), verbindingswoorden ("daarom", "dus"), en houd alleen de kern. Bijv. "30 min hardlopen" niet "Vandaag ga ik 30 min hardlopen"
 - Voor REMINDER ook: "tijd" (HH:MM formaat, bijv. "19:00"), "tekst" (kort wat de reminder is, bijv. "creatine innemen"), "eenmalig" (true als het om een specifieke datum gaat, false voor dagelijks), en "datum" (alleen bij eenmalig=true: gebruik "morgen", "overmorgen", een weekdagnaam zoals "vrijdag", of een datum als "2026-04-25" — null bij dagelijkse reminders)
@@ -351,8 +351,12 @@ REMINDER = verzoek om een herinnering in te stellen (dagelijks of eenmalig):
 - Eenmalig (eenmalig=true): bevat een specifieke dag of datum: "morgen", "overmorgen", een weekdagnaam, of een concrete datum
 - Voorbeelden eenmalig: "Herinner me morgen om 09:00 aan mijn afspraak", "Reminder vrijdag om 14:00 voor tandarts", "Stuur me overmorgen om 10:00 een bericht"
 
-STOP_REMINDER = verzoek om een reminder te stoppen of verwijderen:
-- Sleutelwoorden: "stop reminder", "verwijder reminder", "reminder uit", "geen reminder meer", "zet reminder uit"
+STOP_REMINDER = verzoek om een specifieke reminder of alle reminders te stoppen:
+- Sleutelwoorden: "stop reminder", "verwijder reminder", "reminder uit", "geen reminder meer", "zet reminder uit", "stop alle reminders", "verwijder al mijn reminders"
+- Voeg "alle": true toe als het om alle reminders gaat, anders "alle": false
+
+REMINDER_LIJST = verzoek om een overzicht van actieve reminders:
+- Sleutelwoorden: "welke reminders", "toon reminders", "mijn reminders", "wat zijn mijn reminders", "reminder overzicht"
 
 OVERIG = alles wat niet in bovenstaande categorieën past
 
@@ -370,8 +374,12 @@ Voorbeelden:
 - "Herinner me morgen om 09:00 aan mijn afspraak" → [{"categorie":"REMINDER","tijd":"09:00","tekst":"afspraak","eenmalig":true,"datum":"morgen"}]
 - "Reminder vrijdag om 14:00 voor tandarts" → [{"categorie":"REMINDER","tijd":"14:00","tekst":"tandarts","eenmalig":true,"datum":"vrijdag"}]
 - "Stuur me overmorgen om 10:00 een bericht over mijn medicatie" → [{"categorie":"REMINDER","tijd":"10:00","tekst":"medicatie","eenmalig":true,"datum":"overmorgen"}]
-- "Stop de creatine reminder" → [{"categorie":"STOP_REMINDER","tekst":"creatine"}]
-- "Verwijder mijn reminder" → [{"categorie":"STOP_REMINDER","tekst":""}]
+- "Stop de creatine reminder" → [{"categorie":"STOP_REMINDER","tekst":"creatine","alle":false}]
+- "Zet de 19:00 reminder uit" → [{"categorie":"STOP_REMINDER","tekst":"19:00","alle":false}]
+- "Stop alle reminders" → [{"categorie":"STOP_REMINDER","tekst":"","alle":true}]
+- "Verwijder al mijn reminders" → [{"categorie":"STOP_REMINDER","tekst":"","alle":true}]
+- "Welke reminders heb ik?" → [{"categorie":"REMINDER_LIJST","tekst":""}]
+- "Toon mijn reminders" → [{"categorie":"REMINDER_LIJST","tekst":""}]
 - "Ik heb last van mijn rug na tuinwerk" → [{"categorie":"OVERIG","tekst":"Ik heb last van mijn rug na tuinwerk"}]
 - "Ik ben gisteren gaan hardlopen" → [{"categorie":"OVERIG","tekst":"Ik ben gisteren gaan hardlopen"}]
 - "Ik heb slecht geslapen vannacht" → [{"categorie":"OVERIG","tekst":"Ik heb slecht geslapen vannacht"}]
@@ -602,10 +610,11 @@ async function handleStopReminder(from, item, userData) {
     return
   }
 
-  let query = supabase.from("reminders").update({ actief: false }).eq("user_id", userId).eq("actief", true)
-
+  const stopAlle = !!item.alle
   const tekst = item.tekst?.trim()
-  if (tekst) {
+
+  let query = supabase.from("reminders").update({ actief: false }).eq("user_id", userId).eq("actief", true)
+  if (!stopAlle && tekst) {
     query = query.ilike("tekst", `%${tekst}%`)
   }
 
@@ -616,8 +625,51 @@ async function handleStopReminder(from, item, userData) {
     return
   }
 
-  console.log("Reminder(s) gestopt voor user:", userId)
-  await sendWhatsApp(from, "Reminder gestopt.")
+  console.log(`Reminder(s) gestopt voor user: ${userId} | alle: ${stopAlle}`)
+  if (stopAlle) {
+    await sendWhatsApp(from, "✅ Alle reminders gestopt.")
+  } else {
+    const label = tekst || "reminder"
+    await sendWhatsApp(from, `✅ Reminder ${label} gestopt.`)
+  }
+}
+
+async function handleReminderLijst(from, userData) {
+  console.log("=== [3] REMINDER LIJST ===")
+  const userId = userData?.id
+  if (!userId) {
+    await sendWhatsApp(from, "Koppel eerst je account via de app.")
+    return
+  }
+
+  const { data, error } = await supabase
+    .from("reminders")
+    .select("tekst, tijd, eenmalig, datum")
+    .eq("user_id", userId)
+    .eq("actief", true)
+    .order("tijd", { ascending: true })
+
+  if (error) {
+    console.error("Reminder lijst error:", error.message)
+    await sendWhatsApp(from, "Er ging iets mis. Probeer het opnieuw.")
+    return
+  }
+
+  if (!data || data.length === 0) {
+    await sendWhatsApp(from, "Je hebt geen actieve reminders.")
+    return
+  }
+
+  const lines = data.map(r => {
+    if (r.eenmalig) {
+      const label = datumLabel(r.datum) || r.datum || "eenmalig"
+      return `- ${label} ${r.tijd} — ${r.tekst} (eenmalig)`
+    }
+    return `- ${r.tijd} — ${r.tekst} (dagelijks)`
+  })
+
+  const reply = `📋 Jouw actieve reminders:\n${lines.join("\n")}\n\nStuur 'stop [naam]' om een reminder uit te zetten.`
+  await sendWhatsApp(from, reply)
 }
 
 // ── Hoofdflow ─────────────────────────────────────────────────
@@ -657,12 +709,17 @@ async function handleMessage(from, body) {
     const commitments  = items.filter((i) => i.categorie === "COMMITMENT")
     const vragen       = items.filter((i) => i.categorie === "VRAAG")
     const rustdagen    = items.filter((i) => i.categorie === "RUSTDAG")
-    const reminders    = items.filter((i) => i.categorie === "REMINDER")
-    const stopReminders = items.filter((i) => i.categorie === "STOP_REMINDER")
+    const reminders      = items.filter((i) => i.categorie === "REMINDER")
+    const stopReminders  = items.filter((i) => i.categorie === "STOP_REMINDER")
+    const reminderLijst  = items.filter((i) => i.categorie === "REMINDER_LIJST")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length}`)
 
     // Reminder intents — altijd direct afhandelen
+    if (reminderLijst.length > 0) {
+      await handleReminderLijst(from, userData)
+      return
+    }
     if (reminders.length > 0) {
       for (const item of reminders) {
         await handleReminder(from, item, userData)
