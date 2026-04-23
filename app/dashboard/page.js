@@ -141,6 +141,10 @@ export default function Dashboard() {
   const [deactivatedIds, setDeactivatedIds] = useState(new Set())
   const [conversations, setConversations]   = useState([])
 
+  const [inviteLinks,      setInviteLinks]      = useState([])
+  const [generatingInvite, setGeneratingInvite] = useState(false)
+  const [copiedCode,       setCopiedCode]       = useState("")
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
@@ -153,6 +157,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authorized || !authProfile) return
     loadAll(authProfile.email)
+    loadInviteLinks(authProfile.email)
   }, [authorized, authProfile])
 
   async function loadAll(coachEmail) {
@@ -206,6 +211,37 @@ export default function Dashboard() {
     setDeactivatedIds(prev => new Set([...prev, userId]))
     const { error } = await supabase.from("users").update({ active: false }).eq("id", userId)
     if (error) console.error("Deactivate failed:", error.message)
+  }
+
+  async function loadInviteLinks(coachEmail) {
+    const { data } = await supabase
+      .from("invite_links")
+      .select("id, code, gebruikt, created_at")
+      .eq("coach_email", coachEmail)
+      .order("created_at", { ascending: false })
+      .limit(10)
+    setInviteLinks(data || [])
+  }
+
+  async function generateInviteLink() {
+    if (!authProfile?.email || generatingInvite) return
+    setGeneratingInvite(true)
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map(b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
+      .join("")
+    const { error } = await supabase.from("invite_links").insert({
+      coach_email: authProfile.email,
+      code,
+      gebruikt: false,
+    })
+    if (!error) await loadInviteLinks(authProfile.email)
+    setGeneratingInvite(false)
+  }
+
+  function copyInviteLink(code) {
+    navigator.clipboard.writeText(`${window.location.origin}/invite/${code}`)
+    setCopiedCode(code)
+    setTimeout(() => setCopiedCode(""), 2000)
   }
 
   if (!authorized || loading) {
@@ -795,16 +831,48 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Invite Links */}
             <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 28 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Clients</p>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Invite Links</p>
                 <button
-                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/invite`)}
-                  style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 12, cursor: "pointer" }}
+                  onClick={generateInviteLink}
+                  disabled={generatingInvite}
+                  style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 12, cursor: generatingInvite ? "default" : "pointer", opacity: generatingInvite ? 0.6 : 1 }}
                 >
-                  + Invite Client
+                  {generatingInvite ? "Genereren..." : "+ Genereer invite link"}
                 </button>
               </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {inviteLinks.length === 0 && (
+                  <p style={{ color: "#333", fontSize: 13 }}>Nog geen invite links aangemaakt.</p>
+                )}
+                {inviteLinks.map(link => (
+                  <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "#0a0a0a", border: `1px solid ${link.gebruikt ? "#1a1a1a" : BORDER}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, color: link.gebruikt ? "#333" : "#aaa", fontFamily: "monospace", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        axisapp.nl/invite/{link.code}
+                      </p>
+                      <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#555", margin: "3px 0 0" }}>
+                        {link.gebruikt ? "Gebruikt" : "Actief"}
+                      </p>
+                    </div>
+                    {!link.gebruikt && (
+                      <button
+                        onClick={() => copyInviteLink(link.code)}
+                        style={{ marginLeft: 12, padding: "5px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: copiedCode === link.code ? GREEN : "#666", fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+                      >
+                        {copiedCode === link.code ? "Gekopieerd!" : "Kopieer"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Clients */}
+            <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 28 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 20 }}>Clients</p>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {users.map(u => {
                   const deactivated = deactivatedIds.has(u.id)
