@@ -184,6 +184,8 @@ async function getClientContext(userData) {
   const userId = userData?.auth_user_id
   if (!userId) return { recentCommits: [], latestWeight: null, latestKcal: null }
 
+  const today = getNLDate()
+
   const [
     { data: recentCommits },
     { data: weightData },
@@ -192,8 +194,7 @@ async function getClientContext(userData) {
     supabase.from("commitments")
       .select("text, date, done")
       .eq("user_id", userId)
-      .order("date", { ascending: false })
-      .limit(3),
+      .eq("date", today),
     supabase.from("metrics")
       .select("waarde, datum")
       .eq("user_id", userId)
@@ -235,15 +236,17 @@ function buildSystemPrompt(tone, userData, clientContext) {
     ? `${clientContext.latestKcal.waarde} (${clientContext.latestKcal.datum})`
     : "Onbekend"
 
+  const today = getNLDate()
+
   const contextBlock = `
 
 CLIENTCONTEXT:
 ${name ? `Naam: ${name}` : ""}
-Streak: ${streak} ${streak === 1 ? "dag" : "dagen"}
-Gemiste dagen: ${missedDays}
+Huidige streak (rechtstreeks uit database): ${streak} ${streak === 1 ? "dag" : "dagen"} — gebruik dit getal exact, verzin geen andere waarde
+Gemiste dagen (rechtstreeks uit database): ${missedDays} — gebruik dit getal exact
 Trainingslocatie: ${userData?.training_location || "onbekend"}
 Fitnessniveau: ${userData?.fitness_level || "onbekend"}
-Recente commitments:
+Commitments van vandaag (${today}):
 ${commitLines}
 Laatste gewicht: ${weightLine}
 Laatste kcal/voeding: ${kcalLine}
@@ -257,7 +260,26 @@ Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 GEBRUIK VAN DE NAAM:
 ${name ? `De client heet ${name}. Gebruik de voornaam maximaal 1x per gesprek — aan het begin of bij een belangrijk moment. Niet bij elk bericht herhalen.` : "Naam onbekend — spreek de client niet bij naam aan."}`
 
-  return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}`
+  const scopeBlock = `
+
+SCOPE — WAT AXIS DOET:
+- Dagelijkse check-in via WhatsApp (08:00)
+- Commitments bijhouden en afvinken
+- Metrics opslaan: gewicht, kcal, stappen
+- Avond reflectie (20:00)
+- Reminders instellen op verzoek: "Herinner me elke dag om 19:00 aan creatine" of "Herinner me morgen om 09:00 aan mijn afspraak"
+- Vragen beantwoorden over sport, voeding en discipline
+
+WAT AXIS NIET DOET:
+- Agenda beheren
+- Afspraken inplannen met anderen
+- Workouts of voedingsschema's maken
+- Medisch advies geven
+- Berichten sturen naar anderen
+
+Als iemand iets vraagt buiten dit domein: leg vriendelijk uit wat AXIS wel kan doen en stuur het gesprek terug naar commitment, metrics of coaching.`
+
+  return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}${scopeBlock}`
 }
 
 // ── WhatsApp verzenden ────────────────────────────────────────
@@ -285,18 +307,26 @@ async function parseCheckin(body) {
 Splits het op in losse onderdelen en classificeer elk onderdeel.
 
 Geef terug als JSON array. Elk object heeft:
-- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "OVERIG"
+- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "REMINDER" | "STOP_REMINDER" | "OVERIG"
 - Voor METRIC ook: "metric_type" (kies uit: gewicht/kcal/eiwitten/koolhydraten/vetten/bloeddruk/hartslag/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
 - Voor COMMITMENT ook: "tekst" als bondige actie (max 8 woorden) — verwijder dagaanduidingen ("vandaag", "vandaag ga ik", "ga ik"), verbindingswoorden ("daarom", "dus"), en houd alleen de kern. Bijv. "30 min hardlopen" niet "Vandaag ga ik 30 min hardlopen"
+- Voor REMINDER ook: "tijd" (HH:MM formaat, bijv. "19:00"), "tekst" (kort wat de reminder is, bijv. "creatine innemen"), "eenmalig" (true als het om een specifieke datum gaat, false voor dagelijks), en "datum" (alleen bij eenmalig=true: gebruik "morgen", "overmorgen", een weekdagnaam zoals "vrijdag", of een datum als "2026-04-25" — null bij dagelijkse reminders)
+- Voor STOP_REMINDER ook: "tekst" (optioneel — wat gestopt moet worden, bijv. "creatine")
 - Voor alle andere categorieën ook: "tekst" (de originele tekst van dit onderdeel)
 
 Regels — lees deze zorgvuldig:
 
-COMMITMENT = alles wat met beweging of een actie/plan te maken heeft:
+COMMITMENT = een actie die iemand VAN PLAN IS te gaan doen (toekomst of intentie):
 - Alle vormen van sport en beweging: hardlopen, fietsen, zwemmen, wandelen, sporten, gym, krachttraining, yoga, padellen, voetbal, stretchen, dansen, klimmen, roeien, skiën, etc.
 - Ook als er een getal bij staat: "10.000 stappen", "5km hardlopen", "1 uur fietsen", "45 min yoga"
 - Stappen met een doelgetal = COMMITMENT (geen METRIC!)
 - Andere acties/plannen voor vandaag: mediteren, lezen, koud douchen, vroeg opstaan, etc.
+
+GEEN COMMITMENT — classificeer als OVERIG of VRAAG:
+- Klachten of pijn: "ik heb last van mijn rug", "ik ben moe", "mijn knie doet pijn"
+- Verhalen over het verleden: "ik heb gisteren gesport", "ik heb tuinwerk gedaan", "ik ben wezen wandelen"
+- Mededelingen zonder actie-intentie: "ik heb slecht geslapen", "het was een drukke dag"
+- Alles met een vraagteken → VRAAG, nooit COMMITMENT
 
 RUSTDAG = bewuste dag van rust of herstel (geen sport, geen training):
 - Sleutelwoorden: "rustdag", "dagje rust", "rust vandaag", "hersteldag", "recovery", "geen sport", "geen training", "dag vrij", "rusten vandaag"
@@ -314,6 +344,16 @@ VRAAG = bevat een vraagteken of is duidelijk een vraag
 
 REFLECTIE = alleen een kaal "ja" of "nee" (of "yes"/"no") als antwoord op een check-out vraag
 
+REMINDER = verzoek om een herinnering in te stellen (dagelijks of eenmalig):
+- Sleutelwoorden: "herinner me", "reminder", "remind me", "stuur me een reminder", "elke dag om"
+- Vereist een tijdstip in het bericht
+- Dagelijks (eenmalig=false, datum=null): "Herinner me elke dag om 19:00 aan creatine", "Reminder om 07:30 voor mijn medicatie"
+- Eenmalig (eenmalig=true): bevat een specifieke dag of datum: "morgen", "overmorgen", een weekdagnaam, of een concrete datum
+- Voorbeelden eenmalig: "Herinner me morgen om 09:00 aan mijn afspraak", "Reminder vrijdag om 14:00 voor tandarts", "Stuur me overmorgen om 10:00 een bericht"
+
+STOP_REMINDER = verzoek om een reminder te stoppen of verwijderen:
+- Sleutelwoorden: "stop reminder", "verwijder reminder", "reminder uit", "geen reminder meer", "zet reminder uit"
+
 OVERIG = alles wat niet in bovenstaande categorieën past
 
 Voorbeelden:
@@ -325,6 +365,17 @@ Voorbeelden:
 - "ja" → [{"categorie":"REFLECTIE","tekst":"ja"}]
 - "rustdag" → [{"categorie":"RUSTDAG","tekst":"Rustdag"}]
 - "Dagje rust. Gewicht is 78.2 en 1750 kcal" → [{"categorie":"RUSTDAG","tekst":"Rustdag"},{"categorie":"METRIC","metric_type":"gewicht","waarde":"78.2kg"},{"categorie":"METRIC","metric_type":"kcal","waarde":"1750 kcal"}]
+- "Herinner me elke dag om 19:00 aan creatine" → [{"categorie":"REMINDER","tijd":"19:00","tekst":"creatine innemen","eenmalig":false,"datum":null}]
+- "Stuur me om 07:30 een reminder voor mijn medicatie" → [{"categorie":"REMINDER","tijd":"07:30","tekst":"medicatie innemen","eenmalig":false,"datum":null}]
+- "Herinner me morgen om 09:00 aan mijn afspraak" → [{"categorie":"REMINDER","tijd":"09:00","tekst":"afspraak","eenmalig":true,"datum":"morgen"}]
+- "Reminder vrijdag om 14:00 voor tandarts" → [{"categorie":"REMINDER","tijd":"14:00","tekst":"tandarts","eenmalig":true,"datum":"vrijdag"}]
+- "Stuur me overmorgen om 10:00 een bericht over mijn medicatie" → [{"categorie":"REMINDER","tijd":"10:00","tekst":"medicatie","eenmalig":true,"datum":"overmorgen"}]
+- "Stop de creatine reminder" → [{"categorie":"STOP_REMINDER","tekst":"creatine"}]
+- "Verwijder mijn reminder" → [{"categorie":"STOP_REMINDER","tekst":""}]
+- "Ik heb last van mijn rug na tuinwerk" → [{"categorie":"OVERIG","tekst":"Ik heb last van mijn rug na tuinwerk"}]
+- "Ik ben gisteren gaan hardlopen" → [{"categorie":"OVERIG","tekst":"Ik ben gisteren gaan hardlopen"}]
+- "Ik heb slecht geslapen vannacht" → [{"categorie":"OVERIG","tekst":"Ik heb slecht geslapen vannacht"}]
+- "Het was een drukke dag" → [{"categorie":"OVERIG","tekst":"Het was een drukke dag"}]
 
 Bericht: "${body.replace(/"/g, "'")}"
 
@@ -418,6 +469,8 @@ async function handleVraag(from, body, userData, history, clientContext) {
   const systemPrompt = buildSystemPrompt(tone, userData, clientContext)
   const messages   = [...history, { role: "user", content: body }]
 
+  console.log("=== [MESSAGES NAAR ANTHROPIC] ===", JSON.stringify(messages, null, 2))
+
   const aiResponse = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,
@@ -435,18 +488,136 @@ async function handleVraag(from, body, userData, history, clientContext) {
   await sendWhatsApp(from, reply)
 }
 
-async function handleOverig(from, body, userData) {
+async function handleOverig(from, body, userData, history = []) {
   console.log("=== [3] OVERIG — AI DOORVRAAG ===")
   const tone = getTone(userData?.streak ?? 0, userData?.missed_days ?? 0)
+  const messages = [...history, { role: "user", content: body }]
+
+  console.log("=== [MESSAGES NAAR ANTHROPIC] ===", JSON.stringify(messages, null, 2))
+
   const aiResponse = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 128,
     system: `${SYSTEM_PROMPTS[tone]}
 
-Je ontvangt een bericht dat je niet precies begrijpt. Reageer menselijk en nieuwsgierig. Stel één korte doorvraag om te begrijpen wat de gebruiker bedoelt of wat ze nodig hebben. Geen opsommingen, geen uitleg over wat je kunt doen.`,
-    messages: [{ role: "user", content: body }],
+Je ontvangt een bericht dat je niet precies begrijpt of dat buiten het domein van AXIS valt.
+
+Als het buiten het domein valt (reminders, agenda, taken buiten fitness): leg vriendelijk maar duidelijk uit wat AXIS wel en niet doet. Zeg: "Dat kan ik niet voor je doen — AXIS is geen reminder app. Wat ik wel doe: elke ochtend om 08:00 stuur ik je een check-in. Stuur me dan je commitment voor die dag."
+
+Als het onduidelijk is maar binnen het domein zou kunnen vallen: reageer menselijk en nieuwsgierig. Stel één korte doorvraag. Geen opsommingen, geen uitleg over wat je kunt doen.`,
+    messages,
   })
-  await sendWhatsApp(from, aiResponse.content[0].text)
+  const reply = aiResponse.content[0].text
+  await Promise.all([
+    saveConversation(userData?.id, "user", body),
+    saveConversation(userData?.id, "assistant", reply),
+  ])
+  await sendWhatsApp(from, reply)
+}
+
+function resolveDate(datum) {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  const d = (datum || "").toLowerCase().trim()
+  if (d === "morgen") {
+    today.setDate(today.getDate() + 1)
+    return today.toISOString().slice(0, 10)
+  }
+  if (d === "overmorgen") {
+    today.setDate(today.getDate() + 2)
+    return today.toISOString().slice(0, 10)
+  }
+  const weekdays = { maandag: 1, dinsdag: 2, woensdag: 3, donderdag: 4, vrijdag: 5, zaterdag: 6, zondag: 0 }
+  if (weekdays[d] !== undefined) {
+    const target = weekdays[d]
+    const current = today.getDay()
+    let diff = target - current
+    if (diff <= 0) diff += 7
+    today.setDate(today.getDate() + diff)
+    return today.toISOString().slice(0, 10)
+  }
+  // Already an ISO date string or unrecognized — return as-is if it looks like a date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  return null
+}
+
+function datumLabel(isoDate) {
+  if (!isoDate) return null
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  const todayStr = now.toISOString().slice(0, 10)
+  const tomorrowStr = new Date(new Date(now).setDate(now.getDate() + 1)).toISOString().slice(0, 10)
+  if (isoDate === tomorrowStr) return "morgen"
+  const date = new Date(isoDate)
+  return date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })
+}
+
+async function handleReminder(from, item, userData) {
+  console.log("=== [3] REMINDER AANMAKEN ===")
+  const userId = userData?.id
+  if (!userId) {
+    await sendWhatsApp(from, "Koppel eerst je account via de app om reminders in te stellen.")
+    return
+  }
+
+  const { tijd, tekst, eenmalig } = item
+  if (!tijd || !tekst) {
+    await sendWhatsApp(from, "Ik kon de tijd of tekst van je reminder niet herkennen. Probeer: \"Herinner me elke dag om 19:00 aan creatine\"")
+    return
+  }
+
+  const isEenmalig = !!eenmalig
+  const datum = isEenmalig ? resolveDate(item.datum) : null
+
+  if (isEenmalig && !datum) {
+    await sendWhatsApp(from, "Ik kon de datum niet herkennen. Probeer: \"Herinner me morgen om 09:00 aan mijn afspraak\"")
+    return
+  }
+
+  const { error } = await supabase
+    .from("reminders")
+    .insert({ user_id: userId, tekst, tijd, actief: true, eenmalig: isEenmalig, datum })
+
+  if (error) {
+    console.error("Reminder INSERT error:", error.message)
+    await sendWhatsApp(from, "Er ging iets mis bij het aanmaken van je reminder. Probeer het opnieuw.")
+    return
+  }
+
+  console.log("Reminder opgeslagen:", tekst, "om", tijd, "| eenmalig:", isEenmalig, "| datum:", datum)
+
+  if (isEenmalig) {
+    const label = datumLabel(datum)
+    await sendWhatsApp(from, `✅ Eenmalige reminder aangemaakt — ik stuur je ${label} om ${tijd} een berichtje over ${tekst}.`)
+  } else {
+    await sendWhatsApp(from, `✅ Reminder aangemaakt — ik stuur je elke dag om ${tijd} een berichtje over ${tekst}.`)
+  }
+}
+
+async function handleStopReminder(from, item, userData) {
+  console.log("=== [3] REMINDER STOPPEN ===")
+  const userId = userData?.id
+  if (!userId) {
+    await sendWhatsApp(from, "Koppel eerst je account via de app.")
+    return
+  }
+
+  let query = supabase.from("reminders").update({ actief: false }).eq("user_id", userId).eq("actief", true)
+
+  const tekst = item.tekst?.trim()
+  if (tekst) {
+    query = query.ilike("tekst", `%${tekst}%`)
+  }
+
+  const { error } = await query
+  if (error) {
+    console.error("Reminder stop error:", error.message)
+    await sendWhatsApp(from, "Er ging iets mis. Probeer het opnieuw.")
+    return
+  }
+
+  console.log("Reminder(s) gestopt voor user:", userId)
+  await sendWhatsApp(from, "Reminder gestopt.")
 }
 
 // ── Hoofdflow ─────────────────────────────────────────────────
@@ -482,12 +653,26 @@ async function handleMessage(from, body) {
     const items = await parseCheckin(body)
     console.log("Items na classificatie + override:", JSON.stringify(items))
 
-    const metrics     = items.filter((i) => i.categorie === "METRIC")
-    const commitments = items.filter((i) => i.categorie === "COMMITMENT")
-    const vragen      = items.filter((i) => i.categorie === "VRAAG")
-    const rustdagen   = items.filter((i) => i.categorie === "RUSTDAG")
+    const metrics      = items.filter((i) => i.categorie === "METRIC")
+    const commitments  = items.filter((i) => i.categorie === "COMMITMENT")
+    const vragen       = items.filter((i) => i.categorie === "VRAAG")
+    const rustdagen    = items.filter((i) => i.categorie === "RUSTDAG")
+    const reminders    = items.filter((i) => i.categorie === "REMINDER")
+    const stopReminders = items.filter((i) => i.categorie === "STOP_REMINDER")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length}`)
+
+    // Reminder intents — altijd direct afhandelen
+    if (reminders.length > 0) {
+      for (const item of reminders) {
+        await handleReminder(from, item, userData)
+      }
+      return
+    }
+    if (stopReminders.length > 0) {
+      await handleStopReminder(from, stopReminders[0], userData)
+      return
+    }
 
     // Enkelvoudige speciale gevallen
     if (items.length === 1) {
@@ -509,7 +694,8 @@ async function handleMessage(from, body) {
         return
       }
       if (items[0].categorie === "REFLECTIE" || items[0].categorie === "OVERIG") {
-        await handleOverig(from, body, userData)
+        const history = await getConversationHistory(userData?.id)
+        await handleOverig(from, body, userData, history)
         return
       }
       // Enkel rustdag → opslaan als commitment + AI reactie over herstel
@@ -639,7 +825,10 @@ async function handleMessage(from, body) {
 
     const confirmation = buildConfirmation(savedItems)
     if (confirmation) await sendWhatsApp(from, confirmation)
-    else await handleOverig(from, body, userData)
+    else {
+      const history = await getConversationHistory(userData?.id)
+      await handleOverig(from, body, userData, history)
+    }
 
   } catch (error) {
     console.error("=== [ERROR] ===")
