@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "raoul87@gmail.com"
+const COACH_EMAILS = ["raoul87@gmail.com", "jobbrinkman1998@gmail.com"]
 const GREEN = "#22c55e"
 const CARD_BG = "#111"
 const BORDER = "#1e1e1e"
@@ -144,18 +144,18 @@ export default function Dashboard() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
-      if (session.user.email !== ADMIN_EMAIL) { router.replace("/"); return }
+      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/"); return }
       setAuthProfile(session.user)
       setAuthorized(true)
     })
   }, [])
 
   useEffect(() => {
-    if (!authorized) return
-    loadAll()
-  }, [authorized])
+    if (!authorized || !authProfile) return
+    loadAll(authProfile.email)
+  }, [authorized, authProfile])
 
-  async function loadAll() {
+  async function loadAll(coachEmail) {
     setLoading(true)
     const now      = new Date()
     const today    = now.toISOString().split("T")[0]
@@ -172,7 +172,7 @@ export default function Dashboard() {
       { data: metricsRaw },
       { data: conversationsRaw },
     ] = await Promise.all([
-      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).order("id", { ascending: true }),
+      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).eq("coach_email", coachEmail).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
       supabase.from("commitments").select("user_id, text, done, date").gte("date", thirtyAgoStr).order("date", { ascending: false }).limit(500),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
@@ -790,7 +790,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p style={{ color: "#555", fontSize: 11, marginBottom: 4 }}>Email</p>
-                  <p style={{ color: "#aaa", fontSize: 14 }}>{authProfile?.email || ADMIN_EMAIL}</p>
+                  <p style={{ color: "#aaa", fontSize: 14 }}>{authProfile?.email || "—"}</p>
                 </div>
               </div>
             </div>
