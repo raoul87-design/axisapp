@@ -11,9 +11,21 @@ function firstName(name) {
   return name.trim().split(/\s+/)[0]
 }
 
-function morningMessage(name) {
+function morningMessage(name, kcalDoel, eiwittenDoel) {
   const fn = firstName(name)
   const greeting = fn ? `Goedemorgen ${fn}! 🌅` : `Goedemorgen! 🌅`
+
+  if (kcalDoel) {
+    const doelLines = [`- Kcal: ${kcalDoel}`]
+    if (eiwittenDoel) doelLines.push(`- Eiwitten: ${eiwittenDoel}g`)
+    return `${greeting} Stuur je check-in voor vandaag.
+
+Jouw doel vandaag:
+${doelLines.join("\n")}
+
+Commitment, gewicht en voeding zijn optioneel — stuur wat voor jou werkt.`
+  }
+
   return `${greeting} Stuur je check-in voor vandaag.
 
 Bijvoorbeeld:
@@ -39,7 +51,7 @@ export async function GET(request) {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, whatsapp_number, auth_user_id, name")
+      .select("id, whatsapp_number, auth_user_id, name, kcal_doel, eiwitten_doel")
       .not("whatsapp_number", "is", null)
 
     if (error) {
@@ -60,7 +72,7 @@ export async function GET(request) {
         const message = await client.messages.create({
           from,
           to: user.whatsapp_number,
-          body: morningMessage(user.name),
+          body: morningMessage(user.name, user.kcal_doel, user.eiwitten_doel),
         })
 
         console.log(`[${user.whatsapp_number}] SID: ${message.sid}`)
