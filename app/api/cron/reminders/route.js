@@ -16,27 +16,31 @@ function getNLTime() {
 export async function GET(request) {
   const authHeader = request.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 })
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } })
   }
 
   const { hour: currentTime, date: currentDate } = getNLTime()
   console.log(`=== [REMINDERS CRON] START === Tijd (NL): ${currentTime} | Datum: ${currentDate}`)
+  console.log("TWILIO_ACCOUNT_SID aanwezig:", !!process.env.TWILIO_ACCOUNT_SID)
+  console.log("TWILIO_AUTH_TOKEN aanwezig:", !!process.env.TWILIO_AUTH_TOKEN)
+  console.log("CRON_SECRET aanwezig:", !!process.env.CRON_SECRET)
 
   try {
-    // Fetch daily reminders (eenmalig = false or null) + one-time reminders for today
-    const { data: reminders, error } = await supabase
+    // Fetch all active reminders matching current time — filter eenmalig in JS to avoid complex PostgREST OR
+    const { data: allReminders, error } = await supabase
       .from("reminders")
       .select("id, tekst, tijd, eenmalig, datum, user_id, users(whatsapp_number, name)")
       .eq("actief", true)
       .eq("tijd", currentTime)
-      .or(`eenmalig.is.null,eenmalig.eq.false,and(eenmalig.eq.true,datum.eq.${currentDate})`)
 
     if (error) {
       console.error("Fout bij ophalen reminders:", error.message)
-      return new Response("DB error", { status: 500 })
+      return new Response(JSON.stringify({ error: "DB error", detail: error.message }), { status: 500, headers: { "Content-Type": "application/json" } })
     }
 
-    console.log(`${reminders.length} reminder(s) voor ${currentTime}`)
+    // Keep daily reminders (eenmalig falsy) + one-time reminders scheduled for today
+    const reminders = (allReminders ?? []).filter(r => !r.eenmalig || r.datum === currentDate)
+    console.log(`${allReminders.length} gevonden, ${reminders.length} geldig voor ${currentTime} op ${currentDate}`)
 
     const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     const results = []
@@ -84,6 +88,6 @@ export async function GET(request) {
     })
   } catch (error) {
     console.error("Cron error:", error.message)
-    return new Response("Internal error", { status: 500 })
+    return new Response(JSON.stringify({ error: "Internal error", detail: error.message }), { status: 500, headers: { "Content-Type": "application/json" } })
   }
 }
