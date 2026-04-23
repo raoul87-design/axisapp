@@ -97,7 +97,7 @@ function getNLDate() {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel")
+    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, coach_email")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -179,6 +179,21 @@ async function saveConversation(publicUserId, role, content) {
   else console.log("Conversation opgeslagen | role:", role)
 }
 
+async function getCoachFaq(coachEmail) {
+  if (!coachEmail) return []
+  const { data, error } = await supabase
+    .from("coach_faq")
+    .select("vraag, antwoord")
+    .eq("coach_email", coachEmail)
+    .eq("actief", true)
+    .order("created_at", { ascending: true })
+  if (error) {
+    console.error("Coach FAQ ophalen mislukt:", error.message)
+    return []
+  }
+  return data || []
+}
+
 // Haal client-specifieke context op: commitments, gewicht, kcal
 async function getClientContext(userData) {
   const userId = userData?.auth_user_id
@@ -217,7 +232,7 @@ async function getClientContext(userData) {
 }
 
 // Bouw een rijke system prompt met clientcontext en geheugeninstructies
-function buildSystemPrompt(tone, userData, clientContext) {
+function buildSystemPrompt(tone, userData, clientContext, faqItems = []) {
   const name       = userData?.name || null
   const streak     = userData?.streak     ?? 0
   const missedDays = userData?.missed_days ?? 0
@@ -288,7 +303,14 @@ WAT AXIS NIET DOET:
 
 Als iemand iets vraagt buiten dit domein: leg vriendelijk uit wat AXIS wel kan doen en stuur het gesprek terug naar commitment, metrics of coaching.`
 
-  return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}${scopeBlock}`
+  const faqBlock = faqItems.length > 0 ? `
+
+COACH FAQ — gebruik deze antwoorden als een client een vergelijkbare vraag stelt:
+${faqItems.map(f => `Q: ${f.vraag}\nA: ${f.antwoord}`).join("\n\n")}
+
+Staat een vraag niet in de FAQ? Gebruik normale AXIS kennis. Zeg NOOIT dat iets niet in de FAQ staat.` : ""
+
+  return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}${scopeBlock}${faqBlock}`
 }
 
 // ── WhatsApp verzenden ────────────────────────────────────────
@@ -480,10 +502,10 @@ async function handleReflection(from, body, userData) {
   console.log("Reflectie reply verstuurd")
 }
 
-async function handleVraag(from, body, userData, history, clientContext) {
+async function handleVraag(from, body, userData, history, clientContext, faqItems = []) {
   console.log("=== [3] VRAAG BEANTWOORDEN ===")
   const tone       = getTone(userData?.streak ?? 0, userData?.missed_days ?? 0)
-  const systemPrompt = buildSystemPrompt(tone, userData, clientContext)
+  const systemPrompt = buildSystemPrompt(tone, userData, clientContext, faqItems)
   const messages   = [...history, { role: "user", content: body }]
 
   console.log("=== [MESSAGES NAAR ANTHROPIC] ===", JSON.stringify(messages, null, 2))
@@ -693,6 +715,7 @@ async function handleMessage(from, body) {
     const missedDays      = userData?.missed_days     ?? 0
     const tone            = getTone(streak, missedDays)
     const awaitingReflection = userData?.awaiting_reflection ?? false
+    const faqItems        = await getCoachFaq(userData?.coach_email)
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
     console.log("Awaiting reflection:", awaitingReflection)
@@ -756,7 +779,7 @@ async function handleMessage(from, body) {
           getConversationHistory(userData?.id),
           getClientContext(userData),
         ])
-        await handleVraag(from, body, userData, history, clientContext)
+        await handleVraag(from, body, userData, history, clientContext, faqItems)
         return
       }
       if (items[0].categorie === "REFLECTIE" || items[0].categorie === "OVERIG") {
@@ -780,7 +803,7 @@ async function handleMessage(from, body) {
           getConversationHistory(userData?.id),
           getClientContext(userData),
         ])
-        const systemPrompt = buildSystemPrompt(tone, userData, clientContext) +
+        const systemPrompt = buildSystemPrompt(tone, userData, clientContext, faqItems) +
           `\n\nDe client meldt een rustdag. Bevestig in 1-2 zinnen dat rust essentieel is voor herstel en progressie. Vraag daarna vriendelijk of ze nog hun gewicht of calorieën willen doorgeven.`
         const aiResponse = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -823,7 +846,7 @@ async function handleMessage(from, body) {
           console.log("Commitment saved OK | user_id:", userId, "| text:", commitments[0].tekst)
         }
 
-        const systemPrompt = buildSystemPrompt(tone, userData, clientContext)
+        const systemPrompt = buildSystemPrompt(tone, userData, clientContext, faqItems)
         const messages     = [...history, { role: "user", content: body }]
 
         const aiResponse = await anthropic.messages.create({

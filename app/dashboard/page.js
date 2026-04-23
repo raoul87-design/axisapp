@@ -145,6 +145,12 @@ export default function Dashboard() {
   const [generatingInvite, setGeneratingInvite] = useState(false)
   const [copiedCode,       setCopiedCode]       = useState("")
 
+  const [faqItems,    setFaqItems]    = useState([])
+  const [showFaqModal, setShowFaqModal] = useState(false)
+  const [faqForm,     setFaqForm]     = useState({ vraag: "", antwoord: "" })
+  const [editingFaqId, setEditingFaqId] = useState(null)
+  const [savingFaq,   setSavingFaq]   = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
@@ -158,6 +164,7 @@ export default function Dashboard() {
     if (!authorized || !authProfile) return
     loadAll(authProfile.email)
     loadInviteLinks(authProfile.email)
+    loadFaq(authProfile.email)
   }, [authorized, authProfile])
 
   async function loadAll(coachEmail) {
@@ -211,6 +218,35 @@ export default function Dashboard() {
     setDeactivatedIds(prev => new Set([...prev, userId]))
     const { error } = await supabase.from("users").update({ active: false }).eq("id", userId)
     if (error) console.error("Deactivate failed:", error.message)
+  }
+
+  async function loadFaq(coachEmail) {
+    const { data } = await supabase
+      .from("coach_faq")
+      .select("id, vraag, antwoord, actief, created_at")
+      .eq("coach_email", coachEmail)
+      .order("created_at", { ascending: true })
+    setFaqItems(data || [])
+  }
+
+  async function saveFaq() {
+    if (!faqForm.vraag.trim() || !faqForm.antwoord.trim()) return
+    setSavingFaq(true)
+    if (editingFaqId) {
+      await supabase.from("coach_faq").update({ vraag: faqForm.vraag.trim(), antwoord: faqForm.antwoord.trim() }).eq("id", editingFaqId)
+    } else {
+      await supabase.from("coach_faq").insert({ coach_email: authProfile.email, vraag: faqForm.vraag.trim(), antwoord: faqForm.antwoord.trim(), actief: true })
+    }
+    await loadFaq(authProfile.email)
+    setShowFaqModal(false)
+    setFaqForm({ vraag: "", antwoord: "" })
+    setEditingFaqId(null)
+    setSavingFaq(false)
+  }
+
+  async function deleteFaq(id) {
+    await supabase.from("coach_faq").delete().eq("id", id)
+    setFaqItems(prev => prev.filter(f => f.id !== id))
   }
 
   async function loadInviteLinks(coachEmail) {
@@ -840,6 +876,57 @@ export default function Dashboard() {
               )
             })()}
 
+            {/* ── COACH FAQ ── */}
+            {(() => {
+              const atLimit = faqItems.length >= 20
+              return (
+                <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+                  <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center" }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0, flex: 1 }}>Coach FAQ</p>
+                    <button
+                      onClick={() => { setFaqForm({ vraag: "", antwoord: "" }); setEditingFaqId(null); setShowFaqModal(true) }}
+                      disabled={atLimit}
+                      style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${atLimit ? "#2a2a2a" : GREEN}`, background: atLimit ? "transparent" : "#0a1a0f", color: atLimit ? "#333" : GREEN, fontSize: 12, cursor: atLimit ? "default" : "pointer" }}
+                    >
+                      + Toevoegen
+                    </button>
+                  </div>
+
+                  {faqItems.length === 0 ? (
+                    <p style={{ padding: 24, color: "#333", fontSize: 13, textAlign: "center" }}>
+                      Nog geen FAQ items. Voeg vragen toe die je clients vaak stellen.
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {faqItems.map((faq, i) => (
+                        <div key={faq.id} style={{ padding: "16px 24px", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: 16, alignItems: "flex-start" }}>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ color: "#fff", fontSize: 13, fontWeight: "bold", margin: "0 0 6px" }}>{faq.vraag}</p>
+                            <p style={{ color: "#666", fontSize: 12, margin: 0, lineHeight: 1.5 }}>{faq.antwoord}</p>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                            <button
+                              onClick={() => { setFaqForm({ vraag: faq.vraag, antwoord: faq.antwoord }); setEditingFaqId(faq.id); setShowFaqModal(true) }}
+                              style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: "#666", fontSize: 11, cursor: "pointer" }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteFaq(faq.id)}
+                              style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid #2a1a1a`, background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {atLimit && <p style={{ padding: "8px 24px 16px", color: "#555", fontSize: 11, textAlign: "right" }}>Maximum van 20 items bereikt</p>}
+                </div>
+              )
+            })()}
+
           </div>
         )}
 
@@ -957,5 +1044,52 @@ export default function Dashboard() {
 
       </div>
     </div>
+
+    {/* ── FAQ MODAL ── */}
+    {showFaqModal && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+        <div style={{ background: "#111", border: `1px solid ${BORDER}`, borderRadius: 16, padding: 32, width: "100%", maxWidth: 500 }}>
+          <p style={{ fontSize: 16, fontWeight: "bold", color: "#fff", marginBottom: 24 }}>
+            {editingFaqId ? "FAQ item bewerken" : "FAQ item toevoegen"}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <p style={{ color: "#555", fontSize: 11, marginBottom: 6 }}>Vraag</p>
+              <input
+                value={faqForm.vraag}
+                onChange={e => setFaqForm(f => ({ ...f, vraag: e.target.value }))}
+                placeholder="Bijv. Hoeveel eiwitten heb ik nodig?"
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div>
+              <p style={{ color: "#555", fontSize: 11, marginBottom: 6 }}>Antwoord</p>
+              <textarea
+                value={faqForm.antwoord}
+                onChange={e => setFaqForm(f => ({ ...f, antwoord: e.target.value }))}
+                placeholder="Bijv. Streef naar 1.8-2g eiwit per kg lichaamsgewicht per dag."
+                rows={4}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }}
+              />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
+            <button
+              onClick={() => { setShowFaqModal(false); setFaqForm({ vraag: "", antwoord: "" }); setEditingFaqId(null) }}
+              style={{ padding: "9px 20px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: "#666", fontSize: 13, cursor: "pointer" }}
+            >
+              Annuleren
+            </button>
+            <button
+              onClick={saveFaq}
+              disabled={savingFaq || !faqForm.vraag.trim() || !faqForm.antwoord.trim()}
+              style={{ padding: "9px 20px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 13, cursor: savingFaq ? "default" : "pointer", opacity: savingFaq ? 0.6 : 1 }}
+            >
+              {savingFaq ? "Opslaan..." : "Opslaan"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
