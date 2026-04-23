@@ -97,7 +97,7 @@ function getNLDate() {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level")
+    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -258,7 +258,16 @@ Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 - Niet dezelfde vragen twee keer te stellen
 
 GEBRUIK VAN DE NAAM:
-${name ? `De client heet ${name}. Gebruik de voornaam maximaal 1x per gesprek — aan het begin of bij een belangrijk moment. Niet bij elk bericht herhalen.` : "Naam onbekend — spreek de client niet bij naam aan."}`
+${name ? `De client heet ${name}. Gebruik de voornaam maximaal 1x per gesprek — aan het begin of bij een belangrijk moment. Niet bij elk bericht herhalen.` : "Naam onbekend — spreek de client niet bij naam aan."}
+${userData?.kcal_doel ? `
+VOEDINGSDOEL CLIENT:
+Kcal doel: ${userData.kcal_doel} kcal/dag${userData.eiwitten_doel ? `\nEiwitten doel: ${userData.eiwitten_doel}g/dag` : ""}${userData.koolhydraten_doel ? `\nKoolhydraten doel: ${userData.koolhydraten_doel}g/dag` : ""}${userData.vetten_doel ? `\nVetten doel: ${userData.vetten_doel}g/dag` : ""}
+
+Als de client kcal of macros instuurt — vergelijk altijd met dit doel:
+- Bij afvallen: onder het kcal doel = goed, boven het doel = vriendelijk aanspreken en bijsturen
+- Bij aankomen/spiermassa: boven het doel = goed, onder het doel = aanmoedigen om meer te eten
+- Noem het verschil concreet: "Je zat ${userData.kcal_doel} kcal, dat is X onder/boven je doel"
+- Houd het kort en direct, max 2 zinnen over voeding` : ""}`
 
   const scopeBlock = `
 

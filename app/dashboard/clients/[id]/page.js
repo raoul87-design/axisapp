@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "raoul87@gmail.com"
+const COACH_EMAILS = ["raoul87@gmail.com", "jobbrinkman1998@gmail.com"]
 const GREEN  = "#22c55e"
 const BORDER = "#1e1e1e"
 const CARD   = "#111"
@@ -96,10 +96,17 @@ export default function ClientDetail() {
   const [conversations, setConversations] = useState([])
   const [activeTab, setActiveTab]     = useState("overview")
 
+  const [kcalDoel,         setKcalDoel]         = useState("")
+  const [eiwittenDoel,     setEiwittenDoel]      = useState("")
+  const [koolhydratenDoel, setKoolhydratenDoel]  = useState("")
+  const [vettenDoel,       setVettenDoel]        = useState("")
+  const [savingGoals,      setSavingGoals]       = useState(false)
+  const [goalsSaved,       setGoalsSaved]        = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
-      if (session.user.email !== ADMIN_EMAIL) { router.replace("/"); return }
+      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/"); return }
       setAuthorized(true)
     })
   }, [])
@@ -115,11 +122,15 @@ export default function ClientDetail() {
     const [
       { data: userData },
     ] = await Promise.all([
-      supabase.from("users").select("id, auth_user_id, name, whatsapp_number, streak, missed_days, awaiting_reflection").eq("id", id).single(),
+      supabase.from("users").select("id, auth_user_id, name, whatsapp_number, streak, missed_days, awaiting_reflection, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel").eq("id", id).single(),
     ])
 
     if (!userData) { setLoading(false); return }
     setUser(userData)
+    if (userData.kcal_doel)         setKcalDoel(String(userData.kcal_doel))
+    if (userData.eiwitten_doel)     setEiwittenDoel(String(userData.eiwitten_doel))
+    if (userData.koolhydraten_doel) setKoolhydratenDoel(String(userData.koolhydraten_doel))
+    if (userData.vetten_doel)       setVettenDoel(String(userData.vetten_doel))
 
     const uid = userData.auth_user_id || userData.id
 
@@ -195,6 +206,21 @@ export default function ClientDetail() {
     const day = completionByDay[ds]
     return { date: ds, label: d.getDate(), day: d.toLocaleDateString("nl-NL", { weekday: "short" }), state: !day ? "empty" : day.done > 0 ? "done" : "missed" }
   })
+
+  async function saveNutritionGoals() {
+    if (!kcalDoel || savingGoals) return
+    setSavingGoals(true)
+    await supabase.from("users").update({
+      kcal_doel:          parseInt(kcalDoel) || null,
+      eiwitten_doel:      eiwittenDoel      ? parseInt(eiwittenDoel)      : null,
+      koolhydraten_doel:  koolhydratenDoel  ? parseInt(koolhydratenDoel)  : null,
+      vetten_doel:        vettenDoel        ? parseInt(vettenDoel)        : null,
+      doelen_door_coach:  true,
+    }).eq("id", id)
+    setSavingGoals(false)
+    setGoalsSaved(true)
+    setTimeout(() => setGoalsSaved(false), 2500)
+  }
 
   const TABS = [
     { value: "overview", label: "Overview" },
@@ -318,6 +344,29 @@ export default function ClientDetail() {
                 )}
               </div>
             )}
+
+            {/* Voedingsdoelen */}
+            <div style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 20 }}>Voedingsdoelen</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 18 }}>
+                {[
+                  { label: "Kcal doel *", val: kcalDoel, set: setKcalDoel, placeholder: "bijv. 2000" },
+                  { label: "Eiwitten (g)", val: eiwittenDoel, set: setEiwittenDoel, placeholder: "bijv. 150" },
+                  { label: "Koolhydraten (g)", val: koolhydratenDoel, set: setKoolhydratenDoel, placeholder: "bijv. 200" },
+                  { label: "Vetten (g)", val: vettenDoel, set: setVettenDoel, placeholder: "bijv. 70" },
+                ].map(({ label, val, set, placeholder }) => (
+                  <div key={label}>
+                    <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>{label}</p>
+                    <input type="number" value={val} onChange={e => set(e.target.value)} placeholder={placeholder}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                ))}
+              </div>
+              <button onClick={saveNutritionGoals} disabled={!kcalDoel || savingGoals}
+                style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: goalsSaved ? "#0a1a0f" : (!kcalDoel || savingGoals ? "#1a1a1a" : GREEN), color: goalsSaved ? GREEN : (!kcalDoel || savingGoals ? "#444" : "#000"), fontWeight: "bold", fontSize: 13, cursor: (!kcalDoel || savingGoals) ? "default" : "pointer" }}>
+                {goalsSaved ? "✓ Opgeslagen" : savingGoals ? "Opslaan..." : "Opslaan"}
+              </button>
+            </div>
 
             {/* Recent commitments preview */}
             <div style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>

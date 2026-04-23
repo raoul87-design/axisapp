@@ -177,7 +177,7 @@ export default function Dashboard() {
       { data: metricsRaw },
       { data: conversationsRaw },
     ] = await Promise.all([
-      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection").not("whatsapp_number", "is", null).eq("coach_email", coachEmail).order("id", { ascending: true }),
+      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection, kcal_doel").not("whatsapp_number", "is", null).eq("coach_email", coachEmail).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
       supabase.from("commitments").select("user_id, text, done, date").gte("date", thirtyAgoStr).order("date", { ascending: false }).limit(500),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
@@ -320,6 +320,19 @@ export default function Dashboard() {
   const toneMap   = { brutal: "#ef4444", hard: "#f97316", medium: GREEN, soft: "#86efac" }
   const getToneLabel = (u) => { const m = u.missed_days || 0, s = u.streak || 0; return m >= 4 ? "brutal" : m >= 2 ? "hard" : s >= 7 ? "soft" : "medium" }
 
+  const getAvgKcal7d = (uid) => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+    const cutoffStr = cutoff.toISOString().split("T")[0]
+    const entries = metricsData.filter(m =>
+      m.user_id === uid &&
+      (m.type === "voeding" || m.type === "calorie" || m.type === "kcal") &&
+      m.datum >= cutoffStr
+    )
+    if (entries.length === 0) return null
+    const sum = entries.reduce((acc, m) => acc + (parseFloat(m.waarde) || 0), 0)
+    return Math.round(sum / entries.length)
+  }
+
   // ── Week / history commits ──
   const weekAgoStr    = (() => { const d = new Date(); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0] })()
   const weekCommits   = recentCommits.filter(c => c.date >= weekAgoStr)
@@ -447,7 +460,7 @@ export default function Dashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    {["Client", "Number", "Streak", "Missed", "Volume", "Weight", "Commitment", "Status"].map(h => (
+                    {["Client", "Number", "Streak", "Missed", "Volume", "Weight", "Kcal", "Commitment", "Status"].map(h => (
                       <th key={h} style={{ ...TH, padding: "10px 16px", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -481,6 +494,23 @@ export default function Dashboard() {
                               <p style={{ fontSize: 10, color: "#444", margin: "2px 0 0" }}>{fmtDate(w.datum)}</p>
                             </div>
                           ) : <span style={{ color: "#333", fontSize: 12 }}>—</span>}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          {(() => {
+                            const avg = getAvgKcal7d(user.auth_user_id)
+                            const doel = user.kcal_doel
+                            if (!avg) return <span style={{ color: "#333", fontSize: 12 }}>—</span>
+                            if (!doel) return <span style={{ fontSize: 12, color: "#888" }}>{avg}</span>
+                            const diff = avg - doel
+                            const arrow = diff > 50 ? { sym: "↑", color: "#ef4444" } : diff < -50 ? { sym: "↓", color: "#f97316" } : { sym: "→", color: GREEN }
+                            return (
+                              <div>
+                                <span style={{ fontSize: 13, color: "#fff" }}>{avg}</span>
+                                <span style={{ fontSize: 12, color: arrow.color, marginLeft: 4 }}>{arrow.sym}</span>
+                                <p style={{ fontSize: 10, color: "#444", margin: "2px 0 0" }}>doel {doel}</p>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td style={{ padding: "12px 16px", fontSize: 12, color: "#666", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {getTodayCommitmentText(user)}

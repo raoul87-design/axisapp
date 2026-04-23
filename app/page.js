@@ -39,6 +39,14 @@ const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
 const [chatLoading,     setChatLoading]    = useState(false)
 
+const [showNutritionModal, setShowNutritionModal] = useState(false)
+const [kcalDoel,           setKcalDoel]           = useState("")
+const [eiwittenDoel,       setEiwittenDoel]        = useState("")
+const [koolhydratenDoel,   setKoolhydratenDoel]    = useState("")
+const [vettenDoel,         setVettenDoel]          = useState("")
+const [doelenDoorCoach,    setDoelenDoorCoach]     = useState(false)
+const [savingGoals,        setSavingGoals]         = useState(false)
+
 // ── Voortgang state ───────────────────────────────────────────
 const [metricsWeight,    setMetricsWeight]    = useState([])
 const [metricsKcal,      setMetricsKcal]      = useState([])
@@ -184,10 +192,28 @@ async function loadCommitments() {
 }
 
 async function checkFirstUse() {
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level").eq("auth_user_id", user.id).single()
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach").eq("auth_user_id", user.id).single()
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
+  if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
+  if (data?.eiwitten_doel)     setEiwittenDoel(String(data.eiwitten_doel))
+  if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
+  if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
+  if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
+}
+
+async function saveNutritionGoals() {
+  if (!kcalDoel || savingGoals) return
+  setSavingGoals(true)
+  await supabase.from("users").update({
+    kcal_doel:          parseInt(kcalDoel) || null,
+    eiwitten_doel:      eiwittenDoel      ? parseInt(eiwittenDoel)      : null,
+    koolhydraten_doel:  koolhydratenDoel  ? parseInt(koolhydratenDoel)  : null,
+    vetten_doel:        vettenDoel        ? parseInt(vettenDoel)        : null,
+  }).eq("auth_user_id", user.id)
+  setSavingGoals(false)
+  setShowNutritionModal(false)
 }
 
 async function saveGoalData(goal, cw, tw) {
@@ -536,6 +562,47 @@ if (showOnboarding) {
   )
 }
 
+// ── Voedingsdoelen modal ──────────────────────────────────────
+if (showNutritionModal) {
+  const readonly = doelenDoorCoach
+  const inp = { width: "100%", padding: "11px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: readonly ? C.cardAlt : C.inputBg, color: readonly ? C.textMuted : C.text, fontSize: 14, boxSizing: "border-box", outline: "none" }
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, padding: "20px" }}>
+      <div style={{ width: "100%", maxWidth: 400, background: C.card, padding: 36, borderRadius: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, color: C.text, margin: 0 }}>Voedingsdoelen</h2>
+          <button onClick={() => setShowNutritionModal(false)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20 }}>×</button>
+        </div>
+        {readonly && (
+          <div style={{ background: "#0a1a0f", border: `1px solid #1a4d2a`, borderRadius: 8, padding: "10px 14px", marginBottom: 20 }}>
+            <p style={{ color: GREEN, fontSize: 13, margin: 0 }}>✓ Ingesteld door je coach</p>
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            { label: "Dagelijks kcal doel", val: kcalDoel, set: setKcalDoel, placeholder: "bijv. 2000", required: true },
+            { label: "Eiwitten (g)", val: eiwittenDoel, set: setEiwittenDoel, placeholder: "bijv. 150" },
+            { label: "Koolhydraten (g)", val: koolhydratenDoel, set: setKoolhydratenDoel, placeholder: "bijv. 200" },
+            { label: "Vetten (g)", val: vettenDoel, set: setVettenDoel, placeholder: "bijv. 70" },
+          ].map(({ label, val, set, placeholder, required }) => (
+            <div key={label}>
+              <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>{label}{required && " *"}</p>
+              <input type="number" value={val} onChange={e => !readonly && set(e.target.value)} readOnly={readonly}
+                placeholder={placeholder} style={inp} />
+            </div>
+          ))}
+        </div>
+        {!readonly && (
+          <button onClick={saveNutritionGoals} disabled={!kcalDoel || savingGoals}
+            style={{ width: "100%", marginTop: 20, padding: "13px", background: (!kcalDoel || savingGoals) ? C.cardAlt : GREEN, border: "none", borderRadius: 8, color: (!kcalDoel || savingGoals) ? C.textMuted : "#000", fontWeight: "bold", fontSize: 15, cursor: (!kcalDoel || savingGoals) ? "default" : "pointer" }}>
+            {savingGoals ? "Opslaan..." : "Opslaan"}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Hoofdapp ──────────────────────────────────────────────────
 const done = commitments.filter(c => c.done).length
 const total = commitments.length
@@ -594,6 +661,10 @@ return (
             <button onClick={async () => { setShowSettings(false); const number = prompt("Jouw WhatsApp nummer (+31...):"); if (!number) return; const ok = await linkWhatsapp(number); if (ok) alert("WhatsApp gekoppeld!") }}
               style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
               Koppel WhatsApp
+            </button>
+            <button onClick={() => { setShowSettings(false); setShowNutritionModal(true) }}
+              style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
+              🥗 Voedingsdoelen
             </button>
             <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
             <button onClick={logout}
