@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "../lib/supabase"
+import { supabase } from "../../lib/supabase"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 const GREEN = "#22c55e"
