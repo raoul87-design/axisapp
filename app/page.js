@@ -754,7 +754,9 @@ return (
 
       <div style={{ marginBottom: 32 }}>
         <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Commitments</p>
-        {commitments.length === 0 && <p style={{ color: C.textMuted, fontSize: 14 }}>Nog geen commitments voor vandaag.</p>}
+        {commitments.length === 0 && (
+          <p style={{ color: C.textMuted, fontSize: 13 }}>Voeg je eerste commitment toe om te beginnen.</p>
+        )}
         {commitments.slice(0, showAll ? commitments.length : 5).map(c => (
           <div key={c.id} onClick={() => toggleDone(c.id, c.done)}
             style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${C.borderSub}`, cursor: "pointer" }}>
@@ -779,31 +781,58 @@ return (
         )}
       </div>
 
-      <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Reflectie</p>
-        <div style={{ background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.borderSub}` }}>
-          <p style={{ fontSize: 15, marginBottom: 16, color: C.text }}>Heb je je commitments gehaald?</p>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => setCompleted(true)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === true ? "#166534" : C.cardAlt, color: completed === true ? GREEN : C.textSub, fontWeight: completed === true ? "bold" : "normal", fontSize: 14 }}>Ja</button>
-            <button onClick={() => setCompleted(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === false ? "#2a1a1a" : C.cardAlt, color: completed === false ? "#ef4444" : C.textSub, fontWeight: completed === false ? "bold" : "normal", fontSize: 14 }}>Nee</button>
-          </div>
-          {completed !== null && (
-            <div style={{ marginTop: 16 }}>
-              <p style={{ color: C.textSub, fontSize: 13, marginBottom: 8 }}>
-                {completed ? "Wat hielp je om consistent te blijven?" : "Wat stond je in de weg?"}
-              </p>
-              <textarea value={answer} onChange={e => setAnswer(e.target.value)}
-                placeholder="Schrijf je reflectie..." rows={3}
-                style={{ width: "100%", padding: 12, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 14, resize: "none", boxSizing: "border-box" }}
-              />
-              <button onClick={handleSubmit}
-                style={{ marginTop: 10, background: GREEN, color: "#000", padding: "10px 20px", borderRadius: 8, border: "none", fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>
-                Opslaan
-              </button>
+      {/* ── REFLECTIE (progressief) ──────────────────────────── */}
+      {total > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: 10, letterSpacing: 2, color: done > 0 ? C.textMuted : C.textDim, textTransform: "uppercase", marginBottom: 16, transition: "color 0.4s" }}>Reflectie</p>
+
+          {/* State 2 — niets afgevinkt */}
+          {done === 0 && (
+            <div style={{ background: C.card, borderRadius: 12, padding: "16px 20px", border: `1px solid ${C.borderSub}`, opacity: 0.45 }}>
+              <p style={{ fontSize: 14, color: C.textMuted, margin: 0 }}>Klaar voor vandaag? Vink af en reflecteer.</p>
+            </div>
+          )}
+
+          {/* State 3 — deels afgevinkt | State 4 — alles afgevinkt */}
+          {done > 0 && (
+            <div style={{
+              background: done === total ? "#0a1a0f" : C.card,
+              borderRadius: 12,
+              padding: 20,
+              border: `1px solid ${done === total ? "#1a4d2a" : C.borderSub}`,
+              boxShadow: done === total ? "0 0 20px #22c55e22" : "none",
+              animation: done === total ? "pulseGlow 2.5s ease-in-out infinite" : "none",
+              transition: "background 0.4s, border-color 0.4s, box-shadow 0.4s",
+            }}>
+              {done === total && (
+                <p style={{ color: GREEN, fontSize: 12, margin: "0 0 12px", letterSpacing: 0.5 }}>
+                  🎯 Alle commitments voltooid!
+                </p>
+              )}
+              <p style={{ fontSize: 15, marginBottom: 16, color: C.text }}>Heb je je commitments gehaald?</p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setCompleted(true)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === true ? "#166534" : C.cardAlt, color: completed === true ? GREEN : C.textSub, fontWeight: completed === true ? "bold" : "normal", fontSize: 14 }}>Ja</button>
+                <button onClick={() => setCompleted(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === false ? "#2a1a1a" : C.cardAlt, color: completed === false ? "#ef4444" : C.textSub, fontWeight: completed === false ? "bold" : "normal", fontSize: 14 }}>Nee</button>
+              </div>
+              {completed !== null && (
+                <div style={{ marginTop: 16 }}>
+                  <p style={{ color: C.textSub, fontSize: 13, marginBottom: 8 }}>
+                    {completed ? "Wat hielp je om consistent te blijven?" : "Wat stond je in de weg?"}
+                  </p>
+                  <textarea value={answer} onChange={e => setAnswer(e.target.value)}
+                    placeholder="Schrijf je reflectie..." rows={3}
+                    style={{ width: "100%", padding: 12, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 14, resize: "none", boxSizing: "border-box" }}
+                  />
+                  <button onClick={handleSubmit}
+                    style={{ marginTop: 10, background: GREEN, color: "#000", padding: "10px 20px", borderRadius: 8, border: "none", fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>
+                    Opslaan
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      )}
 
       <div style={{ marginBottom: 32 }}>
         <style>{`
