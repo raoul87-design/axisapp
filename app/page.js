@@ -1189,7 +1189,7 @@ return (
         placeholder="Voeg een commitment toe..."
         style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none" }}
       />
-      <button onClick={addCommitment} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: text ? GREEN : C.card, cursor: "pointer", fontSize: 22, color: text ? "#000" : C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+      <button onClick={() => addCommitment()} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: text ? GREEN : C.card, cursor: "pointer", fontSize: 22, color: text ? "#000" : C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
         +
       </button>
     </div>
