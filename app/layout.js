@@ -15,6 +15,10 @@ export const metadata = {
   title: "AXIS",
   description: "Commit. Execute. Reflect. Recover.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     title: "AXIS",
