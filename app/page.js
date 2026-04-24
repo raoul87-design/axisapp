@@ -39,6 +39,12 @@ const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
 const [chatLoading,     setChatLoading]    = useState(false)
 
+const [publicUserId,    setPublicUserId]    = useState(null)
+const [reminders,       setReminders]       = useState([])
+const [showAddReminder, setShowAddReminder] = useState(false)
+const [reminderForm,    setReminderForm]    = useState({ tekst: "", tijd: "" })
+const [savingReminder,  setSavingReminder]  = useState(false)
+
 const [showNutritionModal, setShowNutritionModal] = useState(false)
 const [kcalDoel,           setKcalDoel]           = useState("")
 const [eiwittenDoel,       setEiwittenDoel]        = useState("")
@@ -226,6 +232,42 @@ async function saveGoalData(goal, cw, tw) {
   }
 }
 
+async function loadReminders(pid) {
+  const { data } = await supabase
+    .from("reminders")
+    .select("id, tekst, tijd, actief, eenmalig, datum")
+    .eq("user_id", pid)
+    .order("tijd", { ascending: true })
+  setReminders(data || [])
+}
+
+async function toggleReminder(id, current) {
+  await supabase.from("reminders").update({ actief: !current }).eq("id", id)
+  setReminders(prev => prev.map(r => r.id === id ? { ...r, actief: !r.actief } : r))
+}
+
+async function deleteReminder(id) {
+  await supabase.from("reminders").delete().eq("id", id)
+  setReminders(prev => prev.filter(r => r.id !== id))
+}
+
+async function addReminder() {
+  if (!reminderForm.tekst.trim() || !reminderForm.tijd || !publicUserId || savingReminder) return
+  setSavingReminder(true)
+  await supabase.from("reminders").insert({
+    user_id: publicUserId,
+    tekst: reminderForm.tekst.trim(),
+    tijd: reminderForm.tijd,
+    actief: true,
+    eenmalig: false,
+    datum: null,
+  })
+  await loadReminders(publicUserId)
+  setShowAddReminder(false)
+  setReminderForm({ tekst: "", tijd: "" })
+  setSavingReminder(false)
+}
+
 async function loadHistory() {
   const { data } = await supabase
     .from("daily_results").select("date,score")
@@ -249,7 +291,10 @@ async function loadWeekData() {
   const { data: userData } = await supabase
     .from("users").select("id, missed_days").eq("auth_user_id", user.id).single()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
-  const publicUserId = userData?.id
+  const pid = userData?.id
+  setPublicUserId(pid)
+  if (pid) loadReminders(pid)
+  const publicUserId = pid
   const [{ data: checkIns }, { data: commits }] = await Promise.all([
     publicUserId
       ? supabase.from("check_ins").select("sent_at")
@@ -815,6 +860,78 @@ return (
             </>
           )
         })()}
+      </div>
+
+      {/* ── REMINDERS ──────────────────────────────────────────── */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Reminders</p>
+          <button
+            onClick={() => { setShowAddReminder(v => !v); setReminderForm({ tekst: "", tijd: "" }) }}
+            style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${showAddReminder ? C.border : GREEN}`, background: showAddReminder ? "transparent" : "#0a1a0f", color: showAddReminder ? C.textMuted : GREEN, fontSize: 12, cursor: "pointer" }}
+          >
+            {showAddReminder ? "Annuleren" : "+ Toevoegen"}
+          </button>
+        </div>
+
+        {showAddReminder && (
+          <div style={{ background: C.card, borderRadius: 10, padding: 16, marginBottom: 12, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input
+                value={reminderForm.tekst}
+                onChange={e => setReminderForm(f => ({ ...f, tekst: e.target.value }))}
+                placeholder="Bijv. creatine innemen"
+                style={{ padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none" }}
+              />
+              <input
+                type="time"
+                value={reminderForm.tijd}
+                onChange={e => setReminderForm(f => ({ ...f, tijd: e.target.value }))}
+                style={{ padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.tijd ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
+              />
+              <button
+                onClick={addReminder}
+                disabled={!reminderForm.tekst.trim() || !reminderForm.tijd || savingReminder}
+                style={{ padding: "11px", borderRadius: 8, border: "none", background: (reminderForm.tekst.trim() && reminderForm.tijd) ? GREEN : C.cardAlt, color: (reminderForm.tekst.trim() && reminderForm.tijd) ? "#000" : C.textMuted, fontWeight: "bold", fontSize: 14, cursor: (reminderForm.tekst.trim() && reminderForm.tijd) ? "pointer" : "default" }}
+              >
+                {savingReminder ? "Opslaan..." : "Opslaan"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {reminders.length === 0 && !showAddReminder && (
+          <p style={{ color: C.textMuted, fontSize: 13 }}>Geen reminders ingesteld.</p>
+        )}
+
+        {reminders.map(r => {
+          const isExpired = r.eenmalig && r.datum && r.datum < getNLDate()
+          return (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSub}` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, color: r.actief && !isExpired ? C.text : C.textMuted, margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.tekst}
+                </p>
+                <p style={{ fontSize: 11, color: C.textDim, margin: "3px 0 0" }}>
+                  {r.tijd} · {r.eenmalig ? (isExpired ? "verlopen" : `eenmalig ${r.datum}`) : "dagelijks"}
+                </p>
+              </div>
+              <button
+                onClick={() => toggleReminder(r.id, r.actief)}
+                disabled={isExpired}
+                style={{ width: 38, height: 22, borderRadius: 11, border: "none", background: r.actief && !isExpired ? GREEN : C.cardAlt, cursor: isExpired ? "default" : "pointer", position: "relative", flexShrink: 0, transition: "background 0.2s" }}
+              >
+                <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: r.actief && !isExpired ? 18 : 4, transition: "left 0.2s" }} />
+              </button>
+              <button
+                onClick={() => deleteReminder(r.id)}
+                style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
       </div>
 
     </div>
