@@ -142,7 +142,7 @@ export default function InvitePage() {
         .update({ gebruikt: true })
         .eq("code", code)
 
-      router.replace("/")
+      router.replace("/home")
     } catch (err) {
       console.error("Finishing onboarding failed:", err)
       setFinishing(false)

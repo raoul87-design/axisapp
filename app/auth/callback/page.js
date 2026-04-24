@@ -12,10 +12,10 @@ export default function AuthCallback() {
 
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(() => {
-        router.replace("/")
+        router.replace("/home")
       })
     } else {
-      router.replace("/")
+      router.replace("/home")
     }
   }, [])
 

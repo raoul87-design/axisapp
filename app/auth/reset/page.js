@@ -38,7 +38,7 @@ export default function ResetPassword() {
       setError(error.message)
     } else {
       alert("Wachtwoord opgeslagen! Je wordt ingelogd.")
-      router.replace("/")
+      router.replace("/home")
     }
   }
 

@@ -106,7 +106,7 @@ export default function ClientDetail() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
-      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/"); return }
+      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/home"); return }
       setAuthorized(true)
     })
   }, [])

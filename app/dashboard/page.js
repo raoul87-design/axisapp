@@ -154,7 +154,7 @@ export default function Dashboard() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
-      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/"); return }
+      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/home"); return }
       setAuthProfile(session.user)
       setAuthorized(true)
     })
