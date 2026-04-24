@@ -387,6 +387,7 @@ export default function Dashboard() {
   const TD = { padding: "13px 20px" }
 
   return (
+    <>
     <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif" }}>
       <Sidebar active={activeNav} setActive={setActiveNav} />
 
@@ -1091,5 +1092,6 @@ export default function Dashboard() {
         </div>
       </div>
     )}
+    </>
   )
 }
