@@ -688,33 +688,51 @@ return (
           ···
         </button>
         {showSettings && (
-          <div style={{ position: "absolute", right: 0, top: 32, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 0", minWidth: 190, zIndex: 100 }}>
-            <div style={{ padding: "6px 16px", color: C.textMuted, fontSize: 11 }}>{user?.email}</div>
-            <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
+          <div style={{ position: "absolute", right: 0, top: 36, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "6px 0", minWidth: 216, zIndex: 100, boxShadow: "0 8px 28px rgba(0,0,0,0.28)", overflow: "hidden" }}>
+            <style>{`.ax-menu-btn { transition: background 0.12s; } .ax-menu-btn:hover { background: ${theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"} !important; }`}</style>
+
+            {/* Email */}
+            <div style={{ padding: "8px 14px 10px" }}>
+              <p style={{ color: C.textDim, fontSize: 11, margin: 0, letterSpacing: 0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</p>
+            </div>
+
+            <div style={{ height: 1, background: C.borderSub }} />
+
+            {/* Thema */}
             {[{ val: "dark", label: "Dark", icon: "🌙" }, { val: "light", label: "Light", icon: "☀️" }].map(({ val, label, icon }) => (
               <button key={val} onClick={() => { toggleTheme(val); setShowSettings(false) }}
-                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: theme === val ? GREEN : "transparent", border: theme === val ? "none" : `1px solid ${C.border}`, flexShrink: 0 }} />
-                {icon} {label}
+                className="ax-menu-btn"
+                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 14px", background: "none", border: "none", color: C.text, cursor: "pointer", fontSize: 13, boxSizing: "border-box" }}>
+                <span style={{ fontSize: 14, width: 18, textAlign: "center" }}>{icon}</span>
+                <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
+                {theme === val && <div style={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, flexShrink: 0 }} />}
               </button>
             ))}
-            <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
-            <button onClick={async () => { setShowSettings(false); const pw = prompt("Nieuw wachtwoord (min. 6 tekens):"); if (!pw || pw.length < 6) return; const { error } = await supabase.auth.updateUser({ password: pw }); if (error) alert("Fout: " + error.message); else alert("Wachtwoord opgeslagen!") }}
-              style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
-              Wachtwoord instellen
-            </button>
-            <button onClick={async () => { setShowSettings(false); const number = prompt("Jouw WhatsApp nummer (+31...):"); if (!number) return; const ok = await linkWhatsapp(number); if (ok) alert("WhatsApp gekoppeld!") }}
-              style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
-              Koppel WhatsApp
-            </button>
-            <button onClick={() => { setShowSettings(false); setShowNutritionModal(true) }}
-              style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: C.text, textAlign: "left", cursor: "pointer", fontSize: 14 }}>
-              🥗 Voedingsdoelen
-            </button>
-            <hr style={{ border: "none", borderTop: `1px solid ${C.borderSub}`, margin: "4px 0" }} />
+
+            <div style={{ height: 1, background: C.borderSub, margin: "4px 0" }} />
+
+            {/* Acties */}
+            {[
+              { icon: "🔑", label: "Wachtwoord instellen", onClick: async () => { setShowSettings(false); const pw = prompt("Nieuw wachtwoord (min. 6 tekens):"); if (!pw || pw.length < 6) return; const { error } = await supabase.auth.updateUser({ password: pw }); if (error) alert("Fout: " + error.message); else alert("Wachtwoord opgeslagen!") } },
+              { icon: "💬", label: "Koppel WhatsApp",      onClick: async () => { setShowSettings(false); const number = prompt("Jouw WhatsApp nummer (+31...):"); if (!number) return; const ok = await linkWhatsapp(number); if (ok) alert("WhatsApp gekoppeld!") } },
+              { icon: "🥗", label: "Voedingsdoelen",       onClick: () => { setShowSettings(false); setShowNutritionModal(true) } },
+            ].map(({ icon, label, onClick }) => (
+              <button key={label} onClick={onClick}
+                className="ax-menu-btn"
+                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 14px", background: "none", border: "none", color: C.text, cursor: "pointer", fontSize: 13, boxSizing: "border-box" }}>
+                <span style={{ fontSize: 14, width: 18, textAlign: "center" }}>{icon}</span>
+                <span style={{ textAlign: "left" }}>{label}</span>
+              </button>
+            ))}
+
+            <div style={{ height: 1, background: C.borderSub, margin: "4px 0" }} />
+
+            {/* Uitloggen */}
             <button onClick={logout}
-              style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#ef4444", textAlign: "left", cursor: "pointer", fontSize: 14 }}>
-              Uitloggen
+              className="ax-menu-btn"
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 14px", background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, boxSizing: "border-box" }}>
+              <span style={{ fontSize: 13, width: 18, textAlign: "center" }}>⏻</span>
+              <span style={{ textAlign: "left" }}>Uitloggen</span>
             </button>
           </div>
         )}
