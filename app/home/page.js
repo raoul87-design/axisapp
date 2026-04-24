@@ -42,7 +42,7 @@ const [chatLoading,     setChatLoading]    = useState(false)
 const [publicUserId,    setPublicUserId]    = useState(null)
 const [reminders,       setReminders]       = useState([])
 const [showAddReminder, setShowAddReminder] = useState(false)
-const [reminderForm,    setReminderForm]    = useState({ tekst: "", tijd: "" })
+const [reminderForm,    setReminderForm]    = useState({ tekst: "", tijd: "", eenmalig: false, datum: "" })
 const [savingReminder,  setSavingReminder]  = useState(false)
 
 const [showNutritionModal, setShowNutritionModal] = useState(false)
@@ -117,6 +117,17 @@ function fmtShortDate(d) {
   if (!d) return ""
   const p = d.split("-")
   return p.length === 3 ? `${p[2]}/${p[1]}` : d
+}
+function fmtTime(tijd) {
+  if (!tijd) return ""
+  return tijd.slice(0, 5)
+}
+function fmtReminderDate(datum) {
+  if (!datum) return ""
+  const d = new Date(datum + "T12:00:00")
+  const dag = ["Zondag","Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag"][d.getDay()]
+  const maand = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][d.getMonth()]
+  return `${dag} ${d.getDate()} ${maand}`
 }
 function parseMetricValue(raw) {
   if (!raw) return null
@@ -252,19 +263,20 @@ async function deleteReminder(id) {
 }
 
 async function addReminder() {
-  if (!reminderForm.tekst.trim() || !reminderForm.tijd || !publicUserId || savingReminder) return
+  const formOk = reminderForm.tekst.trim() && reminderForm.tijd && (!reminderForm.eenmalig || reminderForm.datum)
+  if (!formOk || !publicUserId || savingReminder) return
   setSavingReminder(true)
   await supabase.from("reminders").insert({
     user_id: publicUserId,
     tekst: reminderForm.tekst.trim(),
     tijd: reminderForm.tijd,
     actief: true,
-    eenmalig: false,
-    datum: null,
+    eenmalig: reminderForm.eenmalig,
+    datum: reminderForm.eenmalig ? reminderForm.datum : null,
   })
   await loadReminders(publicUserId)
   setShowAddReminder(false)
-  setReminderForm({ tekst: "", tijd: "" })
+  setReminderForm({ tekst: "", tijd: "", eenmalig: false, datum: "" })
   setSavingReminder(false)
 }
 
@@ -914,7 +926,7 @@ return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Reminders</p>
           <button
-            onClick={() => { setShowAddReminder(v => !v); setReminderForm({ tekst: "", tijd: "" }) }}
+            onClick={() => { setShowAddReminder(v => !v); setReminderForm({ tekst: "", tijd: "", eenmalig: false, datum: "" }) }}
             style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${showAddReminder ? C.border : GREEN}`, background: showAddReminder ? "transparent" : "#0a1a0f", color: showAddReminder ? C.textMuted : GREEN, fontSize: 12, cursor: "pointer" }}
           >
             {showAddReminder ? "Annuleren" : "+ Toevoegen"}
@@ -930,19 +942,48 @@ return (
                 placeholder="Bijv. creatine innemen"
                 style={{ padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none" }}
               />
-              <input
-                type="time"
-                value={reminderForm.tijd}
-                onChange={e => setReminderForm(f => ({ ...f, tijd: e.target.value }))}
-                style={{ padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.tijd ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
-              />
-              <button
-                onClick={addReminder}
-                disabled={!reminderForm.tekst.trim() || !reminderForm.tijd || savingReminder}
-                style={{ padding: "11px", borderRadius: 8, border: "none", background: (reminderForm.tekst.trim() && reminderForm.tijd) ? GREEN : C.cardAlt, color: (reminderForm.tekst.trim() && reminderForm.tijd) ? "#000" : C.textMuted, fontWeight: "bold", fontSize: 14, cursor: (reminderForm.tekst.trim() && reminderForm.tijd) ? "pointer" : "default" }}
-              >
-                {savingReminder ? "Opslaan..." : "Opslaan"}
-              </button>
+
+              {/* Type toggle */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {[{ val: false, label: "Dagelijks" }, { val: true, label: "Eenmalig" }].map(({ val, label }) => (
+                  <button key={label} onClick={() => setReminderForm(f => ({ ...f, eenmalig: val, datum: "" }))}
+                    style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1px solid ${reminderForm.eenmalig === val ? GREEN : C.inputBorder}`, background: reminderForm.eenmalig === val ? "#0a1a0f" : C.inputBg, color: reminderForm.eenmalig === val ? GREEN : C.textSub, fontSize: 13, fontWeight: reminderForm.eenmalig === val ? "bold" : "normal", cursor: "pointer" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tijd + optioneel datum */}
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="time"
+                  value={reminderForm.tijd}
+                  onChange={e => setReminderForm(f => ({ ...f, tijd: e.target.value }))}
+                  style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.tijd ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
+                />
+                {reminderForm.eenmalig && (
+                  <input
+                    type="date"
+                    value={reminderForm.datum}
+                    min={getNLDate()}
+                    onChange={e => setReminderForm(f => ({ ...f, datum: e.target.value }))}
+                    style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.datum ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
+                  />
+                )}
+              </div>
+
+              {(() => {
+                const formOk = reminderForm.tekst.trim() && reminderForm.tijd && (!reminderForm.eenmalig || reminderForm.datum)
+                return (
+                  <button
+                    onClick={addReminder}
+                    disabled={!formOk || savingReminder}
+                    style={{ padding: "11px", borderRadius: 8, border: "none", background: formOk ? GREEN : C.cardAlt, color: formOk ? "#000" : C.textMuted, fontWeight: "bold", fontSize: 14, cursor: formOk ? "pointer" : "default" }}
+                  >
+                    {savingReminder ? "Opslaan..." : "Opslaan"}
+                  </button>
+                )
+              })()}
             </div>
           </div>
         )}
@@ -953,14 +994,19 @@ return (
 
         {reminders.map(r => {
           const isExpired = r.eenmalig && r.datum && r.datum < getNLDate()
+          const timeLabel = fmtTime(r.tijd)
+          const subLabel  = r.eenmalig
+            ? (isExpired ? "Verlopen" : fmtReminderDate(r.datum))
+            : "Dagelijks"
+          const subColor  = isExpired ? "#7a3030" : C.textDim
           return (
             <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSub}` }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 14, color: r.actief && !isExpired ? C.text : C.textMuted, margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {r.tekst}
                 </p>
-                <p style={{ fontSize: 11, color: C.textDim, margin: "3px 0 0" }}>
-                  {r.tijd} · {r.eenmalig ? (isExpired ? "verlopen" : `eenmalig ${r.datum}`) : "dagelijks"}
+                <p style={{ fontSize: 11, color: subColor, margin: "3px 0 0" }}>
+                  {timeLabel} · {subLabel}
                 </p>
               </div>
               <button
