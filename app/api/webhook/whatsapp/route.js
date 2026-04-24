@@ -477,8 +477,10 @@ function buildConfirmation(savedItems) {
 async function handleReflection(from, body, userData) {
   console.log("=== [3] REFLECTIE VERWERKEN ===")
   const { streak, missed_days: missedDays, auth_user_id: authUserId, id } = userData
+  // [BUG3 FIX] Geen conversation history — alleen streak/reflectie data, geïsoleerde context
   const normalized = body.trim().toLowerCase()
-  const completed  = normalized === "ja" || normalized === "yes"
+  // Ruimere matching: ja/yes/done/top/ok/👍 = afgerond
+  const completed  = /^(ja|yes|done|top|ok|oké|👍|👌|✅|goed|klaar|prima|super|fijn)\.?$/i.test(normalized)
 
   if (authUserId) {
     await supabase.from("reflections").insert({ user_id: authUserId, completed, answer: body })
@@ -703,6 +705,9 @@ async function handleReminderLijst(from, userData) {
   await sendWhatsApp(from, reply)
 }
 
+// Korte bevestigingen die alleen een ACK verdienen (reminder replies, etc.)
+const SHORT_ACK_RE = /^(done|top|ok|oké|oke|👍|👌|✅|goed|check|klaar|thanks|bedankt|super|fijn|prima|yes|yep|ja|nee|nope|no)\.?$/i
+
 // ── Hoofdflow ─────────────────────────────────────────────────
 
 async function handleMessage(from, body) {
@@ -715,21 +720,30 @@ async function handleMessage(from, body) {
     const missedDays      = userData?.missed_days     ?? 0
     const tone            = getTone(streak, missedDays)
     const awaitingReflection = userData?.awaiting_reflection ?? false
-    const faqItems        = await getCoachFaq(userData?.coach_email)
 
     console.log("Streak:", streak, "| MissedDays:", missedDays, "| Toon:", tone)
     console.log("Awaiting reflection:", awaitingReflection)
+
+    // [BUG2 FIX] Reflectie check VOOR delay en classificatie — directe afhandeling, geen history nodig
+    if (awaitingReflection) {
+      console.log("=== [REFLECTIE PRIORITEIT — geen delay] ===")
+      await handleReflection(from, body, userData)
+      return
+    }
+
+    // [BUG1 FIX] Korte bevestiging (reminder reply) — geen AI, geen classificatie
+    if (SHORT_ACK_RE.test(body.trim())) {
+      console.log("=== [SHORT ACK] Reminder reply — geen verdere verwerking ===")
+      await sendWhatsApp(from, "✅ Genoteerd!")
+      return
+    }
 
     // Menselijke vertraging: 30-90 seconden (vereist Vercel Pro timeout > 90s)
     const delaySec = Math.floor(Math.random() * 61) + 30
     console.log(`=== [DELAY] ${delaySec}s ===`)
     await new Promise(r => setTimeout(r, delaySec * 1000))
 
-    // Reflectie heeft prioriteit — geen AI, geen geheugen nodig
-    if (awaitingReflection) {
-      await handleReflection(from, body, userData)
-      return
-    }
+    const faqItems = await getCoachFaq(userData?.coach_email)
 
     // Parse het bericht (override zit al in parseCheckin)
     console.log("=== [3] BERICHT PARSEN ===")
