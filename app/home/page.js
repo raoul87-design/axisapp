@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
 
 const GREEN = "#22c55e"
 const TAB_H = 56
@@ -59,6 +59,9 @@ const [metricsKcal,      setMetricsKcal]      = useState([])
 const [progressHistory,  setProgressHistory]  = useState([])
 const [longestStreak,    setLongestStreak]    = useState(0)
 const [totalActiveDays,  setTotalActiveDays]  = useState(0)
+const [weightPeriod,     setWeightPeriod]     = useState("30d")
+const [kcalPeriod,       setKcalPeriod]       = useState("7d")
+const [doelGewicht,      setDoelGewicht]      = useState(null)
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -209,7 +212,7 @@ async function loadCommitments() {
 }
 
 async function checkFirstUse() {
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach").eq("auth_user_id", user.id).single()
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).single()
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
   if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
@@ -217,6 +220,7 @@ async function checkFirstUse() {
   if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
+  if (data?.target_weight)   setDoelGewicht(data.target_weight)
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
 
@@ -328,10 +332,10 @@ async function loadProgressData() {
   ] = await Promise.all([
     supabase.from("metrics").select("waarde, datum")
       .eq("user_id", user.id).eq("type", "gewicht")
-      .order("datum", { ascending: true }).limit(14),
+      .order("datum", { ascending: true }).limit(200),
     supabase.from("metrics").select("waarde, datum")
       .eq("user_id", user.id).in("type", ["voeding", "calorie", "kcal"])
-      .order("datum", { ascending: true }).limit(14),
+      .order("datum", { ascending: true }).limit(200),
     supabase.from("daily_results").select("date, score")
       .eq("user_id", user.id).order("date", { ascending: false }),
   ])
@@ -434,11 +438,42 @@ useEffect(() => {
 const suggestions = ["Hoe houd ik mijn streak vol?", "Tips voor vandaag", "Ik struggle"]
 
 // ── Voortgang chart data ───────────────────────────────────────
-const weightChartData = metricsWeight
+function periodStartDate(period) {
+  const d = new Date()
+  d.setDate(d.getDate() - (period === "7d" ? 7 : period === "30d" ? 30 : 90))
+  return d.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
+
+function linearTrend(data) {
+  const n = data.length
+  if (n < 2) return data.map(d => ({ ...d, trend: d.value }))
+  const sumX = (n * (n - 1)) / 2
+  const sumY = data.reduce((s, d) => s + d.value, 0)
+  const sumXY = data.reduce((s, d, i) => s + i * d.value, 0)
+  const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
+  const denom = n * sumX2 - sumX * sumX
+  if (denom === 0) return data.map(d => ({ ...d, trend: d.value }))
+  const sl = (n * sumXY - sumX * sumY) / denom
+  const ic = (sumY - sl * sumX) / n
+  return data.map((d, i) => ({ ...d, trend: Math.round((sl * i + ic) * 10) / 10 }))
+}
+
+const wStart = periodStartDate(weightPeriod)
+const kStart = periodStartDate(kcalPeriod)
+
+const weightFiltered = metricsWeight
+  .filter(m => m.datum >= wStart)
   .map(m => ({ label: fmtShortDate(m.datum), value: parseMetricValue(m.waarde) }))
   .filter(d => d.value !== null)
 
+const weightChartData = linearTrend(weightFiltered)
+
+const weightTrendDelta = weightFiltered.length >= 2
+  ? Math.round((weightFiltered[weightFiltered.length - 1].value - weightFiltered[0].value) * 10) / 10
+  : null
+
 const kcalChartData = metricsKcal
+  .filter(m => m.datum >= kStart)
   .map(m => ({ label: fmtShortDate(m.datum), value: parseMetricValue(m.waarde) }))
   .filter(d => d.value !== null)
 
@@ -666,13 +701,30 @@ const total = commitments.length
 const circumference = 2 * Math.PI * 36
 const todayState = total === 0 ? 1 : done === 0 ? 2 : done < total ? 3 : 4
 
+// Period selector
+const PeriodSelector = ({ options, value, onChange }) => (
+  <div style={{ display: "flex", gap: 4 }}>
+    {options.map(opt => (
+      <button key={opt} onClick={() => onChange(opt)} style={{
+        padding: "3px 9px", borderRadius: 5,
+        border: `1px solid ${value === opt ? GREEN : C.border}`,
+        background: value === opt ? GREEN + "22" : "transparent",
+        color: value === opt ? GREEN : C.textMuted,
+        fontSize: 10, fontWeight: value === opt ? "bold" : "normal",
+        cursor: "pointer", letterSpacing: 0.5,
+      }}>{opt}</button>
+    ))}
+  </div>
+)
+
 // Recharts custom tooltip
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
+  const main = payload.find(p => p.dataKey === "value") || payload[0]
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
       <p style={{ color: C.textMuted, margin: "0 0 4px" }}>{label}</p>
-      <p style={{ color: GREEN, margin: 0, fontWeight: "bold" }}>{payload[0].value}</p>
+      <p style={{ color: GREEN, margin: 0, fontWeight: "bold" }}>{main.value}</p>
     </div>
   )
 }
@@ -1066,7 +1118,10 @@ return (
 
       {/* Sectie 2 — Gewicht trend */}
       <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Gewicht</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Gewicht</p>
+          <PeriodSelector options={["7d", "30d", "90d"]} value={weightPeriod} onChange={setWeightPeriod} />
+        </div>
         {weightChartData.length >= 2 ? (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
             {latestWeight && (
@@ -1075,14 +1130,28 @@ return (
                 <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 10 }}>{fmtShortDate(latestWeight.datum)}</span>
               </div>
             )}
-            <ResponsiveContainer width="100%" height={140}>
-              <LineChart data={weightChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+            <ResponsiveContainer width="100%" height={160}>
+              <LineChart data={weightChartData} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                 <XAxis dataKey="label" tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis domain={["auto", "auto"]} tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip content={<ChartTooltip />} />
+                {doelGewicht && (
+                  <ReferenceLine y={doelGewicht} stroke="#555" strokeDasharray="4 2"
+                    label={{ value: `doel ${doelGewicht}kg`, fill: "#666", fontSize: 9, position: "insideTopRight" }} />
+                )}
                 <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: GREEN }} />
+                <Line type="monotone" dataKey="trend" stroke="#555" strokeWidth={1} strokeDasharray="4 2" dot={false} activeDot={false} />
               </LineChart>
             </ResponsiveContainer>
+            {weightTrendDelta !== null && (
+              <p style={{ fontSize: 11, color: C.textDim, marginTop: 12, textAlign: "right" }}>
+                Trend:{" "}
+                <span style={{ color: weightTrendDelta < 0 ? GREEN : weightTrendDelta > 0 ? "#ef4444" : C.textMuted, fontWeight: "bold" }}>
+                  {weightTrendDelta > 0 ? "↑" : weightTrendDelta < 0 ? "↓" : "→"} {Math.abs(weightTrendDelta)}kg
+                </span>
+                {" "}in {weightPeriod === "7d" ? "7 dagen" : weightPeriod === "30d" ? "30 dagen" : "90 dagen"}
+              </p>
+            )}
           </div>
         ) : (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
@@ -1096,20 +1165,38 @@ return (
 
       {/* Sectie 3 — Voeding trend */}
       <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Voeding</p>
-        {kcalChartData.length >= 2 ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Voeding</p>
+          <PeriodSelector options={["7d", "30d"]} value={kcalPeriod} onChange={setKcalPeriod} />
+        </div>
+        {kcalChartData.length >= 1 ? (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
               <span style={{ fontSize: 28, fontWeight: "bold", color: C.text }}>{avgKcal}</span>
-              <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 10 }}>gem. kcal / dag</span>
+              <span style={{ fontSize: 12, color: C.textMuted }}>gem. kcal / dag</span>
+              {kcalDoel && (
+                <span style={{ fontSize: 12, color: C.textDim, marginLeft: 8 }}>
+                  doel <span style={{ color: avgKcal >= parseInt(kcalDoel) * 0.9 ? GREEN : "#ef4444" }}>{kcalDoel}</span>
+                </span>
+              )}
             </div>
             <ResponsiveContainer width="100%" height={140}>
-              <LineChart data={kcalChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <BarChart data={kcalChartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} barSize={kcalChartData.length > 15 ? 6 : 12}>
                 <XAxis dataKey="label" tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis domain={["auto", "auto"]} tick={{ fill: C.textDim, fontSize: 9 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: GREEN }} />
-              </LineChart>
+                {kcalDoel && parseInt(kcalDoel) > 0 && (
+                  <ReferenceLine y={parseInt(kcalDoel)} stroke="#555" strokeDasharray="4 2"
+                    label={{ value: "doel", fill: "#555", fontSize: 9, position: "insideTopRight" }} />
+                )}
+                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+                  {kcalChartData.map((d, i) => (
+                    <Cell key={i} fill={kcalDoel && parseInt(kcalDoel) > 0
+                      ? (d.value >= parseInt(kcalDoel) ? GREEN : "#ef444466")
+                      : GREEN} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         ) : (
@@ -1122,9 +1209,9 @@ return (
         )}
       </div>
 
-      {/* Sectie 4 — Commitments 4-weken grid */}
+      {/* Sectie 4 — Commitments 8-weken grid */}
       <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Afgelopen 4 weken</p>
+        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Afgelopen 8 weken</p>
         <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "16px 14px" }}>
           {(() => {
             const scoreMap = {}
@@ -1138,9 +1225,9 @@ return (
             thisMonday.setDate(todayD.getDate() - daysToMon)
 
             const startMonday = new Date(thisMonday)
-            startMonday.setDate(thisMonday.getDate() - 21)
+            startMonday.setDate(thisMonday.getDate() - 49)
 
-            const weeks = Array.from({ length: 4 }, (_, w) =>
+            const weeks = Array.from({ length: 8 }, (_, w) =>
               Array.from({ length: 7 }, (_, d) => {
                 const date = new Date(startMonday)
                 date.setDate(startMonday.getDate() + w * 7 + d)
@@ -1152,7 +1239,7 @@ return (
             return (
               <>
                 {/* Header row */}
-                <div style={{ display: "grid", gridTemplateColumns: "32px repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "40px repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
                   <div />
                   {dagNamen.map(d => (
                     <div key={d} style={{ textAlign: "center", fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>{d}</div>
@@ -1160,11 +1247,20 @@ return (
                 </div>
                 {/* Week rows */}
                 {weeks.map((week, wi) => {
-                  const weekLabel = wi === 3 ? "nu" : `−${3 - wi}w`
+                  const pastDays = week.filter(date => date <= today && scoreMap[date] !== undefined)
+                  const weekScore = pastDays.length > 0
+                    ? Math.round(pastDays.filter(date => scoreMap[date] > 0).length / pastDays.length * 100)
+                    : null
+                  const weekLabel = wi === 7 ? "nu" : `−${7 - wi}w`
                   return (
-                    <div key={wi} style={{ display: "grid", gridTemplateColumns: "32px repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6 }}>
+                    <div key={wi} style={{ display: "grid", gridTemplateColumns: "40px repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", paddingRight: 6 }}>
                         <span style={{ fontSize: 9, color: C.textDim }}>{weekLabel}</span>
+                        {weekScore !== null && (
+                          <span style={{ fontSize: 8, marginTop: 1, color: weekScore >= 80 ? GREEN : weekScore >= 50 ? "#f97316" : "#ef4444" }}>
+                            {weekScore}%
+                          </span>
+                        )}
                       </div>
                       {week.map(date => {
                         const isFuture = date > today
