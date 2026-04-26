@@ -345,6 +345,13 @@ Geef terug als JSON array. Elk object heeft:
 - Voor STOP_REMINDER ook: "tekst" (optioneel — wat gestopt moet worden, bijv. "creatine")
 - Voor alle andere categorieën ook: "tekst" (de originele tekst van dit onderdeel)
 
+WORKOUT_LOG = een melding van voltooide trainingssets (oefeningen gedaan):
+- Bevat oefening + sets + reps, eventueel gewicht
+- Sleutelwoorden: "bench press", "squat", "deadlift", "sets", "reps", gekombineerd met "gedaan", "klaar", "gedaan", "afgerond"
+- Geef terug als: {"categorie":"WORKOUT_LOG","oefeningen":[{"naam":"...","sets":3,"reps":10,"gewicht":80},...]}
+- gewicht is optioneel (null als niet vermeld)
+- Dit is GEEN COMMITMENT (gaat over het verleden, al gedaan)
+
 Regels — lees deze zorgvuldig:
 
 COMMITMENT = een actie die iemand VAN PLAN IS te gaan doen (toekomst of intentie):
@@ -411,6 +418,9 @@ Voorbeelden:
 - "Verwijder al mijn reminders" → [{"categorie":"STOP_REMINDER","tekst":"","alle":true}]
 - "Welke reminders heb ik?" → [{"categorie":"REMINDER_LIJST","tekst":""}]
 - "Toon mijn reminders" → [{"categorie":"REMINDER_LIJST","tekst":""}]
+- "Bench press 3x8 80kg, squat 3x10 70kg" → [{"categorie":"WORKOUT_LOG","oefeningen":[{"naam":"Bench Press","sets":3,"reps":8,"gewicht":80},{"naam":"Squat","sets":3,"reps":10,"gewicht":70}]}]
+- "Workout klaar: push-up 3x15, lat pulldown 3x10 60kg" → [{"categorie":"WORKOUT_LOG","oefeningen":[{"naam":"Push-up","sets":3,"reps":15,"gewicht":null},{"naam":"Lat Pulldown","sets":3,"reps":10,"gewicht":60}]}]
+- "Deadlift 80kg 3x5 gedaan" → [{"categorie":"WORKOUT_LOG","oefeningen":[{"naam":"Deadlift","sets":3,"reps":5,"gewicht":80}]}]
 - "Ik heb last van mijn rug na tuinwerk" → [{"categorie":"OVERIG","tekst":"Ik heb last van mijn rug na tuinwerk"}]
 - "Ik ben gisteren gaan hardlopen" → [{"categorie":"OVERIG","tekst":"Ik ben gisteren gaan hardlopen"}]
 - "Ik heb slecht geslapen vannacht" → [{"categorie":"OVERIG","tekst":"Ik heb slecht geslapen vannacht"}]
@@ -705,6 +715,66 @@ async function handleReminderLijst(from, userData) {
   await sendWhatsApp(from, reply)
 }
 
+async function handleWorkoutLog(from, item, userData) {
+  console.log("=== [3] WORKOUT LOG OPSLAAN ===")
+  const userId = userData?.auth_user_id
+  if (!userId) {
+    await sendWhatsApp(from, "Koppel eerst je account via de app om trainingen bij te houden.")
+    return
+  }
+  const today = getNLDate()
+  const oefeningen = item.oefeningen || []
+  if (!oefeningen.length) {
+    await sendWhatsApp(from, "Ik kon geen oefeningen herkennen. Probeer: \"Bench press 3x8 80kg\"")
+    return
+  }
+
+  // Haal vandaag's workout op (voor workout_id)
+  const { data: planning } = await supabase
+    .from("workout_planning")
+    .select("workout_id, workout:workout_id ( workout_oefeningen ( oefening_id, oefening:oefening_id ( naam ) ) )")
+    .eq("user_id", userId).eq("datum", today).maybeSingle()
+
+  // Bouw naam→oefening_id map vanuit planning
+  const nameToId = {}
+  for (const wo of planning?.workout?.workout_oefeningen || []) {
+    if (wo.oefening?.naam) nameToId[wo.oefening.naam.toLowerCase()] = wo.oefening_id
+  }
+
+  const rows = []
+  for (let si = 0; si < oefeningen.length; si++) {
+    const oe = oefeningen[si]
+    const matchedId = nameToId[oe.naam.toLowerCase()] || null
+    for (let setNr = 1; setNr <= (oe.sets || 1); setNr++) {
+      rows.push({
+        user_id: userId,
+        workout_id: planning?.workout_id || null,
+        oefening_id: matchedId,
+        datum: today,
+        set_nummer: setNr,
+        reps_gedaan: oe.reps || null,
+        gewicht: oe.gewicht || null,
+        completed: true,
+      })
+    }
+  }
+
+  const { error } = await supabase.from("workout_sets").insert(rows)
+  if (error) {
+    console.error("Workout sets INSERT error:", error.message)
+    await sendWhatsApp(from, "Er ging iets mis bij het opslaan. Probeer het opnieuw.")
+    return
+  }
+
+  const lines = oefeningen.map(oe => {
+    const w = oe.gewicht ? ` (${oe.gewicht}kg)` : ""
+    return `- ${oe.naam}: ${oe.sets}×${oe.reps}${w}`
+  })
+  const setsTotal = rows.length
+  await sendWhatsApp(from, `💪 Workout gelogd!\n${lines.join("\n")}\n\n${setsTotal} sets opgeslagen.`)
+  console.log(`Workout log: ${rows.length} sets opgeslagen voor user ${userId}`)
+}
+
 // Korte bevestigingen die alleen een ACK verdienen (reminder replies, etc.)
 const SHORT_ACK_RE = /^(done|top|ok|oké|oke|👍|👌|✅|goed|check|klaar|thanks|bedankt|super|fijn|prima|yes|yep|ja|nee|nope|no)\.?$/i
 
@@ -758,8 +828,15 @@ async function handleMessage(from, body) {
     const reminders      = items.filter((i) => i.categorie === "REMINDER")
     const stopReminders  = items.filter((i) => i.categorie === "STOP_REMINDER")
     const reminderLijst  = items.filter((i) => i.categorie === "REMINDER_LIJST")
+    const workoutLogs    = items.filter((i) => i.categorie === "WORKOUT_LOG")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length} | WorkoutLogs: ${workoutLogs.length}`)
+
+    // Workout log — direct afhandelen
+    if (workoutLogs.length > 0) {
+      await handleWorkoutLog(from, workoutLogs[0], userData)
+      return
+    }
 
     // Reminder intents — altijd direct afhandelen
     if (reminderLijst.length > 0) {

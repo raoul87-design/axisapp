@@ -124,6 +124,13 @@ export default function ClientDetail() {
   const [savingGoals,      setSavingGoals]       = useState(false)
   const [goalsSaved,       setGoalsSaved]        = useState(false)
 
+  const [workoutPlanWeek,   setWorkoutPlanWeek]   = useState([])
+  const [availableWorkouts, setAvailableWorkouts] = useState([])
+  const [assigningDay,      setAssigningDay]       = useState(null)
+  const [assignWorkoutId,   setAssignWorkoutId]    = useState("")
+  const [savingPlan,        setSavingPlan]         = useState(false)
+  const [recentWorkoutSets, setRecentWorkoutSets]  = useState([])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
@@ -155,21 +162,39 @@ export default function ClientDetail() {
 
     const uid = userData.auth_user_id || userData.id
 
+    const todayStr2 = new Date().toISOString().split("T")[0]
+    const dow = new Date().getDay()
+    const daysToMon = dow === 0 ? 6 : dow - 1
+    const mondayDate = new Date(); mondayDate.setDate(mondayDate.getDate() - daysToMon)
+    const monday = mondayDate.toISOString().split("T")[0]
+    const sundayDate = new Date(mondayDate); sundayDate.setDate(mondayDate.getDate() + 6)
+    const sunday = sundayDate.toISOString().split("T")[0]
+
     const [
       { data: commitsData },
       { data: metricsData },
       { data: convoData },
+      { data: dailyData },
+      { data: weekPlanData },
+      { data: workoutsData },
+      { data: setsData },
     ] = await Promise.all([
       supabase.from("commitments").select("text, date, done").eq("user_id", uid).order("date", { ascending: false }).limit(60),
       supabase.from("metrics").select("type, waarde, datum").eq("user_id", uid).order("datum", { ascending: false }).limit(200),
       supabase.from("conversations").select("role, content, created_at").eq("user_id", userData.id).order("created_at", { ascending: false }).limit(40),
       supabase.from("daily_results").select("date, score").eq("user_id", uid).order("date", { ascending: false }).limit(56),
+      supabase.from("workout_planning").select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label )`).eq("user_id", uid).gte("datum", monday).lte("datum", sunday).order("datum", { ascending: true }),
+      supabase.from("workouts").select("id, naam, dag_label, niveau, schema_type").eq("is_template", true).order("naam", { ascending: true }),
+      supabase.from("workout_sets").select(`oefening_id, gewicht, datum, completed, oefening:oefening_id ( naam )`).eq("user_id", uid).eq("completed", true).not("gewicht", "is", null).order("datum", { ascending: false }).limit(300),
     ])
 
     setCommitments(commitsData || [])
     setMetrics(metricsData || [])
     setConversations((convoData || []).reverse())
     setDailyResults(dailyData || [])
+    setWorkoutPlanWeek(weekPlanData || [])
+    setAvailableWorkouts(workoutsData || [])
+    setRecentWorkoutSets(setsData || [])
     setLoading(false)
   }
 
@@ -305,10 +330,60 @@ export default function ClientDetail() {
     setTimeout(() => setGoalsSaved(false), 2500)
   }
 
+  // ── PO alerts: exercises where last 3 sessions same weight ──────
+  const poAlerts = (() => {
+    const byEx = {}
+    for (const s of recentWorkoutSets) {
+      const key = s.oefening_id
+      if (!byEx[key]) byEx[key] = { naam: s.oefening?.naam || key, sessions: {} }
+      if (!byEx[key].sessions[s.datum]) byEx[key].sessions[s.datum] = []
+      byEx[key].sessions[s.datum].push(parseFloat(s.gewicht) || 0)
+    }
+    const alerts = []
+    for (const [, ex] of Object.entries(byEx)) {
+      const dates = Object.keys(ex.sessions).sort().reverse().slice(0, 3)
+      if (dates.length < 3) continue
+      const maxW = dates.map(d => Math.max(...ex.sessions[d]))
+      if (maxW[0] > 0 && maxW[0] === maxW[1] && maxW[1] === maxW[2]) {
+        alerts.push({ naam: ex.naam, gewicht: maxW[0], sessies: 3 })
+      }
+    }
+    return alerts
+  })()
+
+  async function saveWorkoutPlanning(datum, workoutId) {
+    if (!user || !workoutId) return
+    setSavingPlan(true)
+    const uid = user.auth_user_id || user.id
+    if (workoutId === "remove") {
+      await supabase.from("workout_planning").delete().eq("user_id", uid).eq("datum", datum)
+    } else {
+      await supabase.from("workout_planning").upsert(
+        { user_id: uid, workout_id: workoutId, datum, afgerond: false },
+        { onConflict: "user_id,datum" }
+      )
+    }
+    const dow2 = new Date().getDay()
+    const dtm = dow2 === 0 ? 6 : dow2 - 1
+    const mon = new Date(); mon.setDate(mon.getDate() - dtm)
+    const monStr = mon.toISOString().split("T")[0]
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+    const sunStr = sun.toISOString().split("T")[0]
+    const { data: fresh } = await supabase.from("workout_planning")
+      .select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label )`)
+      .eq("user_id", uid).gte("datum", monStr).lte("datum", sunStr)
+      .order("datum", { ascending: true })
+    setWorkoutPlanWeek(fresh || [])
+    setAssigningDay(null)
+    setAssignWorkoutId("")
+    setSavingPlan(false)
+  }
+
   const TABS = [
     { value: "overview", label: "Overview" },
     { value: "commitments", label: "Commitments" },
     { value: "metrics", label: "Metrics" },
+    { value: "workouts", label: "Workouts" },
     { value: "messages", label: "Messages" },
   ]
 
@@ -696,6 +771,114 @@ export default function ClientDetail() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* ── WORKOUTS TAB ── */}
+        {activeTab === "workouts" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+            {/* PO alerts */}
+            {poAlerts.length > 0 && (
+              <div style={{ background: "#0a1a0f", border: `1px solid #1a4d2a`, borderRadius: 12, padding: 20 }}>
+                <p style={{ color: GREEN, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Progressieve overload klaar</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {poAlerts.map((a, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "#ccc", fontSize: 14 }}>{a.naam}</span>
+                      <span style={{ color: GREEN, fontSize: 13 }}>{a.gewicht} kg → verhoog gewicht</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Week planning */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BORDER}` }}>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Trainingsplan deze week</p>
+              </div>
+              <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+                {(() => {
+                  const dayNames = ["zo", "ma", "di", "wo", "do", "vr", "za"]
+                  const dow2 = new Date().getDay()
+                  const dtm = dow2 === 0 ? 6 : dow2 - 1
+                  const mon = new Date(); mon.setDate(mon.getDate() - dtm)
+                  return Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(mon); d.setDate(mon.getDate() + i)
+                    const datum = d.toISOString().split("T")[0]
+                    const dn = dayNames[d.getDay()]
+                    const plan = workoutPlanWeek.find(p => p.datum === datum)
+                    const isToday = datum === new Date().toISOString().split("T")[0]
+                    const isAssigning = assigningDay === datum
+                    return (
+                      <div key={datum} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: isToday ? "#0d1f0d" : "transparent", border: `1px solid ${isToday ? "#1a4d2a" : BORDER}` }}>
+                        <span style={{ color: isToday ? GREEN : "#555", fontSize: 12, minWidth: 28 }}>{dn}</span>
+                        <span style={{ color: "#333", fontSize: 11, minWidth: 52 }}>{datum.slice(5).replace("-", "/")}</span>
+                        {isAssigning ? (
+                          <div style={{ display: "flex", flex: 1, gap: 6, alignItems: "center" }}>
+                            <select value={assignWorkoutId} onChange={e => setAssignWorkoutId(e.target.value)}
+                              style={{ flex: 1, background: "#111", border: `1px solid #333`, borderRadius: 6, color: "#ccc", fontSize: 12, padding: "6px 8px" }}>
+                              <option value="">— kies workout —</option>
+                              {plan && <option value="remove">✕ Verwijder</option>}
+                              {availableWorkouts.map(w => <option key={w.id} value={w.id}>{w.naam}</option>)}
+                            </select>
+                            <button onClick={() => saveWorkoutPlanning(datum, assignWorkoutId)} disabled={!assignWorkoutId || savingPlan}
+                              style={{ padding: "6px 12px", background: GREEN, border: "none", borderRadius: 6, color: "#000", fontWeight: "bold", fontSize: 12, cursor: "pointer", opacity: (!assignWorkoutId || savingPlan) ? 0.4 : 1 }}>
+                              {savingPlan ? "..." : "OK"}
+                            </button>
+                            <button onClick={() => { setAssigningDay(null); setAssignWorkoutId("") }}
+                              style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${BORDER}`, borderRadius: 6, color: "#555", cursor: "pointer", fontSize: 12 }}>✕</button>
+                          </div>
+                        ) : (
+                          <>
+                            <span style={{ flex: 1, color: plan ? "#ccc" : "#333", fontSize: 13 }}>
+                              {plan ? plan.workout?.naam : "—"}
+                              {plan?.afgerond && <span style={{ color: GREEN, marginLeft: 8, fontSize: 12 }}>✓</span>}
+                            </span>
+                            <button onClick={() => { setAssigningDay(datum); setAssignWorkoutId("") }}
+                              style={{ padding: "5px 10px", background: "transparent", border: `1px solid ${BORDER}`, borderRadius: 6, color: "#555", cursor: "pointer", fontSize: 11 }}>
+                              {plan ? "Wijzig" : "+ Assign"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+
+            {/* Recent workout sessions */}
+            {recentWorkoutSets.length > 0 && (
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BORDER}` }}>
+                  <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Recente sets</p>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                      {["Datum", "Oefening", "Gewicht"].map(h => <th key={h} style={TH}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentWorkoutSets.slice(0, 30).map((s, i) => (
+                      <tr key={i} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                        <td style={{ ...TD, fontSize: 12, color: "#555" }}>{s.datum}</td>
+                        <td style={{ ...TD, fontSize: 13, color: "#ccc" }}>{s.oefening?.naam || s.oefening_id}</td>
+                        <td style={{ ...TD, fontSize: 13, color: "#aaa" }}>{s.gewicht} kg</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {recentWorkoutSets.length === 0 && poAlerts.length === 0 && workoutPlanWeek.length === 0 && (
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 32, textAlign: "center" }}>
+                <p style={{ color: "#333", fontSize: 13 }}>Nog geen workoutdata voor deze client</p>
+              </div>
+            )}
           </div>
         )}
 
