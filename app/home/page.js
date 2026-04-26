@@ -34,6 +34,7 @@ const [selectedGoal,    setSelectedGoal]   = useState("")
 const [currentWeightInput, setCurrentWeightInput] = useState("")
 const [targetWeightInput,  setTargetWeightInput]  = useState("")
 const [trainingLocation,   setTrainingLocation]   = useState("")
+const [sportFrequentie,    setSportFrequentie]    = useState(0)
 const [fitnessLevel,       setFitnessLevel]       = useState("")
 const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
@@ -62,6 +63,14 @@ const [totalActiveDays,  setTotalActiveDays]  = useState(0)
 const [weightPeriod,     setWeightPeriod]     = useState("30d")
 const [kcalPeriod,       setKcalPeriod]       = useState("7d")
 const [doelGewicht,      setDoelGewicht]      = useState(null)
+
+// ── Workout state ─────────────────────────────────────────────
+const [workoutScreen,    setWorkoutScreen]    = useState("overview")
+const [todayWorkout,     setTodayWorkout]     = useState(null)
+const [weekWorkouts,     setWeekWorkouts]     = useState([])
+const [setLogs,          setSetLogs]          = useState({})
+const [prevWeights,      setPrevWeights]      = useState({})
+const [workoutLoading,   setWorkoutLoading]   = useState(false)
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -198,9 +207,14 @@ useEffect(() => {
     await loadHistory()
     await loadWeekData()
     await loadProgressData()
+    await loadWorkoutData()
   }
   init()
 }, [user])
+
+useEffect(() => {
+  if (activeTab === "workout" && user) loadWorkoutData()
+}, [activeTab])
 
 async function loadCommitments() {
   const today = getNLDate()
@@ -356,6 +370,86 @@ async function loadProgressData() {
   }
 }
 
+async function loadWorkoutData() {
+  if (!user) return
+  setWorkoutLoading(true)
+  const today = getNLDate()
+  const monday = getMondayNL()
+  const sundayDate = new Date(monday + "T12:00:00")
+  sundayDate.setDate(sundayDate.getDate() + 6)
+  const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+
+  const [{ data: planning }, { data: weekPlan }] = await Promise.all([
+    supabase.from("workout_planning")
+      .select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`)
+      .eq("user_id", user.id).eq("datum", today).maybeSingle(),
+    supabase.from("workout_planning")
+      .select(`id, datum, afgerond, workout:workout_id ( naam, dag_label )`)
+      .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
+      .order("datum", { ascending: true }),
+  ])
+
+  setTodayWorkout(planning || null)
+  setWeekWorkouts(weekPlan || [])
+  if (planning?.afgerond) setWorkoutScreen("done")
+
+  if (planning?.workout?.workout_oefeningen?.length) {
+    const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
+    const { data: prev } = await supabase
+      .from("workout_sets").select("oefening_id, gewicht, datum")
+      .eq("user_id", user.id).eq("completed", true)
+      .in("oefening_id", ids).not("gewicht", "is", null)
+      .order("datum", { ascending: false })
+    const map = {}
+    for (const s of prev || []) {
+      if (!map[s.oefening_id]) map[s.oefening_id] = s.gewicht
+    }
+    setPrevWeights(map)
+  }
+  setWorkoutLoading(false)
+}
+
+function startWorkout() {
+  if (!todayWorkout?.workout?.workout_oefeningen) return
+  const exercises = [...todayWorkout.workout.workout_oefeningen]
+    .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+  const logs = {}
+  for (const wo of exercises) {
+    if (!wo.oefening?.id) continue
+    logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
+      reps: "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
+    }))
+  }
+  setSetLogs(logs)
+  setWorkoutScreen("active")
+}
+
+async function finishWorkout() {
+  if (!todayWorkout || !user) return
+  const today = getNLDate()
+  const exercises = [...(todayWorkout.workout?.workout_oefeningen || [])]
+    .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+  const rows = []
+  for (const wo of exercises) {
+    if (!wo.oefening?.id) continue
+    ;(setLogs[wo.oefening.id] || []).forEach((s, i) => {
+      if (s.done) rows.push({
+        user_id: user.id, workout_id: todayWorkout.workout.id,
+        oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
+        reps_gedaan: s.reps ? parseInt(s.reps) : null,
+        gewicht: s.gewicht ? parseFloat(s.gewicht) : null, completed: true,
+      })
+    })
+  }
+  if (rows.length) {
+    await supabase.from("workout_sets").delete().eq("user_id", user.id).eq("datum", today)
+    await supabase.from("workout_sets").insert(rows)
+  }
+  await supabase.from("workout_planning").update({ afgerond: true }).eq("id", todayWorkout.id)
+  setTodayWorkout(prev => ({ ...prev, afgerond: true }))
+  setWorkoutScreen("done")
+}
+
 function calculateProgress(list) {
   if (list.length === 0) { setProgress(0); return }
   const pct = Math.round(list.filter(c => c.done).length / list.length * 100)
@@ -487,7 +581,7 @@ const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.leng
 
 // ── Onboarding ────────────────────────────────────────────────
 if (showOnboarding) {
-  const totalSteps = 6
+  const totalSteps = 7
   const inputStyle = { width: "100%", padding: "13px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, boxSizing: "border-box", outline: "none" }
   const btnPrimary = { width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }
   const btnGhost   = { width: "100%", padding: "12px", background: "transparent", border: "none", color: C.textSub, cursor: "pointer", fontSize: 13 }
@@ -575,8 +669,40 @@ if (showOnboarding) {
           </>
         )}
 
-        {/* Stap 4 — Fitnessniveau */}
+        {/* Stap 4 — Sportfrequentie */}
         {onboardingStep === 4 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Hoe vaak wil je sporten?</h2>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS stelt een trainingsschema in dat bij je past.</p>
+            <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} onClick={() => setSportFrequentie(n)} style={{
+                  flex: 1, minWidth: 56, padding: "16px 8px", borderRadius: 8,
+                  border: `2px solid ${sportFrequentie === n ? GREEN : C.inputBorder}`,
+                  background: sportFrequentie === n ? "#0a1a0f" : C.inputBg,
+                  color: sportFrequentie === n ? GREEN : C.text,
+                  fontSize: 18, fontWeight: "bold", cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                }}>
+                  {n}x
+                  <span style={{ fontSize: 10, color: sportFrequentie === n ? GREEN : C.textMuted, fontWeight: "normal" }}>
+                    {n === 1 ? "p.w." : n === 5 ? "p.w." : "p.w."}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button onClick={async () => {
+              if (!sportFrequentie) return
+              await supabase.from("users").update({ sport_frequentie: sportFrequentie }).eq("auth_user_id", user.id)
+              setOnboardingStep(5)
+            }} style={{ ...btnPrimary, opacity: sportFrequentie ? 1 : 0.4, cursor: sportFrequentie ? "pointer" : "default" }}>
+              Volgende →
+            </button>
+          </>
+        )}
+
+        {/* Stap 5 — Fitnessniveau */}
+        {onboardingStep === 5 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat is je niveau?</h2>
             <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Zodat de coach je uitdaagt op jouw niveau.</p>
@@ -595,21 +721,21 @@ if (showOnboarding) {
             <button onClick={async () => {
               if (!fitnessLevel) return
               await supabase.from("users").update({ fitness_level: fitnessLevel }).eq("auth_user_id", user.id)
-              setOnboardingStep(5)
+              setOnboardingStep(6)
             }} style={{ ...btnPrimary, opacity: fitnessLevel ? 1 : 0.4, cursor: fitnessLevel ? "pointer" : "default" }}>
               Volgende →
             </button>
           </>
         )}
 
-        {/* Stap 5 — Eerste commitment kiezen */}
-        {onboardingStep === 5 && (
+        {/* Stap 6 — Eerste commitment kiezen */}
+        {onboardingStep === 6 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat ga jij vandaag doen?</h2>
             <p style={{ color: C.textSub, fontSize: 14, marginBottom: 20 }}>Kies een suggestie of typ je eigen commitment.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
               {(GOAL_SUGGESTIONS[selectedGoal] || []).map(s => (
-                <button key={s} onClick={async () => { await addCommitment(s); setOnboardingStep(6) }} style={{
+                <button key={s} onClick={async () => { await addCommitment(s); setOnboardingStep(7) }} style={{
                   padding: "13px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`,
                   background: C.inputBg, color: C.text, fontSize: 14, cursor: "pointer", textAlign: "left",
                 }}>
@@ -619,19 +745,19 @@ if (showOnboarding) {
             </div>
             <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>Of typ zelf:</p>
             <input autoFocus value={text} onChange={e => setText(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && text && addCommitment().then(() => setOnboardingStep(6))}
+              onKeyDown={e => e.key === "Enter" && text && addCommitment().then(() => setOnboardingStep(7))}
               placeholder="bijv. 30 minuten sporten"
               style={{ ...inputStyle, marginBottom: 12 }}
             />
-            <button onClick={async () => { if (!text) return; await addCommitment(); setOnboardingStep(6) }}
+            <button onClick={async () => { if (!text) return; await addCommitment(); setOnboardingStep(7) }}
               style={{ ...btnPrimary, opacity: text ? 1 : 0.4, cursor: text ? "pointer" : "default" }}>
               Dit is mijn commitment →
             </button>
           </>
         )}
 
-        {/* Stap 6 — WhatsApp koppelen */}
-        {onboardingStep === 6 && (
+        {/* Stap 7 — WhatsApp koppelen */}
+        {onboardingStep === 7 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Blijf op koers via WhatsApp</h2>
             <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS stuurt je dagelijks een check-in.<br/>Geen app nodig — gewoon reageren.</p>
@@ -1381,6 +1507,193 @@ return (
     </div>
   )}
 
+  {/* ── TAB: WORKOUT ─────────────────────────────────────────── */}
+  {activeTab === "workout" && (
+    <div style={{ padding: "0 20px", paddingBottom: TAB_H + 32 }}>
+
+      {workoutLoading ? (
+        <p style={{ color: C.textMuted, fontSize: 14, textAlign: "center", paddingTop: 40 }}>Laden...</p>
+      ) : (
+        <>
+          {/* ── OVERVIEW ── */}
+          {workoutScreen === "overview" && (
+            <>
+              {todayWorkout ? (
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 14 }}>
+                    <div>
+                      <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Vandaag</p>
+                      <h3 style={{ color: C.text, fontSize: 18, fontWeight: "bold", margin: 0 }}>{todayWorkout.workout?.naam}</h3>
+                      {todayWorkout.workout?.dag_label && (
+                        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 2 }}>{todayWorkout.workout.dag_label}</p>
+                      )}
+                    </div>
+                    {todayWorkout.afgerond && (
+                      <span style={{ background: "#0a1a0f", color: GREEN, fontSize: 12, padding: "4px 10px", borderRadius: 20, fontWeight: "bold" }}>✓ Klaar</span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                    {[...(todayWorkout.workout?.workout_oefeningen || [])]
+                      .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+                      .map(wo => (
+                        <div key={wo.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ color: C.textSub, fontSize: 14 }}>{wo.oefening?.naam}</span>
+                          <span style={{ color: C.textMuted, fontSize: 12 }}>{wo.sets}×{wo.reps}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                  {!todayWorkout.afgerond ? (
+                    <button onClick={startWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+                      Start workout →
+                    </button>
+                  ) : (
+                    <button onClick={() => setWorkoutScreen("done")} style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
+                      Bekijk samenvatting
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "48px 0 32px" }}>
+                  <p style={{ color: C.textMuted, fontSize: 15, marginBottom: 6 }}>Geen workout gepland vandaag</p>
+                  <p style={{ color: C.textDim, fontSize: 13 }}>Je coach plant jouw trainingen in</p>
+                </div>
+              )}
+
+              {weekWorkouts.length > 0 && (
+                <div>
+                  <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>Deze week</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {weekWorkouts.map(wp => {
+                      const isToday = wp.datum === getNLDate()
+                      const dayNames = ["zo", "ma", "di", "wo", "do", "vr", "za"]
+                      const dn = dayNames[new Date(wp.datum + "T12:00:00").getDay()]
+                      return (
+                        <div key={wp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: isToday ? "#0a1a0f" : C.card, border: `1px solid ${isToday ? "#1a4d2a" : C.border}`, borderRadius: 8, padding: "10px 14px" }}>
+                          <span style={{ color: isToday ? GREEN : C.textSub, fontSize: 13, fontWeight: isToday ? "bold" : "normal", minWidth: 60 }}>{dn} {fmtShortDate(wp.datum)}</span>
+                          <span style={{ color: isToday ? GREEN : C.textMuted, fontSize: 13, flex: 1, textAlign: "right", marginRight: wp.afgerond ? 8 : 0 }}>{wp.workout?.naam || "—"}</span>
+                          {wp.afgerond && <span style={{ color: GREEN, fontSize: 13 }}>✓</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── ACTIVE WORKOUT ── */}
+          {workoutScreen === "active" && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <button onClick={() => setWorkoutScreen("overview")} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0, marginBottom: 4 }}>← Terug</button>
+                  <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>{todayWorkout?.workout?.naam}</h3>
+                </div>
+                <button onClick={finishWorkout} style={{ background: GREEN, border: "none", borderRadius: 8, padding: "8px 16px", color: "#000", fontWeight: "bold", fontSize: 13, cursor: "pointer" }}>
+                  Klaar
+                </button>
+              </div>
+
+              {[...(todayWorkout?.workout?.workout_oefeningen || [])]
+                .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+                .map(wo => {
+                  const oe = wo.oefening
+                  if (!oe) return null
+                  const sets = setLogs[oe.id] || []
+                  const prev = prevWeights[oe.id]
+                  return (
+                    <div key={wo.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
+                        <div>
+                          <h4 style={{ color: C.text, fontSize: 15, fontWeight: "bold", margin: 0 }}>{oe.naam}</h4>
+                          <p style={{ color: C.textMuted, fontSize: 12, marginTop: 2, marginBottom: 0 }}>{oe.spiergroep}</p>
+                        </div>
+                        {oe.youtube_url && (
+                          <a href={oe.youtube_url} target="_blank" rel="noopener noreferrer"
+                            style={{ background: "#1a0a0a", border: "1px solid #4a1a1a", borderRadius: 6, padding: "5px 10px", color: "#ef4444", fontSize: 11, fontWeight: "bold", textDecoration: "none", whiteSpace: "nowrap" }}>
+                            ▶ Video
+                          </a>
+                        )}
+                      </div>
+                      {prev && (
+                        <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 10 }}>Vorige keer: {prev} kg</p>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, paddingBottom: 2 }}>
+                          <span style={{ color: C.textDim, fontSize: 11 }}>#</span>
+                          <span style={{ color: C.textDim, fontSize: 11 }}>Reps</span>
+                          <span style={{ color: C.textDim, fontSize: 11 }}>Kg</span>
+                          <span></span>
+                        </div>
+                        {sets.map((s, si) => (
+                          <div key={si} style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
+                            <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
+                            <input type="number" value={s.reps} placeholder={wo.reps || "—"}
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                            />
+                            <input type="number" value={s.gewicht} placeholder="0"
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                            />
+                            <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
+                              style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {s.done ? "✓" : ""}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })
+              }
+
+              <button onClick={finishWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000", marginTop: 4 }}>
+                Workout afronden ✓
+              </button>
+            </>
+          )}
+
+          {/* ── DONE ── */}
+          {workoutScreen === "done" && (
+            <>
+              <div style={{ textAlign: "center", padding: "32px 0 24px" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>💪</div>
+                <h3 style={{ color: GREEN, fontSize: 22, margin: 0 }}>Workout afgerond!</h3>
+                {todayWorkout?.workout?.naam && (
+                  <p style={{ color: C.textSub, fontSize: 14, marginTop: 8 }}>{todayWorkout.workout.naam}</p>
+                )}
+              </div>
+              {(() => {
+                const allSets = Object.values(setLogs).flat()
+                const doneSets = allSets.filter(s => s.done)
+                const volume = Math.round(doneSets.reduce((sum, s) => sum + (parseFloat(s.gewicht) || 0) * (parseInt(s.reps) || 0), 0))
+                return doneSets.length > 0 ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
+                      <p style={{ color: GREEN, fontSize: 28, fontWeight: "bold", margin: 0 }}>{doneSets.length}</p>
+                      <p style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>sets voltooid</p>
+                    </div>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
+                      <p style={{ color: GREEN, fontSize: 28, fontWeight: "bold", margin: 0 }}>{volume}</p>
+                      <p style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>kg volume</p>
+                    </div>
+                  </div>
+                ) : null
+              })()}
+              <button onClick={() => { setWorkoutScreen("overview"); loadWorkoutData() }}
+                style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
+                ← Terug naar overzicht
+              </button>
+            </>
+          )}
+        </>
+      )}
+
+    </div>
+  )}
+
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
   <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: C.bg, borderTop: `1px solid ${C.borderSub}`, display: "flex", zIndex: 50 }}>
 
@@ -1405,6 +1718,18 @@ return (
         <path d="M17 5h2v2" stroke={activeTab === "voortgang" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span style={{ fontSize: 11, color: activeTab === "voortgang" ? GREEN : C.textMuted, fontWeight: activeTab === "voortgang" ? "bold" : "normal" }}>Voortgang</span>
+    </button>
+
+    {/* Workout */}
+    <button onClick={() => setActiveTab("workout")}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
+      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+        <path d="M3 11h2M17 11h2M5 11l2-3h8l2 3M5 11l2 3h8l2-3"
+          stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={3} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} />
+        <circle cx={19} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} />
+      </svg>
+      <span style={{ fontSize: 11, color: activeTab === "workout" ? GREEN : C.textMuted, fontWeight: activeTab === "workout" ? "bold" : "normal" }}>Workout</span>
     </button>
 
     {/* Coach */}
