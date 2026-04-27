@@ -406,7 +406,7 @@ async function loadWorkoutData() {
     const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
     const { data: prev } = await supabase
       .from("workout_sets").select("oefening_id, gewicht, datum")
-      .eq("user_id", user.id).eq("completed", true)
+      .eq("user_id", user.id)
       .in("oefening_id", ids).not("gewicht", "is", null)
       .order("datum", { ascending: false })
     const map = {}
@@ -472,7 +472,7 @@ async function finishWorkout() {
         user_id: user.id, workout_id: todayWorkout.workout.id,
         oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
         reps_gedaan: s.reps ? parseInt(s.reps) : null,
-        gewicht: s.gewicht ? parseFloat(s.gewicht) : null, completed: true,
+        gewicht: s.gewicht ? parseFloat(s.gewicht) : null,
       })
     })
   }
