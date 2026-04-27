@@ -71,6 +71,7 @@ const [weekWorkouts,     setWeekWorkouts]     = useState([])
 const [setLogs,          setSetLogs]          = useState({})
 const [prevWeights,      setPrevWeights]      = useState({})
 const [workoutLoading,   setWorkoutLoading]   = useState(false)
+const [workoutLibrary,   setWorkoutLibrary]   = useState([])
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -379,18 +380,25 @@ async function loadWorkoutData() {
   sundayDate.setDate(sundayDate.getDate() + 6)
   const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const [{ data: planning }, { data: weekPlan }] = await Promise.all([
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`
+
+  const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
     supabase.from("workout_planning")
-      .select(`id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`)
+      .select(PLANNING_SELECT)
       .eq("user_id", user.id).eq("datum", today).maybeSingle(),
     supabase.from("workout_planning")
       .select(`id, datum, gedaan, workout:workout_id ( naam, dag_type )`)
       .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
       .order("datum", { ascending: true }),
+    supabase.from("workouts")
+      .select(`id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id )`)
+      .eq("is_template", true)
+      .order("naam", { ascending: true }),
   ])
 
   setTodayWorkout(planning || null)
   setWeekWorkouts(weekPlan || [])
+  setWorkoutLibrary(libraryData || [])
   if (planning?.gedaan) setWorkoutScreen("done")
 
   if (planning?.workout?.workout_oefeningen?.length) {
@@ -409,9 +417,9 @@ async function loadWorkoutData() {
   setWorkoutLoading(false)
 }
 
-function startWorkout() {
-  if (!todayWorkout?.workout?.workout_oefeningen) return
-  const exercises = [...todayWorkout.workout.workout_oefeningen]
+function startWorkoutFromPlanning(planning) {
+  if (!planning?.workout?.workout_oefeningen) return
+  const exercises = [...planning.workout.workout_oefeningen]
     .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
   const logs = {}
   for (const wo of exercises) {
@@ -422,6 +430,34 @@ function startWorkout() {
   }
   setSetLogs(logs)
   setWorkoutScreen("active")
+}
+
+function startWorkout() {
+  startWorkoutFromPlanning(todayWorkout)
+}
+
+async function chooseSelfWorkout(workoutId) {
+  if (!user || !workoutId) return
+  setWorkoutLoading(true)
+  const today = getNLDate()
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`
+
+  await supabase.from("workout_planning").upsert(
+    { user_id: user.id, workout_id: workoutId, datum: today, gedaan: false },
+    { onConflict: "user_id,datum" }
+  )
+
+  const { data: fresh } = await supabase
+    .from("workout_planning").select(PLANNING_SELECT)
+    .eq("user_id", user.id).eq("datum", today).maybeSingle()
+
+  if (fresh) {
+    setTodayWorkout(fresh)
+    setWorkoutLoading(false)
+    startWorkoutFromPlanning(fresh)
+  } else {
+    setWorkoutLoading(false)
+  }
 }
 
 async function finishWorkout() {
@@ -1554,9 +1590,13 @@ return (
                   )}
                 </div>
               ) : (
-                <div style={{ textAlign: "center", padding: "48px 0 32px" }}>
+                <div style={{ textAlign: "center", padding: "32px 0 24px" }}>
                   <p style={{ color: C.textMuted, fontSize: 15, marginBottom: 6 }}>Geen workout gepland vandaag</p>
-                  <p style={{ color: C.textDim, fontSize: 13 }}>Je coach plant jouw trainingen in</p>
+                  <p style={{ color: C.textDim, fontSize: 13, marginBottom: 20 }}>Kies zelf een workout om te beginnen</p>
+                  <button onClick={() => setWorkoutScreen("picker")}
+                    style={{ padding: "13px 28px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+                    Kies workout →
+                  </button>
                 </div>
               )}
 
@@ -1579,6 +1619,63 @@ return (
                   </div>
                 </div>
               )}
+            </>
+          )}
+
+          {/* ── WORKOUT PICKER ── */}
+          {workoutScreen === "picker" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <button onClick={() => setWorkoutScreen("overview")}
+                  style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                  ← Terug
+                </button>
+                <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Kies een workout</h3>
+              </div>
+
+              {(() => {
+                const niveauMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
+                const allowed = niveauMap[trainingLocation] || null
+                const filtered = workoutLibrary.filter(w => !allowed || allowed.includes(w.niveau))
+                const grouped = {}
+                for (const w of filtered) {
+                  const key = w.niveau
+                  if (!grouped[key]) grouped[key] = []
+                  grouped[key].push(w)
+                }
+                const niveauLabel = { lichaamsgewicht: "Lichaamsgewicht", homegym: "Thuis (dumbbells)", gym: "Gym" }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ textAlign: "center", padding: "40px 0" }}>
+                      <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
+                      <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Vraag je coach om workouts toe te voegen</p>
+                    </div>
+                  )
+                }
+
+                return Object.entries(grouped).map(([niveau, workouts]) => (
+                  <div key={niveau} style={{ marginBottom: 24 }}>
+                    <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+                      {niveauLabel[niveau] || niveau}
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {workouts.map(w => (
+                        <button key={w.id} onClick={() => chooseSelfWorkout(w.id)}
+                          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                          <div>
+                            <p style={{ color: C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
+                            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
+                              {w.dag_type} · {w.workout_oefeningen?.length || 0} oefeningen
+                            </p>
+                          </div>
+                          <span style={{ color: GREEN, fontSize: 18, lineHeight: 1 }}>→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
             </>
           )}
 
