@@ -380,7 +380,7 @@ async function loadWorkoutData() {
   sundayDate.setDate(sundayDate.getDate() + 6)
   const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
 
   const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
     supabase.from("workout_planning")
@@ -391,7 +391,7 @@ async function loadWorkoutData() {
       .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
       .order("datum", { ascending: true }),
     supabase.from("workouts")
-      .select(`id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id )`)
+      .select(`id, naam, dag_type, niveau, workout_oefeningen ( id )`)
       .eq("is_template", true)
       .order("naam", { ascending: true }),
   ])
@@ -440,7 +440,7 @@ async function chooseSelfWorkout(workoutId) {
   if (!user || !workoutId) return
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
 
   await supabase.from("workout_planning").upsert(
     { user_id: user.id, workout_id: workoutId, datum: today, gedaan: false },
