@@ -72,6 +72,7 @@ const [setLogs,          setSetLogs]          = useState({})
 const [prevWeights,      setPrevWeights]      = useState({})
 const [workoutLoading,   setWorkoutLoading]   = useState(false)
 const [workoutLibrary,   setWorkoutLibrary]   = useState([])
+const [pickerSelected,   setPickerSelected]   = useState(null)
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -380,7 +381,7 @@ async function loadWorkoutData() {
   sundayDate.setDate(sundayDate.getDate() + 6)
   const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
   const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
     supabase.from("workout_planning")
@@ -440,7 +441,7 @@ async function chooseSelfWorkout(workoutId) {
   if (!user || !workoutId) return
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
   await supabase.from("workout_planning").delete().eq("user_id", user.id).eq("datum", today)
   await supabase.from("workout_planning").insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
@@ -1623,12 +1624,20 @@ return (
           {/* ── WORKOUT PICKER ── */}
           {workoutScreen === "picker" && (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <button onClick={() => setWorkoutScreen("overview")}
-                  style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
-                  ← Terug
-                </button>
-                <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Kies een workout</h3>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => { setWorkoutScreen("overview"); setPickerSelected(null) }}
+                    style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                    ← Terug
+                  </button>
+                  <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Kies een workout</h3>
+                </div>
+                {pickerSelected && (
+                  <button onClick={() => chooseSelfWorkout(pickerSelected)}
+                    style={{ padding: "10px 20px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 14, color: "#000" }}>
+                    Start →
+                  </button>
+                )}
               </div>
 
               {(() => {
@@ -1658,22 +1667,37 @@ return (
                       {niveauLabel[niveau] || niveau}
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {workouts.map(w => (
-                        <button key={w.id} onClick={() => chooseSelfWorkout(w.id)}
-                          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
-                          <div>
-                            <p style={{ color: C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
-                            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
-                              {w.dag_type} · {w.workout_oefeningen?.length || 0} oefeningen
-                            </p>
-                          </div>
-                          <span style={{ color: GREEN, fontSize: 18, lineHeight: 1 }}>→</span>
-                        </button>
-                      ))}
+                      {workouts.map(w => {
+                        const isSelected = pickerSelected === w.id
+                        return (
+                          <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
+                            style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                            <div>
+                              <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
+                              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
+                                {w.dag_type} · {w.workout_oefeningen?.length || 0} oefeningen
+                              </p>
+                            </div>
+                            {isSelected
+                              ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span>
+                              : <span style={{ color: C.textDim, fontSize: 18 }}>○</span>
+                            }
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 ))
               })()}
+
+              {pickerSelected && (
+                <div style={{ position: "sticky", bottom: TAB_H + 12, marginTop: 16 }}>
+                  <button onClick={() => chooseSelfWorkout(pickerSelected)}
+                    style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+                    Start workout →
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -1699,12 +1723,17 @@ return (
                   const prev = prevWeights[oe.id]
                   return (
                     <div key={wo.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+                      {oe.gif_url && (
+                        <div style={{ textAlign: "center", marginBottom: 12 }}>
+                          <img src={oe.gif_url} alt={oe.naam} style={{ maxHeight: 200, borderRadius: 8, objectFit: "contain" }} />
+                        </div>
+                      )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
                         <div>
                           <h4 style={{ color: C.text, fontSize: 15, fontWeight: "bold", margin: 0 }}>{oe.naam}</h4>
                           <p style={{ color: C.textMuted, fontSize: 12, marginTop: 2, marginBottom: 0 }}>{oe.spiergroep}</p>
                         </div>
-                        {oe.youtube_url && (
+                        {!oe.gif_url && oe.youtube_url && (
                           <a href={oe.youtube_url} target="_blank" rel="noopener noreferrer"
                             style={{ background: "#1a0a0a", border: "1px solid #4a1a1a", borderRadius: 6, padding: "5px 10px", color: "#ef4444", fontSize: 11, fontWeight: "bold", textDecoration: "none", whiteSpace: "nowrap" }}>
                             ▶ Video
