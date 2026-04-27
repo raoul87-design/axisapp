@@ -95,13 +95,16 @@ export async function GET(request) {
   const results = { oefeningen: 0, workouts: 0, links: 0, errors: [] }
 
   try {
-    // 1. Seed oefeningen
-    const { error: oefeningErr } = await supabase
+    // 1. Seed oefeningen — alleen als tabel leeg is
+    const { count: oeCount } = await supabase
       .from("oefeningen")
-      .upsert(OEFENINGEN, { onConflict: "naam", ignoreDuplicates: true })
+      .select("id", { count: "exact", head: true })
 
-    if (oefeningErr) {
-      results.errors.push("Oefeningen: " + oefeningErr.message)
+    if (oeCount === 0) {
+      const { error: oeErr } = await supabase.from("oefeningen").insert(OEFENINGEN)
+      if (oeErr) results.errors.push("Oefeningen: " + oeErr.message)
+    } else {
+      results.skipped = `oefeningen (${oeCount} al aanwezig)`
     }
 
     // 2. Fetch alle oefeningen voor naam→id map
@@ -110,23 +113,24 @@ export async function GET(request) {
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
 
-    // 3. Seed workouts
-    const workoutInserts = WORKOUTS_DATA.map(w => ({
-      naam: w.naam,
-      niveau: w.niveau,
-      schema_type: w.schema_type,
-      dag_type: w.dag_type,
-      beschrijving: w.beschrijving || null,
-      coach_email: "system",
-      is_template: true,
-    }))
-
-    const { error: workoutErr } = await supabase
+    // 3. Seed workouts — alleen als er nog geen system workouts zijn
+    const { count: wCount } = await supabase
       .from("workouts")
-      .upsert(workoutInserts, { onConflict: "naam", ignoreDuplicates: true })
+      .select("id", { count: "exact", head: true })
+      .eq("coach_email", "system")
 
-    if (workoutErr) {
-      results.errors.push("Workouts: " + workoutErr.message)
+    if (wCount === 0) {
+      const workoutInserts = WORKOUTS_DATA.map(w => ({
+        naam: w.naam,
+        niveau: w.niveau,
+        schema_type: w.schema_type,
+        dag_type: w.dag_type,
+        beschrijving: w.beschrijving || null,
+        coach_email: "system",
+        is_template: true,
+      }))
+      const { error: wErr } = await supabase.from("workouts").insert(workoutInserts)
+      if (wErr) results.errors.push("Workouts: " + wErr.message)
     }
 
     // 4. Fetch alle workouts voor naam→id map
@@ -139,7 +143,7 @@ export async function GET(request) {
     ;(allWorkouts || []).forEach(w => { workoutMap[w.naam] = w.id })
     results.workouts = allWorkouts?.length || 0
 
-    // 5. Seed workout_oefeningen (delete first to avoid duplicates)
+    // 5. Seed workout_oefeningen (delete + re-insert voor idempotentie)
     const workoutIds = Object.values(workoutMap)
     if (workoutIds.length > 0) {
       await supabase.from("workout_oefeningen").delete().in("workout_id", workoutIds)
