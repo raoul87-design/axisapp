@@ -358,10 +358,8 @@ export default function ClientDetail() {
     if (workoutId === "remove") {
       await supabase.from("workout_planning").delete().eq("user_id", uid).eq("datum", datum)
     } else {
-      await supabase.from("workout_planning").upsert(
-        { user_id: uid, workout_id: workoutId, datum, gedaan: false },
-        { onConflict: "user_id,datum" }
-      )
+      await supabase.from("workout_planning").delete().eq("user_id", uid).eq("datum", datum)
+      await supabase.from("workout_planning").insert({ user_id: uid, workout_id: workoutId, datum, gedaan: false })
     }
     const dow2 = new Date().getDay()
     const dtm = dow2 === 0 ? 6 : dow2 - 1

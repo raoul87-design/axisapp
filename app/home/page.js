@@ -442,10 +442,8 @@ async function chooseSelfWorkout(workoutId) {
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
 
-  await supabase.from("workout_planning").upsert(
-    { user_id: user.id, workout_id: workoutId, datum: today, gedaan: false },
-    { onConflict: "user_id,datum" }
-  )
+  await supabase.from("workout_planning").delete().eq("user_id", user.id).eq("datum", today)
+  await supabase.from("workout_planning").insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
 
   const { data: fresh } = await supabase
     .from("workout_planning").select(PLANNING_SELECT)
