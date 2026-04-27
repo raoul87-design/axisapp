@@ -1806,7 +1806,7 @@ return (
                   </div>
                 ) : null
               })()}
-              <button onClick={() => { setWorkoutScreen("overview"); loadWorkoutData() }}
+              <button onClick={() => setWorkoutScreen("overview")}
                 style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
                 ← Terug naar overzicht
               </button>
