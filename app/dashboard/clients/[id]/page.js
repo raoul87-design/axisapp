@@ -184,8 +184,8 @@ export default function ClientDetail() {
       supabase.from("conversations").select("role, content, created_at").eq("user_id", userData.id).order("created_at", { ascending: false }).limit(40),
       supabase.from("daily_results").select("date, score").eq("user_id", uid).order("date", { ascending: false }).limit(56),
       supabase.from("workout_planning").select(`id, datum, gedaan, workout:workout_id ( id, naam, dag_type )`).eq("user_id", uid).gte("datum", monday).lte("datum", sunday).order("datum", { ascending: true }),
-      supabase.from("workouts").select("id, naam, dag_type, niveau, schema_type").eq("is_template", true).order("naam", { ascending: true }),
-      supabase.from("workout_sets").select(`oefening_id, gewicht, datum, completed, oefening:oefening_id ( naam )`).eq("user_id", uid).eq("completed", true).not("gewicht", "is", null).order("datum", { ascending: false }).limit(300),
+      supabase.from("workouts").select("id, naam, dag_type").eq("is_template", true).order("naam", { ascending: true }),
+      supabase.from("workout_sets").select(`oefening_id, gewicht, datum, oefening:oefening_id ( naam )`).eq("user_id", uid).not("gewicht", "is", null).order("datum", { ascending: false }).limit(300),
     ])
 
     setCommitments(commitsData || [])
