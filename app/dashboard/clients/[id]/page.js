@@ -183,8 +183,8 @@ export default function ClientDetail() {
       supabase.from("metrics").select("type, waarde, datum").eq("user_id", uid).order("datum", { ascending: false }).limit(200),
       supabase.from("conversations").select("role, content, created_at").eq("user_id", userData.id).order("created_at", { ascending: false }).limit(40),
       supabase.from("daily_results").select("date, score").eq("user_id", uid).order("date", { ascending: false }).limit(56),
-      supabase.from("workout_planning").select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label )`).eq("user_id", uid).gte("datum", monday).lte("datum", sunday).order("datum", { ascending: true }),
-      supabase.from("workouts").select("id, naam, dag_label, niveau, schema_type").eq("is_template", true).order("naam", { ascending: true }),
+      supabase.from("workout_planning").select(`id, datum, gedaan, workout:workout_id ( id, naam, dag_type )`).eq("user_id", uid).gte("datum", monday).lte("datum", sunday).order("datum", { ascending: true }),
+      supabase.from("workouts").select("id, naam, dag_type, niveau, schema_type").eq("is_template", true).order("naam", { ascending: true }),
       supabase.from("workout_sets").select(`oefening_id, gewicht, datum, completed, oefening:oefening_id ( naam )`).eq("user_id", uid).eq("completed", true).not("gewicht", "is", null).order("datum", { ascending: false }).limit(300),
     ])
 
@@ -359,7 +359,7 @@ export default function ClientDetail() {
       await supabase.from("workout_planning").delete().eq("user_id", uid).eq("datum", datum)
     } else {
       await supabase.from("workout_planning").upsert(
-        { user_id: uid, workout_id: workoutId, datum, afgerond: false },
+        { user_id: uid, workout_id: workoutId, datum, gedaan: false },
         { onConflict: "user_id,datum" }
       )
     }
@@ -370,7 +370,7 @@ export default function ClientDetail() {
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
     const sunStr = sun.toISOString().split("T")[0]
     const { data: fresh } = await supabase.from("workout_planning")
-      .select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label )`)
+      .select(`id, datum, gedaan, workout:workout_id ( id, naam, dag_type )`)
       .eq("user_id", uid).gte("datum", monStr).lte("datum", sunStr)
       .order("datum", { ascending: true })
     setWorkoutPlanWeek(fresh || [])
@@ -834,7 +834,7 @@ export default function ClientDetail() {
                           <>
                             <span style={{ flex: 1, color: plan ? "#ccc" : "#333", fontSize: 13 }}>
                               {plan ? plan.workout?.naam : "—"}
-                              {plan?.afgerond && <span style={{ color: GREEN, marginLeft: 8, fontSize: 12 }}>✓</span>}
+                              {plan?.gedaan && <span style={{ color: GREEN, marginLeft: 8, fontSize: 12 }}>✓</span>}
                             </span>
                             <button onClick={() => { setAssigningDay(datum); setAssignWorkoutId("") }}
                               style={{ padding: "5px 10px", background: "transparent", border: `1px solid ${BORDER}`, borderRadius: 6, color: "#555", cursor: "pointer", fontSize: 11 }}>

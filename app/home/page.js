@@ -381,17 +381,17 @@ async function loadWorkoutData() {
 
   const [{ data: planning }, { data: weekPlan }] = await Promise.all([
     supabase.from("workout_planning")
-      .select(`id, datum, afgerond, workout:workout_id ( id, naam, dag_label, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`)
+      .select(`id, datum, gedaan, workout:workout_id ( id, naam, dag_type, niveau, schema_type, workout_oefeningen ( id, sets, reps, rust_seconden, volgorde, oefening:oefening_id ( id, naam, naam_en, niveau, spiergroep, youtube_url, instructies, fouten ) ) )`)
       .eq("user_id", user.id).eq("datum", today).maybeSingle(),
     supabase.from("workout_planning")
-      .select(`id, datum, afgerond, workout:workout_id ( naam, dag_label )`)
+      .select(`id, datum, gedaan, workout:workout_id ( naam, dag_type )`)
       .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
       .order("datum", { ascending: true }),
   ])
 
   setTodayWorkout(planning || null)
   setWeekWorkouts(weekPlan || [])
-  if (planning?.afgerond) setWorkoutScreen("done")
+  if (planning?.gedaan) setWorkoutScreen("done")
 
   if (planning?.workout?.workout_oefeningen?.length) {
     const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
@@ -445,8 +445,8 @@ async function finishWorkout() {
     await supabase.from("workout_sets").delete().eq("user_id", user.id).eq("datum", today)
     await supabase.from("workout_sets").insert(rows)
   }
-  await supabase.from("workout_planning").update({ afgerond: true }).eq("id", todayWorkout.id)
-  setTodayWorkout(prev => ({ ...prev, afgerond: true }))
+  await supabase.from("workout_planning").update({ gedaan: true }).eq("id", todayWorkout.id)
+  setTodayWorkout(prev => ({ ...prev, gedaan: true }))
   setWorkoutScreen("done")
 }
 
@@ -1524,11 +1524,11 @@ return (
                     <div>
                       <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Vandaag</p>
                       <h3 style={{ color: C.text, fontSize: 18, fontWeight: "bold", margin: 0 }}>{todayWorkout.workout?.naam}</h3>
-                      {todayWorkout.workout?.dag_label && (
-                        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 2 }}>{todayWorkout.workout.dag_label}</p>
+                      {todayWorkout.workout?.dag_type && (
+                        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 2 }}>{todayWorkout.workout.dag_type}</p>
                       )}
                     </div>
-                    {todayWorkout.afgerond && (
+                    {todayWorkout.gedaan && (
                       <span style={{ background: "#0a1a0f", color: GREEN, fontSize: 12, padding: "4px 10px", borderRadius: 20, fontWeight: "bold" }}>✓ Klaar</span>
                     )}
                   </div>
@@ -1543,7 +1543,7 @@ return (
                       ))
                     }
                   </div>
-                  {!todayWorkout.afgerond ? (
+                  {!todayWorkout.gedaan ? (
                     <button onClick={startWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
                       Start workout →
                     </button>
@@ -1571,8 +1571,8 @@ return (
                       return (
                         <div key={wp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: isToday ? "#0a1a0f" : C.card, border: `1px solid ${isToday ? "#1a4d2a" : C.border}`, borderRadius: 8, padding: "10px 14px" }}>
                           <span style={{ color: isToday ? GREEN : C.textSub, fontSize: 13, fontWeight: isToday ? "bold" : "normal", minWidth: 60 }}>{dn} {fmtShortDate(wp.datum)}</span>
-                          <span style={{ color: isToday ? GREEN : C.textMuted, fontSize: 13, flex: 1, textAlign: "right", marginRight: wp.afgerond ? 8 : 0 }}>{wp.workout?.naam || "—"}</span>
-                          {wp.afgerond && <span style={{ color: GREEN, fontSize: 13 }}>✓</span>}
+                          <span style={{ color: isToday ? GREEN : C.textMuted, fontSize: 13, flex: 1, textAlign: "right", marginRight: wp.gedaan ? 8 : 0 }}>{wp.workout?.naam || "—"}</span>
+                          {wp.gedaan && <span style={{ color: GREEN, fontSize: 13 }}>✓</span>}
                         </div>
                       )
                     })}
