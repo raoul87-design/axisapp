@@ -450,14 +450,18 @@ async function chooseSelfWorkout(workoutId) {
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
-  // Upsert: update als rij bestaat, insert als nieuw
-  const { error: upsertErr } = await supabase.from("workout_planning")
-    .upsert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false }, { onConflict: "user_id,datum" })
-  if (upsertErr) {
-    // Fallback als upsert faalt: probeer update op bestaande rij
+  // Check of er al een planning bestaat voor vandaag
+  const { data: existing } = await supabase
+    .from("workout_planning").select("id")
+    .eq("user_id", user.id).eq("datum", today).maybeSingle()
+
+  if (existing) {
     await supabase.from("workout_planning")
       .update({ workout_id: workoutId, gedaan: false })
-      .eq("user_id", user.id).eq("datum", today)
+      .eq("id", existing.id)
+  } else {
+    await supabase.from("workout_planning")
+      .insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
   }
 
   const { data: fresh } = await supabase
