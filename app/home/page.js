@@ -450,11 +450,14 @@ async function chooseSelfWorkout(workoutId) {
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
-  await supabase.from("workout_planning").delete().eq("user_id", user.id).eq("datum", today)
-  const { error: insErr } = await supabase.from("workout_planning").insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
-  if (insErr) {
-    // 409 conflict: rij bestaat nog (delete geblokkeerd door RLS) → update in plaats van insert
-    await supabase.from("workout_planning").update({ workout_id: workoutId, gedaan: false }).eq("user_id", user.id).eq("datum", today)
+  // Upsert: update als rij bestaat, insert als nieuw
+  const { error: upsertErr } = await supabase.from("workout_planning")
+    .upsert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false }, { onConflict: "user_id,datum" })
+  if (upsertErr) {
+    // Fallback als upsert faalt: probeer update op bestaande rij
+    await supabase.from("workout_planning")
+      .update({ workout_id: workoutId, gedaan: false })
+      .eq("user_id", user.id).eq("datum", today)
   }
 
   const { data: fresh } = await supabase
@@ -1607,9 +1610,19 @@ return (
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => setWorkoutScreen("done")} style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
-                      Bekijk samenvatting
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button onClick={async () => {
+                        await supabase.from("workout_planning").update({ gedaan: false }).eq("id", todayWorkout.id)
+                        setTodayWorkout(prev => ({ ...prev, gedaan: false }))
+                        setSetLogs({})
+                        startWorkoutFromPlanning({ ...todayWorkout, gedaan: false })
+                      }} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+                        Opnieuw doen →
+                      </button>
+                      <button onClick={() => setWorkoutScreen("done")} style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
+                        Bekijk samenvatting
+                      </button>
+                    </div>
                   )}
                 </div>
               ) : (
