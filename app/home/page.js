@@ -451,7 +451,11 @@ async function chooseSelfWorkout(workoutId) {
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
   await supabase.from("workout_planning").delete().eq("user_id", user.id).eq("datum", today)
-  await supabase.from("workout_planning").insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
+  const { error: insErr } = await supabase.from("workout_planning").insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
+  if (insErr) {
+    // 409 conflict: rij bestaat nog (delete geblokkeerd door RLS) → update in plaats van insert
+    await supabase.from("workout_planning").update({ workout_id: workoutId, gedaan: false }).eq("user_id", user.id).eq("datum", today)
+  }
 
   const { data: fresh } = await supabase
     .from("workout_planning").select(PLANNING_SELECT)
