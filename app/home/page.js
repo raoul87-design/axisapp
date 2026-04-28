@@ -450,18 +450,32 @@ async function chooseSelfWorkout(workoutId) {
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
 
-  // Probeer eerst te updaten; als geen rij gevonden → insert
-  const { data: updated } = await supabase
-    .from("workout_planning")
-    .update({ workout_id: workoutId, gedaan: false })
-    .eq("user_id", user.id).eq("datum", today)
-    .select("id")
+  // Stap 1: check of er al een planning bestaat voor vandaag
+  const { data: existing } = await supabase
+    .from("workout_planning").select(PLANNING_SELECT)
+    .eq("user_id", user.id).eq("datum", today).maybeSingle()
 
-  if (!updated || updated.length === 0) {
+  if (existing) {
+    // Rij bestaat al → gebruik direct
+    setTodayWorkout(existing)
+    setWorkoutLoading(false)
+    startWorkoutFromPlanning(existing)
+    return
+  }
+
+  // Stap 2: geen rij → probeer INSERT
+  const { error: insertErr } = await supabase.from("workout_planning")
+    .insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
+
+  if (insertErr) {
+    // INSERT faalde (bv. 409) → verwijder bestaande rij en probeer opnieuw
+    await supabase.from("workout_planning")
+      .delete().eq("user_id", user.id).eq("datum", today)
     await supabase.from("workout_planning")
       .insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
   }
 
+  // Haal de nieuwe rij op met volledige workout data
   const { data: fresh } = await supabase
     .from("workout_planning").select(PLANNING_SELECT)
     .eq("user_id", user.id).eq("datum", today).maybeSingle()
