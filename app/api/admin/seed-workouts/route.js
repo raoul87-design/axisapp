@@ -106,7 +106,7 @@ export async function GET(request) {
     if (!res.ok) return new Response(`API ${res.status}`, { status: 502 })
     const list = await res.json()
     const firstFull = list[0]
-    const sample = list.slice(0, 10).map(e => ({ name: e.name, gifUrl: e.gifUrl, bodyPart: e.bodyPart }))
+    const sample = list.slice(0, 10).map(e => ({ id: e.id, name: e.name, bodyPart: e.bodyPart }))
     const allNames = list.map(e => e.name)
     return new Response(JSON.stringify({ firstFull, sample, allNames }, null, 2), {
       status: 200, headers: { "Content-Type": "application/json" },
@@ -145,59 +145,75 @@ export async function GET(request) {
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
 
-    // 2b. GIFs — volledig hardcoded, geen API calls nodig
-    const HARDCODED_GIFS = {
-      // Lichaamsgewicht
-      "Push-up":                      "https://v2.exercisedb.io/image/hqTMCnxYGAqaTB",
-      "Pike Push-up":                 "https://v2.exercisedb.io/image/XKyDvqomYQlkbY",
-      "Dips op stoel":                "https://v2.exercisedb.io/image/AeT3H4BqKhOFp5",
-      "Plank":                        "https://v2.exercisedb.io/image/OoJiXqOGlLM3xD",
-      "Tafelrij":                     "https://v2.exercisedb.io/image/hVsNBFMsMnHNGG",
-      "Superman":                     "https://v2.exercisedb.io/image/7dBbmJ2DmCR6tN",
-      "Dead Bug":                     "https://v2.exercisedb.io/image/nVnHUAiJaRxKb2",
-      "Air Squat":                    "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Lunge":                        "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Glute Bridge":                 "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
-      "Mountain Climber":             "https://v2.exercisedb.io/image/2hGbEXJJzQODkv",
-      "Calf Raise":                   "https://v2.exercisedb.io/image/k6g-CgTfMxNQiO",
-      // Home gym
-      "Dumbbell Chest Press":         "https://v2.exercisedb.io/image/VmB1G1K7v94",
-      "Dumbbell Shoulder Press":      "https://v2.exercisedb.io/image/qEwKCR5JCog",
-      "Lateral Raise":                "https://v2.exercisedb.io/image/3VcKaXpzqRo",
-      "Tricep Kickback":              "https://v2.exercisedb.io/image/6SS6K3lAwZ8",
-      "Dumbbell Row":                 "https://v2.exercisedb.io/image/roCP6wCXPqo",
-      "Face Pull met weerstandsband": "https://v2.exercisedb.io/image/eIq5CB9JfKE",
-      "Dumbbell Bicep Curl":          "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
-      "Goblet Squat":                 "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Romanian Deadlift DB":         "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Dumbbell Lunge":               "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Glute Bridge met Dumbbell":    "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
-      // Gym
-      "Bench Press":                  "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
-      "Incline Dumbbell Press":       "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
-      "Cable Lateral Raise":          "https://v2.exercisedb.io/image/PPjO6p_JU4E",
-      "Tricep Pushdown":              "https://v2.exercisedb.io/image/2-LAMcpzODU",
-      "Overhead Tricep Extension":    "https://v2.exercisedb.io/image/YbX7Wd8jQ-Q",
-      "Deadlift":                     "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Cable Row":                    "https://v2.exercisedb.io/image/GZbfZ033f74",
-      "Lat Pulldown":                 "https://v2.exercisedb.io/image/2RMoJBiRfJ8ZXN",
-      "Face Pull kabel":              "https://v2.exercisedb.io/image/eIq5CB9JfKE",
-      "Barbell Curl":                 "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
-      "Barbell Squat":                "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Romanian Deadlift Barbell":    "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Leg Press":                    "https://v2.exercisedb.io/image/IZxyjW7MPJQ",
-      "Walking Lunge":                "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Cable Crunch":                 "https://v2.exercisedb.io/image/2fbujeH3F0E",
-      "Shoulder Press":               "https://v2.exercisedb.io/image/qEwKCR5JCog",
-    }
-    for (const oe of (allOef || [])) {
-      if (oe.gif_url) continue
-      const url = HARDCODED_GIFS[oe.naam]
-      if (url) {
-        await supabase.from("oefeningen").update({ gif_url: url }).eq("id", oe.id)
-        results.gifs++
-      } else {
-        results.gifErrors.push(`no_mapping: ${oe.naam}`)
+    // 2b. GIFs — zoek via /exercises/name/, haal id op, bouw URL zelf
+    if (process.env.RAPIDAPI_KEY) {
+      const SEARCH_TERMS = {
+        "Push-up":                      "push-up",
+        "Pike Push-up":                 "pike push-up",
+        "Dips op stoel":                "assisted chest dip",
+        "Plank":                        "plank",
+        "Tafelrij":                     "assisted hanging knee raise",
+        "Superman":                     "superman",
+        "Dead Bug":                     "dead bug",
+        "Air Squat":                    "air squat",
+        "Lunge":                        "lunge",
+        "Glute Bridge":                 "glute bridge",
+        "Mountain Climber":             "mountain climber",
+        "Calf Raise":                   "calf raise",
+        "Dumbbell Chest Press":         "dumbbell bench press",
+        "Dumbbell Shoulder Press":      "dumbbell shoulder press",
+        "Lateral Raise":                "lateral raise",
+        "Tricep Kickback":              "tricep dumbbell kickback",
+        "Dumbbell Row":                 "dumbbell bent over row",
+        "Face Pull met weerstandsband": "band face pull",
+        "Dumbbell Bicep Curl":          "dumbbell bicep curl",
+        "Goblet Squat":                 "dumbbell goblet squat",
+        "Romanian Deadlift DB":         "romanian deadlift",
+        "Dumbbell Lunge":               "dumbbell lunge",
+        "Glute Bridge met Dumbbell":    "glute bridge",
+        "Bench Press":                  "barbell bench press",
+        "Incline Dumbbell Press":       "dumbbell incline press",
+        "Cable Lateral Raise":          "cable lateral raise",
+        "Tricep Pushdown":              "cable pushdown",
+        "Overhead Tricep Extension":    "cable overhead tricep extension",
+        "Deadlift":                     "deadlift",
+        "Cable Row":                    "cable seated row",
+        "Lat Pulldown":                 "cable lat pulldown",
+        "Face Pull kabel":              "cable face pull",
+        "Barbell Curl":                 "barbell curl",
+        "Barbell Squat":                "barbell squat",
+        "Romanian Deadlift Barbell":    "romanian deadlift",
+        "Leg Press":                    "leg press",
+        "Walking Lunge":                "walking lunge",
+        "Cable Crunch":                 "cable crunch",
+        "Shoulder Press":               "barbell shoulder press",
+      }
+      for (const oe of (allOef || [])) {
+        if (oe.gif_url) continue
+        const term = SEARCH_TERMS[oe.naam]
+        if (!term) { results.gifErrors.push(`no_term: ${oe.naam}`); continue }
+        try {
+          const res = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(term)}?limit=1`,
+            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const exerciseId = Array.isArray(data) && data[0]?.id ? data[0].id : null
+            if (exerciseId) {
+              const gifUrl = `https://v2.exercisedb.io/image/${exerciseId}`
+              await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
+              results.gifs++
+            } else {
+              results.gifErrors.push(`no_id: ${term}`)
+            }
+          } else {
+            results.gifErrors.push(`${res.status}: ${term}`)
+          }
+        } catch (e) {
+          results.gifErrors.push(`err: ${e.message}`)
+          break
+        }
       }
     }
 
