@@ -128,18 +128,33 @@ export async function GET(request) {
     results.oefeningen = allOef?.length || 0
 
     // 2b. Haal gif URLs op via ExerciseDB voor oefeningen zonder gif_url
-    results.rapidApiKeyPresent = !!process.env.RAPIDAPI_KEY
     if (process.env.RAPIDAPI_KEY) {
-      // Probe first exercise to diagnose API response
-      const probeOe = (allOef || []).find(o => !o.gif_url)
-      if (probeOe) {
-        const probeSearch = (probeOe.naam_en || probeOe.naam).toLowerCase().replace(/[^a-z0-9\s]/g, "")
-        const probeRes = await fetch(
-          `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(probeSearch)}?limit=1`,
-          { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
-        )
-        const probeText = await probeRes.text()
-        results.apiProbe = { status: probeRes.status, term: probeSearch, body: probeText.slice(0, 300) }
+      for (const oe of (allOef || [])) {
+        if (oe.gif_url) continue
+        const searchTerm = (oe.naam_en || oe.naam).toLowerCase().replace(/[^a-z0-9\s]/g, "")
+        try {
+          const res = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=1`,
+            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : null
+            if (gifUrl) {
+              await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
+              results.gifs++
+            } else {
+              results.gifErrors.push(`no_match: ${searchTerm}`)
+            }
+          } else {
+            const txt = await res.text()
+            results.gifErrors.push(`${res.status}: ${txt.slice(0, 120)}`)
+            break
+          }
+        } catch (e) {
+          results.gifErrors.push(`exception: ${e.message}`)
+          break
+        }
       }
     }
 
