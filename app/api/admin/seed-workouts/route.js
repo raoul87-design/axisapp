@@ -127,34 +127,54 @@ export async function GET(request) {
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
 
-    // 2b. Haal gif URLs op via ExerciseDB voor oefeningen zonder gif_url
+    // 2b. Haal gif URLs op via ExerciseDB — één bulk fetch, daarna lokaal matchen
     if (process.env.RAPIDAPI_KEY) {
-      for (const oe of (allOef || [])) {
-        if (oe.gif_url) continue
-        const searchTerm = (oe.naam_en || oe.naam).toLowerCase().replace(/[^a-z0-9\s]/g, "")
-        try {
-          const res = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=1`,
-            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
-          )
-          if (res.ok) {
-            const data = await res.json()
-            const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : null
+      const ALIASES = {
+        "australian pullup":              "inverted row",
+        "seated cable row":               "cable seated row",
+        "cable face pull":                "cable pull-through",
+        "barbell squat":                  "barbell back squat",
+        "face pull with resistance band": "band face pull",
+      }
+      const norm = s => s.toLowerCase().replace(/[-_]/g, " ").replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
+
+      try {
+        const res = await fetch(
+          "https://exercisedb.p.rapidapi.com/exercises?limit=1300&offset=0",
+          { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+        )
+        if (!res.ok) {
+          results.gifErrors.push(`API ${res.status}: ${(await res.text()).slice(0, 120)}`)
+        } else {
+          const exerciseList = await res.json()
+
+          for (const oe of (allOef || [])) {
+            if (oe.gif_url) continue
+            const ourTerm = norm(oe.naam_en || oe.naam)
+            const alias = ALIASES[ourTerm]
+            const targets = alias ? [norm(alias), ourTerm] : [ourTerm]
+
+            let gifUrl = null
+            for (const target of targets) {
+              const exact = exerciseList.find(e => norm(e.name) === target)
+              if (exact) { gifUrl = exact.gifUrl; break }
+              const partial = exerciseList.find(e => {
+                const en = norm(e.name)
+                return en.includes(target) || target.includes(en)
+              })
+              if (partial) { gifUrl = partial.gifUrl; break }
+            }
+
             if (gifUrl) {
               await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
               results.gifs++
             } else {
-              results.gifErrors.push(`no_match: ${searchTerm}`)
+              results.gifErrors.push(`no_match: ${ourTerm}`)
             }
-          } else {
-            const txt = await res.text()
-            results.gifErrors.push(`${res.status}: ${txt.slice(0, 120)}`)
-            break
           }
-        } catch (e) {
-          results.gifErrors.push(`exception: ${e.message}`)
-          break
         }
+      } catch (e) {
+        results.gifErrors.push(`exception: ${e.message}`)
       }
     }
 
