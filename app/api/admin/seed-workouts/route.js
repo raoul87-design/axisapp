@@ -127,49 +127,89 @@ export async function GET(request) {
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
 
-    // 2b. Haal gif URLs op via ExerciseDB — één bulk fetch, daarna lokaal matchen
-    if (process.env.RAPIDAPI_KEY) {
-      const ALIASES = {
-        "australian pullup":              "inverted row",
-        "seated cable row":               "cable seated row",
-        "cable face pull":                "cable pull-through",
-        "barbell squat":                  "barbell back squat",
-        "face pull with resistance band": "band face pull",
+    // 2b. GIFs — stap 1: hardcoded directe URLs
+    const HARDCODED_GIFS = {
+      "Push-up":                   "https://v2.exercisedb.io/image/hqTMCnxYGAqaTB",
+      "Pike Push-up":              "https://v2.exercisedb.io/image/XKyDvqomYQlkbY",
+      "Plank":                     "https://v2.exercisedb.io/image/OoJiXqOGlLM3xD",
+      "Air Squat":                 "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Barbell Squat":             "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Goblet Squat":              "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Lunge":                     "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Dumbbell Lunge":            "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Walking Lunge":             "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Glute Bridge":              "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
+      "Glute Bridge met Dumbbell": "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
+      "Deadlift":                  "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Romanian Deadlift DB":      "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Romanian Deadlift Barbell": "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Bench Press":               "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
+      "Incline Dumbbell Press":    "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
+      "Lat Pulldown":              "https://v2.exercisedb.io/image/2RMoJBiRfJ8ZXN",
+      "Barbell Curl":              "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
+      "Dumbbell Bicep Curl":       "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
+    }
+    for (const oe of (allOef || [])) {
+      if (oe.gif_url) continue
+      const url = HARDCODED_GIFS[oe.naam]
+      if (url) {
+        await supabase.from("oefeningen").update({ gif_url: url }).eq("id", oe.id)
+        results.gifs++
       }
-      const norm = s => s.toLowerCase().replace(/[-_]/g, " ").replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
+    }
 
+    // 2c. GIFs — stap 2: ExerciseDB voor resterende oefeningen + log eerste 10 namen
+    if (process.env.RAPIDAPI_KEY) {
+      const EXACT_SEARCH = {
+        "Dips op stoel":              "dips",
+        "Tafelrij":                   "inverted row",
+        "Superman":                   "superman",
+        "Dead Bug":                   "dead bug",
+        "Mountain Climber":           "mountain climber",
+        "Calf Raise":                 "calf raise",
+        "Dumbbell Chest Press":       "dumbbell bench press",
+        "Dumbbell Shoulder Press":    "dumbbell shoulder press",
+        "Lateral Raise":              "lateral raise",
+        "Tricep Kickback":            "tricep kickback",
+        "Dumbbell Row":               "dumbbell row",
+        "Face Pull met weerstandsband": "band face pull",
+        "Cable Lateral Raise":        "cable lateral raise",
+        "Tricep Pushdown":            "tricep pushdown",
+        "Overhead Tricep Extension":  "tricep extension",
+        "Cable Row":                  "cable seated row",
+        "Face Pull kabel":            "cable face pull",
+        "Leg Press":                  "leg press",
+        "Cable Crunch":               "cable crunch",
+        "Shoulder Press":             "overhead press",
+      }
       try {
-        const res = await fetch(
-          "https://exercisedb.p.rapidapi.com/exercises?limit=1300&offset=0",
+        // Log eerste 10 namen voor diagnose
+        const sampleRes = await fetch(
+          "https://exercisedb.p.rapidapi.com/exercises?limit=10&offset=0",
           { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
         )
-        if (!res.ok) {
-          results.gifErrors.push(`API ${res.status}: ${(await res.text()).slice(0, 120)}`)
-        } else {
-          const exerciseList = await res.json()
+        if (sampleRes.ok) {
+          const sample = await sampleRes.json()
+          results.exercisedbSample = sample.map(e => e.name)
+        }
 
-          for (const oe of (allOef || [])) {
-            if (oe.gif_url) continue
-            const ourTerm = norm(oe.naam_en || oe.naam)
-            const alias = ALIASES[ourTerm]
-            const targets = alias ? [norm(alias), ourTerm] : [ourTerm]
-
-            let gifUrl = null
-            for (const target of targets) {
-              const exact = exerciseList.find(e => norm(e.name) === target)
-              if (exact) { gifUrl = exact.gifUrl; break }
-              const partial = exerciseList.find(e => {
-                const en = norm(e.name)
-                return en.includes(target) || target.includes(en)
-              })
-              if (partial) { gifUrl = partial.gifUrl; break }
-            }
-
+        const { data: refreshed } = await supabase.from("oefeningen").select("id, naam, gif_url")
+        for (const oe of (refreshed || [])) {
+          if (oe.gif_url) continue
+          const searchTerm = EXACT_SEARCH[oe.naam]
+          if (!searchTerm) { results.gifErrors.push(`no_search_term: ${oe.naam}`); continue }
+          const res = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=1`,
+            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : null
             if (gifUrl) {
               await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
               results.gifs++
             } else {
-              results.gifErrors.push(`no_match: ${ourTerm}`)
+              results.gifErrors.push(`no_match: ${searchTerm}`)
             }
           }
         }
