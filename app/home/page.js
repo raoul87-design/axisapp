@@ -446,6 +446,17 @@ function startWorkout() {
 
 async function chooseSelfWorkout(workoutId) {
   if (!user || !workoutId) return
+
+  // Profiel check: name moet ingevuld zijn
+  const { data: profile } = await supabase
+    .from("users").select("name").eq("auth_user_id", user.id).maybeSingle()
+  if (!profile?.name) {
+    alert("Maak eerst je profiel compleet via de onboarding.")
+    setActiveTab("vandaag")
+    setShowOnboarding(true)
+    return
+  }
+
   setWorkoutLoading(true)
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
