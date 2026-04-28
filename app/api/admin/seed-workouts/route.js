@@ -158,58 +158,61 @@ export async function GET(request) {
       }
     }
 
-    // 2c. GIFs — stap 2: ExerciseDB voor resterende oefeningen + log eerste 10 namen
+    // 2c. GIFs — stap 2: ExerciseDB bulk fetch, exacte naam lookup + debug filter
     if (process.env.RAPIDAPI_KEY) {
-      const EXACT_SEARCH = {
-        "Dips op stoel":              "dips",
-        "Tafelrij":                   "inverted row",
-        "Superman":                   "superman",
-        "Dead Bug":                   "dead bug",
-        "Mountain Climber":           "mountain climber",
-        "Calf Raise":                 "calf raise",
-        "Dumbbell Chest Press":       "dumbbell bench press",
-        "Dumbbell Shoulder Press":    "dumbbell shoulder press",
-        "Lateral Raise":              "lateral raise",
-        "Tricep Kickback":            "tricep kickback",
-        "Dumbbell Row":               "dumbbell row",
+      const EXACT_NAMES = {
+        "Dips op stoel":                "assisted chest dip (kneeling)",
+        "Tafelrij":                     "assisted hanging knee raise",
+        "Superman":                     "back lever",
+        "Dead Bug":                     "dead bug",
+        "Mountain Climber":             "mountain climber",
+        "Calf Raise":                   "standing calf raises",
+        "Dumbbell Chest Press":         "dumbbell bench press",
+        "Dumbbell Shoulder Press":      "dumbbell shoulder press",
+        "Lateral Raise":                "dumbbell lateral raise",
+        "Tricep Kickback":              "dumbbell kickback",
+        "Dumbbell Row":                 "dumbbell bent over row",
         "Face Pull met weerstandsband": "band face pull",
-        "Cable Lateral Raise":        "cable lateral raise",
-        "Tricep Pushdown":            "tricep pushdown",
-        "Overhead Tricep Extension":  "tricep extension",
-        "Cable Row":                  "cable seated row",
-        "Face Pull kabel":            "cable face pull",
-        "Leg Press":                  "leg press",
-        "Cable Crunch":               "cable crunch",
-        "Shoulder Press":             "overhead press",
+        "Cable Lateral Raise":          "cable lateral raise",
+        "Tricep Pushdown":              "cable pushdown",
+        "Overhead Tricep Extension":    "cable triceps pushdown",
+        "Cable Row":                    "cable seated row",
+        "Face Pull kabel":              "cable pull through",
+        "Leg Press":                    "leg press",
+        "Cable Crunch":                 "cable crunch",
+        "Shoulder Press":               "barbell overhead press",
       }
       try {
-        // Log eerste 10 namen voor diagnose
-        const sampleRes = await fetch(
-          "https://exercisedb.p.rapidapi.com/exercises?limit=10&offset=0",
+        const res = await fetch(
+          "https://exercisedb.p.rapidapi.com/exercises?limit=1300&offset=0",
           { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
         )
-        if (sampleRes.ok) {
-          const sample = await sampleRes.json()
-          results.exercisedbSample = sample.map(e => e.name)
-        }
+        if (!res.ok) {
+          results.gifErrors.push(`API ${res.status}: ${(await res.text()).slice(0, 120)}`)
+        } else {
+          const exerciseList = await res.json()
 
-        const { data: refreshed } = await supabase.from("oefeningen").select("id, naam, gif_url")
-        for (const oe of (refreshed || [])) {
-          if (oe.gif_url) continue
-          const searchTerm = EXACT_SEARCH[oe.naam]
-          if (!searchTerm) { results.gifErrors.push(`no_search_term: ${oe.naam}`); continue }
-          const res = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=1`,
-            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
-          )
-          if (res.ok) {
-            const data = await res.json()
-            const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : null
-            if (gifUrl) {
-              await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
+          // Debug: namen die dip/row/lateral/curl/press bevatten
+          const DEBUG_KEYWORDS = ["dip", "row", "lateral", "curl", "press"]
+          results.exercisedbDebug = {}
+          for (const kw of DEBUG_KEYWORDS) {
+            results.exercisedbDebug[kw] = exerciseList
+              .map(e => e.name)
+              .filter(n => n.includes(kw))
+              .slice(0, 10)
+          }
+
+          const { data: refreshed } = await supabase.from("oefeningen").select("id, naam, gif_url")
+          for (const oe of (refreshed || [])) {
+            if (oe.gif_url) continue
+            const exactName = EXACT_NAMES[oe.naam]
+            if (!exactName) { results.gifErrors.push(`no_mapping: ${oe.naam}`); continue }
+            const match = exerciseList.find(e => e.name.toLowerCase() === exactName.toLowerCase())
+            if (match?.gifUrl) {
+              await supabase.from("oefeningen").update({ gif_url: match.gifUrl }).eq("id", oe.id)
               results.gifs++
             } else {
-              results.gifErrors.push(`no_match: ${searchTerm}`)
+              results.gifErrors.push(`no_match: "${exactName}"`)
             }
           }
         }
