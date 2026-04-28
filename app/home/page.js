@@ -228,7 +228,9 @@ async function loadCommitments() {
 }
 
 async function checkFirstUse() {
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).single()
+  console.log("[checkFirstUse] auth user.id:", user.id)
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).maybeSingle()
+  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| data:", data)
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
   if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
@@ -236,7 +238,7 @@ async function checkFirstUse() {
   if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
-  if (data?.target_weight)   setDoelGewicht(data.target_weight)
+  if (data?.target_weight)     setDoelGewicht(data.target_weight)
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
 
@@ -254,12 +256,16 @@ async function saveNutritionGoals() {
 }
 
 async function saveGoalData(goal, cw, tw) {
-  const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).single()
+  console.log("[saveGoalData] auth user.id:", user.id, "| goal:", goal)
+  const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+  console.log("[saveGoalData] existing row:", existing)
   const payload = { goal, current_weight: cw ? parseFloat(cw) : null, target_weight: tw ? parseFloat(tw) : null }
   if (existing) {
-    await supabase.from("users").update(payload).eq("auth_user_id", user.id)
+    const { error } = await supabase.from("users").update(payload).eq("auth_user_id", user.id)
+    console.log("[saveGoalData] update error:", error)
   } else {
-    await supabase.from("users").insert({ ...payload, auth_user_id: user.id })
+    const { error } = await supabase.from("users").insert({ ...payload, auth_user_id: user.id })
+    console.log("[saveGoalData] insert error:", error)
   }
 }
 
@@ -574,7 +580,8 @@ async function linkWhatsapp(number) {
   if (!number || !user) return false
   const formatted = number.startsWith("whatsapp:") ? number : `whatsapp:${number}`
   const { error } = await supabase.from("users")
-    .upsert({ whatsapp_number: formatted, auth_user_id: user.id }, { onConflict: "whatsapp_number" })
+    .update({ whatsapp_number: formatted })
+    .eq("auth_user_id", user.id)
   if (error) { alert("Fout bij koppelen: " + error.message); return false }
   setWhatsappLinked(true)
   return true
