@@ -94,6 +94,23 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url)
   const reset = searchParams.get("reset") === "true"
+  const probe = searchParams.get("probe") === "true"
+
+  // Probe mode: haal eerste 50 ExerciseDB oefeningen op en log naam + gifUrl
+  if (probe) {
+    if (!process.env.RAPIDAPI_KEY) return new Response("RAPIDAPI_KEY missing", { status: 500 })
+    const res = await fetch(
+      "https://exercisedb.p.rapidapi.com/exercises?limit=50&offset=0",
+      { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+    )
+    if (!res.ok) return new Response(`API ${res.status}`, { status: 502 })
+    const list = await res.json()
+    const sample = list.slice(0, 10).map(e => ({ name: e.name, gifUrl: e.gifUrl, bodyPart: e.bodyPart }))
+    const allNames = list.map(e => e.name)
+    return new Response(JSON.stringify({ sample, allNames }, null, 2), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    })
+  }
 
   const results = { oefeningen: 0, workouts: 0, links: 0, gifs: 0, gifErrors: [], errors: [] }
 
