@@ -105,9 +105,10 @@ export async function GET(request) {
     )
     if (!res.ok) return new Response(`API ${res.status}`, { status: 502 })
     const list = await res.json()
+    const firstFull = list[0]
     const sample = list.slice(0, 10).map(e => ({ name: e.name, gifUrl: e.gifUrl, bodyPart: e.bodyPart }))
     const allNames = list.map(e => e.name)
-    return new Response(JSON.stringify({ sample, allNames }, null, 2), {
+    return new Response(JSON.stringify({ firstFull, sample, allNames }, null, 2), {
       status: 200, headers: { "Content-Type": "application/json" },
     })
   }
