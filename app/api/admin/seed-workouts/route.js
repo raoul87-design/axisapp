@@ -180,11 +180,11 @@ export async function GET(request) {
         "Mountain Climber":             "mountain climber",
         "Calf Raise":                   "calf raise",
         "Dumbbell Chest Press":         "dumbbell bench press",
-        "Dumbbell Shoulder Press":      "dumbbell overhead press",
+        "Dumbbell Shoulder Press":      "dumbbell arnold",
         "Lateral Raise":                "lateral raise",
         "Tricep Kickback":              "dumbbell kickback",
         "Dumbbell Row":                 "dumbbell bent over row",
-        "Face Pull met weerstandsband": "face pull",
+        "Face Pull met weerstandsband": "cable pull",
         "Dumbbell Bicep Curl":          "dumbbell bicep curl",
         "Goblet Squat":                 "dumbbell goblet squat",
         "Romanian Deadlift DB":         "romanian deadlift",
@@ -194,24 +194,27 @@ export async function GET(request) {
         "Incline Dumbbell Press":       "dumbbell incline press",
         "Cable Lateral Raise":          "cable lateral raise",
         "Tricep Pushdown":              "cable pushdown",
-        "Overhead Tricep Extension":    "cable overhead extension",
+        "Overhead Tricep Extension":    "tricep overhead",
         "Deadlift":                     "deadlift",
         "Cable Row":                    "cable seated row",
         "Lat Pulldown":                 "cable lat pulldown",
-        "Face Pull kabel":              "face pull",
+        "Face Pull kabel":              "cable pull",
         "Barbell Curl":                 "barbell curl",
         "Barbell Squat":                "barbell squat",
         "Romanian Deadlift Barbell":    "romanian deadlift",
         "Leg Press":                    "leg press",
         "Walking Lunge":                "walking lunge",
         "Cable Crunch":                 "crunch",
-        "Shoulder Press":               "barbell overhead press",
+        "Shoulder Press":               "barbell military",
       }
       // Als zoekterm geen match geeft — gebruik gif van vergelijkbare oefening
       const FALLBACKS = {
         "Pike Push-up":                 "Push-up",
-        "Face Pull met weerstandsband": "Face Pull kabel",
-        "Face Pull kabel":              "Face Pull met weerstandsband",
+        "Face Pull met weerstandsband": "Lat Pulldown",
+        "Face Pull kabel":              "Lat Pulldown",
+        "Dumbbell Shoulder Press":      "Bench Press",
+        "Overhead Tricep Extension":    "Tricep Pushdown",
+        "Shoulder Press":               "Bench Press",
       }
 
       const fetchGifId = async (term) => {
@@ -231,11 +234,14 @@ export async function GET(request) {
         try {
           let exerciseId = await fetchGifId(term)
 
-          // Fallback: zoek gif van vergelijkbare oefening
+          // Fallback: kopieer gif_url van vergelijkbare oefening uit DB
           if (!exerciseId && FALLBACKS[oe.naam]) {
-            const fallbackNaam = FALLBACKS[oe.naam]
-            const fallbackTerm = SEARCH_TERMS[fallbackNaam]
-            if (fallbackTerm) exerciseId = await fetchGifId(fallbackTerm)
+            const { data: fb } = await supabase.from("oefeningen").select("gif_url").eq("naam", FALLBACKS[oe.naam]).single()
+            if (fb?.gif_url) {
+              await supabase.from("oefeningen").update({ gif_url: fb.gif_url }).eq("id", oe.id)
+              results.gifs++
+              continue
+            }
           }
 
           if (exerciseId) {
