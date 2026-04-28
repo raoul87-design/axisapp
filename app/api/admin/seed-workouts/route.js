@@ -92,9 +92,23 @@ export async function GET(request) {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const results = { oefeningen: 0, workouts: 0, links: 0, errors: [] }
+  const { searchParams } = new URL(request.url)
+  const reset = searchParams.get("reset") === "true"
+
+  const results = { oefeningen: 0, workouts: 0, links: 0, gifs: 0, gifErrors: [], errors: [] }
 
   try {
+    // 0. Reset — verwijder alles zodat seed opnieuw kan draaien
+    if (reset) {
+      const { data: systemWorkouts } = await supabase
+        .from("workouts").select("id").eq("coach_email", "system")
+      const ids = (systemWorkouts || []).map(w => w.id)
+      if (ids.length) await supabase.from("workout_oefeningen").delete().in("workout_id", ids)
+      await supabase.from("workouts").delete().eq("coach_email", "system")
+      await supabase.from("oefeningen").delete().neq("id", "00000000-0000-0000-0000-000000000000")
+      results.reset = true
+    }
+
     // 1. Seed oefeningen — alleen als tabel leeg is
     const { count: oeCount } = await supabase
       .from("oefeningen")
@@ -108,10 +122,42 @@ export async function GET(request) {
     }
 
     // 2. Fetch alle oefeningen voor naam→id map
-    const { data: allOef } = await supabase.from("oefeningen").select("id, naam")
+    const { data: allOef } = await supabase.from("oefeningen").select("id, naam, naam_en, gif_url")
     const oefeningMap = {}
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
+
+    // 2b. Haal gif URLs op via ExerciseDB voor oefeningen zonder gif_url
+    results.rapidApiKeyPresent = !!process.env.RAPIDAPI_KEY
+    if (process.env.RAPIDAPI_KEY) {
+      for (const oe of (allOef || [])) {
+        if (oe.gif_url) continue
+        const searchTerm = (oe.naam_en || oe.naam).toLowerCase().replace(/[^a-z0-9\s]/g, "")
+        try {
+          const res = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=1`,
+            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : null
+            if (gifUrl) {
+              await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
+              results.gifs++
+            } else {
+              results.gifErrors.push(`no_match: ${searchTerm}`)
+            }
+          } else {
+            const txt = await res.text()
+            results.gifErrors.push(`${res.status} ${searchTerm}: ${txt.slice(0, 100)}`)
+            break
+          }
+        } catch (e) {
+          results.gifErrors.push(`exception: ${e.message}`)
+          break
+        }
+      }
+    }
 
     // 3. Seed workouts — alleen als er nog geen system workouts zijn
     const { count: wCount } = await supabase
