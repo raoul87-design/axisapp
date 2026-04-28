@@ -459,6 +459,14 @@ async function chooseSelfWorkout(workoutId) {
   }
 }
 
+async function cancelWorkout() {
+  if (!todayWorkout || !user) return
+  await supabase.from("workout_planning").delete().eq("id", todayWorkout.id)
+  setTodayWorkout(null)
+  setSetLogs({})
+  setWorkoutScreen("overview")
+}
+
 async function finishWorkout() {
   if (!todayWorkout || !user) return
   const today = getNLDate()
@@ -1579,9 +1587,14 @@ return (
                     }
                   </div>
                   {!todayWorkout.gedaan ? (
-                    <button onClick={startWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
-                      Start workout →
-                    </button>
+                    <>
+                      <button onClick={startWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
+                        Start workout →
+                      </button>
+                      <button onClick={cancelWorkout} style={{ width: "100%", marginTop: 8, padding: 10, background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12 }}>
+                        ✕ Workout annuleren
+                      </button>
+                    </>
                   ) : (
                     <button onClick={() => setWorkoutScreen("done")} style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
                       Bekijk samenvatting
@@ -1706,7 +1719,10 @@ return (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <div>
-                  <button onClick={() => setWorkoutScreen("overview")} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0, marginBottom: 4 }}>← Terug</button>
+                  <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
+                    <button onClick={() => setWorkoutScreen("overview")} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>← Terug</button>
+                    <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, padding: 0 }}>✕ Annuleer</button>
+                  </div>
                   <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>{todayWorkout?.workout?.naam}</h3>
                 </div>
                 <button onClick={finishWorkout} style={{ background: GREEN, border: "none", borderRadius: 8, padding: "8px 16px", color: "#000", fontWeight: "bold", fontSize: 13, cursor: "pointer" }}>
