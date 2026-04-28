@@ -95,8 +95,8 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const reset = searchParams.get("reset") === "true"
   const probe = searchParams.get("probe") === "true"
+  const find  = searchParams.get("find")  === "true"
 
-  // Probe mode: haal eerste 50 ExerciseDB oefeningen op en log naam + gifUrl
   if (probe) {
     if (!process.env.RAPIDAPI_KEY) return new Response("RAPIDAPI_KEY missing", { status: 500 })
     const res = await fetch(
@@ -105,10 +105,29 @@ export async function GET(request) {
     )
     if (!res.ok) return new Response(`API ${res.status}`, { status: 502 })
     const list = await res.json()
-    const firstFull = list[0]
     const sample = list.slice(0, 10).map(e => ({ id: e.id, name: e.name, bodyPart: e.bodyPart }))
-    const allNames = list.map(e => e.name)
-    return new Response(JSON.stringify({ firstFull, sample, allNames }, null, 2), {
+    return new Response(JSON.stringify({ firstFull: list[0], sample, allNames: list.map(e => e.name) }, null, 2), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    })
+  }
+
+  if (find) {
+    if (!process.env.RAPIDAPI_KEY) return new Response("RAPIDAPI_KEY missing", { status: 500 })
+    const TERMS = ["pushup", "shoulder press", "kickback", "face", "tricep", "crunch", "overhead press"]
+    const out = {}
+    for (const term of TERMS) {
+      const res = await fetch(
+        `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(term)}?limit=5`,
+        { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        out[term] = (Array.isArray(data) ? data : []).slice(0, 3).map(e => ({ id: e.id, name: e.name }))
+      } else {
+        out[term] = `error ${res.status}`
+      }
+    }
+    return new Response(JSON.stringify(out, null, 2), {
       status: 200, headers: { "Content-Type": "application/json" },
     })
   }
@@ -149,7 +168,7 @@ export async function GET(request) {
     if (process.env.RAPIDAPI_KEY) {
       const SEARCH_TERMS = {
         "Push-up":                      "push-up",
-        "Pike Push-up":                 "pike push-up",
+        "Pike Push-up":                 "pike",
         "Dips op stoel":                "assisted chest dip",
         "Plank":                        "plank",
         "Tafelrij":                     "assisted hanging knee raise",
@@ -161,11 +180,11 @@ export async function GET(request) {
         "Mountain Climber":             "mountain climber",
         "Calf Raise":                   "calf raise",
         "Dumbbell Chest Press":         "dumbbell bench press",
-        "Dumbbell Shoulder Press":      "dumbbell shoulder press",
+        "Dumbbell Shoulder Press":      "dumbbell overhead press",
         "Lateral Raise":                "lateral raise",
-        "Tricep Kickback":              "tricep dumbbell kickback",
+        "Tricep Kickback":              "dumbbell kickback",
         "Dumbbell Row":                 "dumbbell bent over row",
-        "Face Pull met weerstandsband": "band face pull",
+        "Face Pull met weerstandsband": "face pull",
         "Dumbbell Bicep Curl":          "dumbbell bicep curl",
         "Goblet Squat":                 "dumbbell goblet squat",
         "Romanian Deadlift DB":         "romanian deadlift",
@@ -175,40 +194,55 @@ export async function GET(request) {
         "Incline Dumbbell Press":       "dumbbell incline press",
         "Cable Lateral Raise":          "cable lateral raise",
         "Tricep Pushdown":              "cable pushdown",
-        "Overhead Tricep Extension":    "cable overhead tricep extension",
+        "Overhead Tricep Extension":    "cable overhead extension",
         "Deadlift":                     "deadlift",
         "Cable Row":                    "cable seated row",
         "Lat Pulldown":                 "cable lat pulldown",
-        "Face Pull kabel":              "cable face pull",
+        "Face Pull kabel":              "face pull",
         "Barbell Curl":                 "barbell curl",
         "Barbell Squat":                "barbell squat",
         "Romanian Deadlift Barbell":    "romanian deadlift",
         "Leg Press":                    "leg press",
         "Walking Lunge":                "walking lunge",
-        "Cable Crunch":                 "cable crunch",
-        "Shoulder Press":               "barbell shoulder press",
+        "Cable Crunch":                 "crunch",
+        "Shoulder Press":               "barbell overhead press",
       }
+      // Als zoekterm geen match geeft — gebruik gif van vergelijkbare oefening
+      const FALLBACKS = {
+        "Pike Push-up":                 "Push-up",
+        "Face Pull met weerstandsband": "Face Pull kabel",
+        "Face Pull kabel":              "Face Pull met weerstandsband",
+      }
+
+      const fetchGifId = async (term) => {
+        const res = await fetch(
+          `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(term)}?limit=1`,
+          { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
+        )
+        if (!res.ok) return null
+        const data = await res.json()
+        return Array.isArray(data) && data[0]?.id ? data[0].id : null
+      }
+
       for (const oe of (allOef || [])) {
         if (oe.gif_url) continue
         const term = SEARCH_TERMS[oe.naam]
         if (!term) { results.gifErrors.push(`no_term: ${oe.naam}`); continue }
         try {
-          const res = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(term)}?limit=1`,
-            { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
-          )
-          if (res.ok) {
-            const data = await res.json()
-            const exerciseId = Array.isArray(data) && data[0]?.id ? data[0].id : null
-            if (exerciseId) {
-              const gifUrl = `https://v2.exercisedb.io/image/${exerciseId}`
-              await supabase.from("oefeningen").update({ gif_url: gifUrl }).eq("id", oe.id)
-              results.gifs++
-            } else {
-              results.gifErrors.push(`no_id: ${term}`)
-            }
+          let exerciseId = await fetchGifId(term)
+
+          // Fallback: zoek gif van vergelijkbare oefening
+          if (!exerciseId && FALLBACKS[oe.naam]) {
+            const fallbackNaam = FALLBACKS[oe.naam]
+            const fallbackTerm = SEARCH_TERMS[fallbackNaam]
+            if (fallbackTerm) exerciseId = await fetchGifId(fallbackTerm)
+          }
+
+          if (exerciseId) {
+            await supabase.from("oefeningen").update({ gif_url: `https://v2.exercisedb.io/image/${exerciseId}` }).eq("id", oe.id)
+            results.gifs++
           } else {
-            results.gifErrors.push(`${res.status}: ${term}`)
+            results.gifErrors.push(`no_match: ${term}`)
           }
         } catch (e) {
           results.gifErrors.push(`err: ${e.message}`)
