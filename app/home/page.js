@@ -453,10 +453,10 @@ function startWorkout() {
 async function chooseSelfWorkout(workoutId) {
   if (!user || !workoutId) return
 
-  // Profiel check: name moet ingevuld zijn
+  // Profiel check: goal moet ingevuld zijn (onboarding gedaan)
   const { data: profile } = await supabase
-    .from("users").select("name").eq("auth_user_id", user.id).maybeSingle()
-  if (!profile?.name) {
+    .from("users").select("goal").eq("auth_user_id", user.id).maybeSingle()
+  if (!profile?.goal) {
     alert("Maak eerst je profiel compleet via de onboarding.")
     setActiveTab("vandaag")
     setShowOnboarding(true)
