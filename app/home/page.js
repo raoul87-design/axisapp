@@ -392,11 +392,13 @@ async function loadWorkoutData() {
       .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
       .order("datum", { ascending: true }),
     supabase.from("workouts")
-      .select(`id, naam, dag_type, niveau, workout_oefeningen ( id )`)
+      .select(`id, naam, dag_type, workout_oefeningen ( id )`)
       .eq("is_template", true)
       .order("naam", { ascending: true }),
   ])
 
+  console.log("[loadWorkoutData] planning:", planning)
+  console.log("[loadWorkoutData] user.id:", user?.id)
   setTodayWorkout(planning || null)
   setWeekWorkouts(weekPlan || [])
   setWorkoutLibrary(libraryData || [])
@@ -419,7 +421,12 @@ async function loadWorkoutData() {
 }
 
 function startWorkoutFromPlanning(planning) {
-  if (!planning?.workout?.workout_oefeningen) return
+  console.log("[startWorkout] planning:", JSON.stringify(planning, null, 2))
+  console.log("[startWorkout] workout_oefeningen:", planning?.workout?.workout_oefeningen)
+  if (!planning?.workout?.workout_oefeningen) {
+    console.warn("[startWorkout] geblokkeerd: geen workout_oefeningen")
+    return
+  }
   const exercises = [...planning.workout.workout_oefeningen]
     .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
   const logs = {}
