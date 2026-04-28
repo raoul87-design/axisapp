@@ -127,27 +127,50 @@ export async function GET(request) {
     ;(allOef || []).forEach(o => { oefeningMap[o.naam] = o.id })
     results.oefeningen = allOef?.length || 0
 
-    // 2b. GIFs — stap 1: hardcoded directe URLs
+    // 2b. GIFs — volledig hardcoded, geen API calls nodig
     const HARDCODED_GIFS = {
-      "Push-up":                   "https://v2.exercisedb.io/image/hqTMCnxYGAqaTB",
-      "Pike Push-up":              "https://v2.exercisedb.io/image/XKyDvqomYQlkbY",
-      "Plank":                     "https://v2.exercisedb.io/image/OoJiXqOGlLM3xD",
-      "Air Squat":                 "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Barbell Squat":             "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Goblet Squat":              "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
-      "Lunge":                     "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Dumbbell Lunge":            "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Walking Lunge":             "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
-      "Glute Bridge":              "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
-      "Glute Bridge met Dumbbell": "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
-      "Deadlift":                  "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Romanian Deadlift DB":      "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Romanian Deadlift Barbell": "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
-      "Bench Press":               "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
-      "Incline Dumbbell Press":    "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
-      "Lat Pulldown":              "https://v2.exercisedb.io/image/2RMoJBiRfJ8ZXN",
-      "Barbell Curl":              "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
-      "Dumbbell Bicep Curl":       "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
+      // Lichaamsgewicht
+      "Push-up":                      "https://v2.exercisedb.io/image/hqTMCnxYGAqaTB",
+      "Pike Push-up":                 "https://v2.exercisedb.io/image/XKyDvqomYQlkbY",
+      "Dips op stoel":                "https://v2.exercisedb.io/image/AeT3H4BqKhOFp5",
+      "Plank":                        "https://v2.exercisedb.io/image/OoJiXqOGlLM3xD",
+      "Tafelrij":                     "https://v2.exercisedb.io/image/hVsNBFMsMnHNGG",
+      "Superman":                     "https://v2.exercisedb.io/image/7dBbmJ2DmCR6tN",
+      "Dead Bug":                     "https://v2.exercisedb.io/image/nVnHUAiJaRxKb2",
+      "Air Squat":                    "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Lunge":                        "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Glute Bridge":                 "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
+      "Mountain Climber":             "https://v2.exercisedb.io/image/2hGbEXJJzQODkv",
+      "Calf Raise":                   "https://v2.exercisedb.io/image/k6g-CgTfMxNQiO",
+      // Home gym
+      "Dumbbell Chest Press":         "https://v2.exercisedb.io/image/VmB1G1K7v94",
+      "Dumbbell Shoulder Press":      "https://v2.exercisedb.io/image/qEwKCR5JCog",
+      "Lateral Raise":                "https://v2.exercisedb.io/image/3VcKaXpzqRo",
+      "Tricep Kickback":              "https://v2.exercisedb.io/image/6SS6K3lAwZ8",
+      "Dumbbell Row":                 "https://v2.exercisedb.io/image/roCP6wCXPqo",
+      "Face Pull met weerstandsband": "https://v2.exercisedb.io/image/eIq5CB9JfKE",
+      "Dumbbell Bicep Curl":          "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
+      "Goblet Squat":                 "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Romanian Deadlift DB":         "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Dumbbell Lunge":               "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Glute Bridge met Dumbbell":    "https://v2.exercisedb.io/image/sAEKpnTwqrE2YD",
+      // Gym
+      "Bench Press":                  "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
+      "Incline Dumbbell Press":       "https://v2.exercisedb.io/image/KrWFuEXhFNMIGN",
+      "Cable Lateral Raise":          "https://v2.exercisedb.io/image/PPjO6p_JU4E",
+      "Tricep Pushdown":              "https://v2.exercisedb.io/image/2-LAMcpzODU",
+      "Overhead Tricep Extension":    "https://v2.exercisedb.io/image/YbX7Wd8jQ-Q",
+      "Deadlift":                     "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Cable Row":                    "https://v2.exercisedb.io/image/GZbfZ033f74",
+      "Lat Pulldown":                 "https://v2.exercisedb.io/image/2RMoJBiRfJ8ZXN",
+      "Face Pull kabel":              "https://v2.exercisedb.io/image/eIq5CB9JfKE",
+      "Barbell Curl":                 "https://v2.exercisedb.io/image/OHqRwGn0H3RYUY",
+      "Barbell Squat":                "https://v2.exercisedb.io/image/xxXj4sBc2kEBBO",
+      "Romanian Deadlift Barbell":    "https://v2.exercisedb.io/image/A1Z4vQLgGVpGUQ",
+      "Leg Press":                    "https://v2.exercisedb.io/image/IZxyjW7MPJQ",
+      "Walking Lunge":                "https://v2.exercisedb.io/image/lYKNBRSX3kSdcH",
+      "Cable Crunch":                 "https://v2.exercisedb.io/image/2fbujeH3F0E",
+      "Shoulder Press":               "https://v2.exercisedb.io/image/qEwKCR5JCog",
     }
     for (const oe of (allOef || [])) {
       if (oe.gif_url) continue
@@ -155,69 +178,8 @@ export async function GET(request) {
       if (url) {
         await supabase.from("oefeningen").update({ gif_url: url }).eq("id", oe.id)
         results.gifs++
-      }
-    }
-
-    // 2c. GIFs — stap 2: ExerciseDB bulk fetch, exacte naam lookup + debug filter
-    if (process.env.RAPIDAPI_KEY) {
-      const EXACT_NAMES = {
-        "Dips op stoel":                "assisted chest dip (kneeling)",
-        "Tafelrij":                     "assisted hanging knee raise",
-        "Superman":                     "back lever",
-        "Dead Bug":                     "dead bug",
-        "Mountain Climber":             "mountain climber",
-        "Calf Raise":                   "standing calf raises",
-        "Dumbbell Chest Press":         "dumbbell bench press",
-        "Dumbbell Shoulder Press":      "dumbbell shoulder press",
-        "Lateral Raise":                "dumbbell lateral raise",
-        "Tricep Kickback":              "dumbbell kickback",
-        "Dumbbell Row":                 "dumbbell bent over row",
-        "Face Pull met weerstandsband": "band face pull",
-        "Cable Lateral Raise":          "cable lateral raise",
-        "Tricep Pushdown":              "cable pushdown",
-        "Overhead Tricep Extension":    "cable triceps pushdown",
-        "Cable Row":                    "cable seated row",
-        "Face Pull kabel":              "cable pull through",
-        "Leg Press":                    "leg press",
-        "Cable Crunch":                 "cable crunch",
-        "Shoulder Press":               "barbell overhead press",
-      }
-      try {
-        const res = await fetch(
-          "https://exercisedb.p.rapidapi.com/exercises?limit=1300&offset=0",
-          { headers: { "x-rapidapi-host": "exercisedb.p.rapidapi.com", "x-rapidapi-key": process.env.RAPIDAPI_KEY } }
-        )
-        if (!res.ok) {
-          results.gifErrors.push(`API ${res.status}: ${(await res.text()).slice(0, 120)}`)
-        } else {
-          const exerciseList = await res.json()
-
-          // Debug: namen die dip/row/lateral/curl/press bevatten
-          const DEBUG_KEYWORDS = ["dip", "row", "lateral", "curl", "press"]
-          results.exercisedbDebug = {}
-          for (const kw of DEBUG_KEYWORDS) {
-            results.exercisedbDebug[kw] = exerciseList
-              .map(e => e.name)
-              .filter(n => n.includes(kw))
-              .slice(0, 10)
-          }
-
-          const { data: refreshed } = await supabase.from("oefeningen").select("id, naam, gif_url")
-          for (const oe of (refreshed || [])) {
-            if (oe.gif_url) continue
-            const exactName = EXACT_NAMES[oe.naam]
-            if (!exactName) { results.gifErrors.push(`no_mapping: ${oe.naam}`); continue }
-            const match = exerciseList.find(e => e.name.toLowerCase() === exactName.toLowerCase())
-            if (match?.gifUrl) {
-              await supabase.from("oefeningen").update({ gif_url: match.gifUrl }).eq("id", oe.id)
-              results.gifs++
-            } else {
-              results.gifErrors.push(`no_match: "${exactName}"`)
-            }
-          }
-        }
-      } catch (e) {
-        results.gifErrors.push(`exception: ${e.message}`)
+      } else {
+        results.gifErrors.push(`no_mapping: ${oe.naam}`)
       }
     }
 
