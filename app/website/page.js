@@ -336,12 +336,13 @@ export default function Website() {
           </p>
           <div className="feature-grid" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {[
-              { num: "01", title: "Daily commitment", desc: "Clients commit to what they will do today. One clear intention — set every morning via WhatsApp." },
-              { num: "02", title: "Execution tracking", desc: "Axis checks whether commitments are executed. Streaks, missed days, and patterns — visible to the coach." },
-              { num: "03", title: "Metrics tracking", desc: "Weight, kcal and macros tracked daily via WhatsApp. No manual entry, no separate app." },
-              { num: "04", title: "AI coach", desc: "Remembers your client's history and responds like a real coach. Adjusts tone based on streak and progress." },
-              { num: "05", title: "Progress insights", desc: "Trends, streaks and patterns visible for both coach and client. Spot who needs support before they drop off." },
+              { num: "01", title: "Daily commitment", desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
+              { num: "02", title: "Execution tracking", desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
+              { num: "03", title: "Metrics tracking", desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
+              { num: "04", title: "AI coach", desc: "Remembers your client's history and adjusts tone based on streak and progress." },
+              { num: "05", title: "Progress insights", desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
               { num: "06", title: "Personal reminders", desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
+              { num: "07", title: "Workout delivery", desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
             ].map(f => (
               <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
                 <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{f.num}</div>
@@ -392,7 +393,7 @@ export default function Website() {
                 Discipline without<br />opening an app.
               </h2>
               <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>
-                Clients don't install anything. They simply respond. Commitments, weight, calories, questions — all via WhatsApp. Daily.
+                Clients don't install anything. They simply respond. Commitments, weight, calories, reminders — all via WhatsApp. Workouts and progress tracking in the app.
               </p>
             </div>
           </div>
@@ -453,7 +454,7 @@ export default function Website() {
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect for independent coaches just getting started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Daily WhatsApp check-ins, morning and evening", "Clients commit to their goal every day", "Metrics tracking — weight, kcal and macros via WhatsApp", "AI coach with memory — remembers your client's history", "Reminders — clients set personal reminders via WhatsApp", "Streak & missed days tracking", "Basic client overview — streak and status per client"].map(f => (
+                {["Daily WhatsApp check-ins", "Metrics tracking — weight, kcal, steps", "AI coach with memory", "Personal reminders via WhatsApp", "Workout library — 39 exercises with instructions and weight logging", "Progressive overload suggestions", "Basic coach dashboard", "Up to 15 clients"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -478,7 +479,7 @@ export default function Website() {
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For coaches who want visibility and a partner to get started.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Everything from Starter", "Full coach dashboard with weekly progress", "Client insights — consistency, volume and risk signals", "Nutrition goals per client — set kcal and macro targets", "Client detail page — full history, trends and conversations", "WhatsApp support from the Axis team", "Onboarding help for your first clients"].map(f => (
+                {["Everything from Starter", "Full coach dashboard with insights", "Client detail page — full history", "Nutrition goals per client", "Custom workout builder", "Progressive overload alerts per client", "Coach FAQ — train the AI with your answers", "WhatsApp support from AXIS team", "Up to 50 clients"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -500,7 +501,7 @@ export default function Website() {
                 <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For gyms and coaching businesses that want Axis under their own name.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Everything from Starter and Growth", "White label — your name, your brand", "Custom branding on all client messages", "Multiple coach accounts", "VIP support"].map(f => (
+                {["Everything from Growth", "White label — your name, your brand", "Multiple coach accounts", "Custom branding on all messages", "VIP support", "Up to 150 clients"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
