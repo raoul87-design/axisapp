@@ -89,6 +89,29 @@ export async function GET(request) {
       return new Response("DB error", { status: 500 })
     }
 
+    // Commitments aanmaken voor ALLE users met workout gepland voor vandaag
+    const { data: allPlanRows } = await supabase
+      .from("workout_planning")
+      .select("user_id, workout:workout_id ( naam )")
+      .eq("datum", today)
+
+    const commitsMade = []
+    for (const row of allPlanRows || []) {
+      const workoutNaam = row.workout?.naam
+      if (!workoutNaam) continue
+      const tekst = `💪 ${workoutNaam}`
+      const { data: dup } = await supabase
+        .from("commitments").select("id")
+        .eq("user_id", row.user_id).eq("date", today).eq("text", tekst).maybeSingle()
+      if (!dup) {
+        await supabase.from("commitments").insert({
+          user_id: row.user_id, date: today, text: tekst, category: "beweging", done: false,
+        })
+        commitsMade.push(row.user_id)
+      }
+    }
+    console.log(`[MORNING CRON] ${commitsMade.length}/${(allPlanRows || []).length} commitments aangemaakt`)
+
     console.log(`${users.length} users gevonden:`, users.map(u => u.whatsapp_number))
 
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
