@@ -387,7 +387,7 @@ async function loadWorkoutData() {
   sundayDate.setDate(sundayDate.getDate() + 6)
   const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
 
   const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
     supabase.from("workout_planning")
@@ -439,7 +439,7 @@ function startWorkoutFromPlanning(planning) {
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
     logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
-      reps: "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
+      reps: wo.reps ? String(wo.reps) : "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
     }))
   }
   setSetLogs(logs)
@@ -465,7 +465,7 @@ async function chooseSelfWorkout(workoutId) {
 
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, gif_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
 
   // Stap 1: check of er al een planning bestaat voor vandaag
   const { data: existing } = await supabase
@@ -476,6 +476,7 @@ async function chooseSelfWorkout(workoutId) {
     // Rij bestaat al → gebruik direct
     setTodayWorkout(existing)
     setWorkoutLoading(false)
+    autoWorkoutCommitment(existing.workout?.naam, today)
     startWorkoutFromPlanning(existing)
     return
   }
@@ -500,9 +501,22 @@ async function chooseSelfWorkout(workoutId) {
   if (fresh) {
     setTodayWorkout(fresh)
     setWorkoutLoading(false)
+    autoWorkoutCommitment(fresh.workout?.naam, today)
     startWorkoutFromPlanning(fresh)
   } else {
     setWorkoutLoading(false)
+  }
+}
+
+async function autoWorkoutCommitment(workoutNaam, forDate) {
+  if (!workoutNaam || !user) return
+  const tekst = `💪 ${workoutNaam}`
+  const { data: dup } = await supabase.from("commitments").select("id")
+    .eq("user_id", user.id).eq("date", forDate).eq("text", tekst).maybeSingle()
+  if (!dup) {
+    await supabase.from("commitments")
+      .insert({ user_id: user.id, date: forDate, text: tekst, category: "beweging", done: false })
+    loadCommitments()
   }
 }
 
@@ -531,9 +545,13 @@ async function finishWorkout() {
       })
     })
   }
+  console.log("[finishWorkout] rows to save:", rows)
   if (rows.length) {
     await supabase.from("workout_sets").delete().eq("user_id", user.id).eq("datum", today)
-    await supabase.from("workout_sets").insert(rows)
+    const { error: setsErr } = await supabase.from("workout_sets").insert(rows)
+    console.log("[finishWorkout] insert error:", setsErr)
+  } else {
+    console.warn("[finishWorkout] geen sets om op te slaan (rows leeg)")
   }
   await supabase.from("workout_planning").update({ gedaan: true }).eq("id", todayWorkout.id)
   setTodayWorkout(prev => ({ ...prev, gedaan: true }))
@@ -1797,17 +1815,12 @@ return (
                   const prev = prevWeights[oe.id]
                   return (
                     <div key={wo.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                      {oe.gif_url && (
-                        <div style={{ textAlign: "center", marginBottom: 12 }}>
-                          <img src={oe.gif_url} alt={oe.naam} style={{ maxHeight: 200, borderRadius: 8, objectFit: "contain" }} />
-                        </div>
-                      )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
                         <div>
                           <h4 style={{ color: C.text, fontSize: 15, fontWeight: "bold", margin: 0 }}>{oe.naam}</h4>
                           <p style={{ color: C.textMuted, fontSize: 12, marginTop: 2, marginBottom: 0 }}>{oe.spiergroep}</p>
                         </div>
-                        {!oe.gif_url && oe.youtube_url && (
+                        {oe.youtube_url && (!fitnessLevel || fitnessLevel.toLowerCase() === "beginner") && (
                           <a href={oe.youtube_url} target="_blank" rel="noopener noreferrer"
                             style={{ background: "#1a0a0a", border: "1px solid #4a1a1a", borderRadius: 6, padding: "5px 10px", color: "#ef4444", fontSize: 11, fontWeight: "bold", textDecoration: "none", whiteSpace: "nowrap" }}>
                             ▶ Video

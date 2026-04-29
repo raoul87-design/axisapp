@@ -360,6 +360,21 @@ export default function ClientDetail() {
     } else {
       await supabase.from("workout_planning").delete().eq("user_id", uid).eq("datum", datum)
       await supabase.from("workout_planning").insert({ user_id: uid, workout_id: workoutId, datum, gedaan: false })
+
+      // Auto commitment als coach workout toewijst voor vandaag
+      const todayISO = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+      if (datum === todayISO) {
+        const workout = availableWorkouts.find(w => w.id === workoutId)
+        if (workout) {
+          const tekst = `💪 ${workout.naam}`
+          const { data: dup } = await supabase.from("commitments").select("id")
+            .eq("user_id", uid).eq("date", datum).eq("text", tekst).maybeSingle()
+          if (!dup) {
+            await supabase.from("commitments")
+              .insert({ user_id: uid, date: datum, text: tekst, category: "beweging", done: false })
+          }
+        }
+      }
     }
     const dow2 = new Date().getDay()
     const dtm = dow2 === 0 ? 6 : dow2 - 1
