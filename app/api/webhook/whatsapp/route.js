@@ -345,6 +345,13 @@ Geef terug als JSON array. Elk object heeft:
 - Voor STOP_REMINDER ook: "tekst" (optioneel — wat gestopt moet worden, bijv. "creatine")
 - Voor alle andere categorieën ook: "tekst" (de originele tekst van dit onderdeel)
 
+COMMITMENT_DONE = een sport- of bewegingsactiviteit die de gebruiker VANDAAG al heeft uitgevoerd (verleden tijd, dezelfde dag):
+- Bevat beweging/sport in verleden tijd, NIET "gisteren" of "vorige week"
+- Sleutelwoorden: "gedaan", "afgerond", "klaar", "heb ... gedaan", "ben gaan ...", "net ... gedaan", "zojuist"
+- Voorbeelden: "uur krachttraining gedaan", "30 min gelopen", "heb gewandeld", "ben gaan fietsen", "yoga klaar"
+- Geef terug als: {"categorie":"COMMITMENT_DONE","tekst":"...bondige actie (max 8 woorden)..."}
+- NIET als de gebruiker "gisteren" of een andere dag noemt
+
 WORKOUT_LOG = een melding van voltooide trainingssets (oefeningen gedaan):
 - Bevat oefening + sets + reps, eventueel gewicht
 - Sleutelwoorden: "bench press", "squat", "deadlift", "sets", "reps", gekombineerd met "gedaan", "klaar", "gedaan", "afgerond"
@@ -425,6 +432,10 @@ Voorbeelden:
 - "Ik ben gisteren gaan hardlopen" → [{"categorie":"OVERIG","tekst":"Ik ben gisteren gaan hardlopen"}]
 - "Ik heb slecht geslapen vannacht" → [{"categorie":"OVERIG","tekst":"Ik heb slecht geslapen vannacht"}]
 - "Het was een drukke dag" → [{"categorie":"OVERIG","tekst":"Het was een drukke dag"}]
+- "Uur krachttraining gedaan" → [{"categorie":"COMMITMENT_DONE","tekst":"Uur krachttraining"}]
+- "30 min gelopen net" → [{"categorie":"COMMITMENT_DONE","tekst":"30 min hardlopen"}]
+- "Heb gewandeld" → [{"categorie":"COMMITMENT_DONE","tekst":"Wandeling"}]
+- "Ben gaan fietsen, 77.3kg" → [{"categorie":"COMMITMENT_DONE","tekst":"Fietsen"},{"categorie":"METRIC","metric_type":"gewicht","waarde":"77.3kg"}]
 
 Bericht: "${body.replace(/"/g, "'")}"
 
@@ -484,33 +495,56 @@ function buildConfirmation(savedItems) {
 
 // ── Handlers ──────────────────────────────────────────────────
 
+const MOVEMENT_RE = /sport|loop|lopen|fiets|fietsen|gym|zwem|wandel|yoga|train|hardloop|krachttraining|padel|beweging|fitness|gelopen|gefietst|getraind|gesport|gewandeld|gewandeld|padellen|gedaan|afgerond|klaar|voltooid|uur\s+\w+/i
+
 async function handleReflection(from, body, userData) {
   console.log("=== [3] REFLECTIE VERWERKEN ===")
   const { streak, missed_days: missedDays, auth_user_id: authUserId, id } = userData
-  // [BUG3 FIX] Geen conversation history — alleen streak/reflectie data, geïsoleerde context
   const normalized = body.trim().toLowerCase()
+  const today = getNLDate()
+
   // Ruimere matching: ja/yes/done/top/ok/👍 = afgerond
-  const completed  = /^(ja|yes|done|top|ok|oké|👍|👌|✅|goed|klaar|prima|super|fijn)\.?$/i.test(normalized)
+  const completed = /^(ja|yes|done|top|ok|oké|👍|👌|✅|goed|klaar|prima|super|fijn)\.?$/i.test(normalized)
+
+  // Detecteer of body naast "nee" ook een activiteit bevat
+  const isSimpleNee = /^(nee|no|nope)\.?$/i.test(normalized)
+  const hasDoneActivity = !completed && !isSimpleNee && MOVEMENT_RE.test(body)
+
+  // Reflectie als afgerond beschouwen als ze iets hebben gedaan (ook al was het niet de commitment)
+  const countAsCompleted = completed || hasDoneActivity
+  console.log("completed:", completed, "| hasDoneActivity:", hasDoneActivity, "| countAsCompleted:", countAsCompleted)
 
   if (authUserId) {
-    await supabase.from("reflections").insert({ user_id: authUserId, completed, answer: body })
-    console.log("Reflectie opgeslagen:", completed)
+    await supabase.from("reflections").insert({ user_id: authUserId, completed: countAsCompleted, answer: body })
+    console.log("Reflectie opgeslagen:", countAsCompleted)
   }
 
-  const newStreak     = completed ? streak + 1 : 0
-  const newMissedDays = completed ? 0 : missedDays + 1
+  const newStreak     = countAsCompleted ? streak + 1 : 0
+  const newMissedDays = countAsCompleted ? 0 : missedDays + 1
   await supabase
     .from("users")
     .update({ streak: newStreak, missed_days: newMissedDays, awaiting_reflection: false })
     .eq("id", id)
-
   console.log("Streak bijgewerkt:", newStreak, "| MissedDays:", newMissedDays)
 
-  const reply = completed
-    ? `Geweldig! 🔥 Streak staat nu op ${newStreak} ${newStreak === 1 ? "dag" : "dagen"}. Morgen weer!`
-    : `Oké, eerlijk is eerlijk. Morgen is een nieuwe kans — wat ga jij anders doen?`
+  if (completed) {
+    await sendWhatsApp(from, `Geweldig! 🔥 Streak staat nu op ${newStreak} ${newStreak === 1 ? "dag" : "dagen"}. Morgen weer!`)
+  } else if (hasDoneActivity) {
+    // Extraheer de activiteit: strip "nee [maar/toch/wel]" prefix
+    const activityText = body.replace(/^(nee|no|nope)[,.\s]*(maar|but|toch|wel)?[,.\s]*/i, "").trim() || body
+    // Sla op als done commitment
+    if (authUserId) {
+      await supabase.from("commitments").insert({
+        user_id: authUserId, text: activityText, date: today,
+        done: true, category: classifyCommitmentCategory(activityText),
+      })
+      console.log("Done commitment opgeslagen:", activityText)
+    }
+    await sendWhatsApp(from, `Goed dat je toch bewogen hebt! 💪 ${activityText} genoteerd. Streak: ${newStreak} ${newStreak === 1 ? "dag" : "dagen"}.`)
+  } else {
+    await sendWhatsApp(from, `Oké, eerlijk is eerlijk. Morgen is een nieuwe kans — wat ga jij anders doen?`)
+  }
 
-  await sendWhatsApp(from, reply)
   console.log("Reflectie reply verstuurd")
 }
 
@@ -821,20 +855,53 @@ async function handleMessage(from, body) {
     const items = await parseCheckin(body)
     console.log("Items na classificatie + override:", JSON.stringify(items))
 
-    const metrics      = items.filter((i) => i.categorie === "METRIC")
-    const commitments  = items.filter((i) => i.categorie === "COMMITMENT")
-    const vragen       = items.filter((i) => i.categorie === "VRAAG")
-    const rustdagen    = items.filter((i) => i.categorie === "RUSTDAG")
-    const reminders      = items.filter((i) => i.categorie === "REMINDER")
-    const stopReminders  = items.filter((i) => i.categorie === "STOP_REMINDER")
-    const reminderLijst  = items.filter((i) => i.categorie === "REMINDER_LIJST")
-    const workoutLogs    = items.filter((i) => i.categorie === "WORKOUT_LOG")
+    const metrics           = items.filter((i) => i.categorie === "METRIC")
+    const commitments       = items.filter((i) => i.categorie === "COMMITMENT")
+    const commitmentsDone   = items.filter((i) => i.categorie === "COMMITMENT_DONE")
+    const vragen            = items.filter((i) => i.categorie === "VRAAG")
+    const rustdagen         = items.filter((i) => i.categorie === "RUSTDAG")
+    const reminders         = items.filter((i) => i.categorie === "REMINDER")
+    const stopReminders     = items.filter((i) => i.categorie === "STOP_REMINDER")
+    const reminderLijst     = items.filter((i) => i.categorie === "REMINDER_LIJST")
+    const workoutLogs       = items.filter((i) => i.categorie === "WORKOUT_LOG")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length} | WorkoutLogs: ${workoutLogs.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | CommitmentsDone: ${commitmentsDone.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length} | WorkoutLogs: ${workoutLogs.length}`)
 
     // Workout log — direct afhandelen
     if (workoutLogs.length > 0) {
       await handleWorkoutLog(from, workoutLogs[0], userData)
+      return
+    }
+
+    // Voltooide activiteit (gedaan vandaag) — opslaan als done commitment + positieve bevestiging
+    if (commitmentsDone.length > 0) {
+      console.log("=== [4] COMMITMENT_DONE — OPSLAAN MET DONE=TRUE ===")
+      const userId = userData?.auth_user_id
+      const today  = getNLDate()
+      const lines  = []
+      if (userId) {
+        for (const item of commitmentsDone) {
+          const { error } = await supabase.from("commitments").insert({
+            user_id: userId, text: item.tekst, date: today,
+            done: true, category: classifyCommitmentCategory(item.tekst),
+          })
+          if (error) console.error("CommitmentDone INSERT error:", error.message)
+          else { console.log("CommitmentDone opgeslagen:", item.tekst); lines.push(item.tekst) }
+        }
+      }
+      // Voeg ook metrics toe als die mee zijn gestuurd
+      const savedItems = [...commitmentsDone.map(i => ({ ...i, categorie: "COMMITMENT" }))]
+      for (const item of metrics) {
+        if (userId) {
+          const { error } = await supabase.from("metrics").insert({ user_id: userId, type: item.metric_type || "anders", waarde: item.waarde, datum: today })
+          if (!error) savedItems.push(item)
+        }
+      }
+      const activiteitenTekst = lines.join(" en ")
+      const reply = metrics.length > 0
+        ? buildConfirmation(savedItems) || `✅ Goed bezig! ${activiteitenTekst} genoteerd.`
+        : `Goed dat je toch bewogen hebt! 💪 ${activiteitenTekst} genoteerd.`
+      await sendWhatsApp(from, reply)
       return
     }
 
