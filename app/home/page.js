@@ -73,6 +73,7 @@ const [prevWeights,      setPrevWeights]      = useState({})
 const [workoutLoading,   setWorkoutLoading]   = useState(false)
 const [workoutLibrary,   setWorkoutLibrary]   = useState([])
 const [pickerSelected,   setPickerSelected]   = useState(null)
+const [openSections,     setOpenSections]     = useState({})
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -229,10 +230,11 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).maybeSingle()
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).maybeSingle()
   console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| data:", data)
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
+  if (data?.sport_frequentie)  setSportFrequentie(data.sport_frequentie)
   if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
   if (data?.eiwitten_doel)     setEiwittenDoel(String(data.eiwitten_doel))
   if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
@@ -387,7 +389,7 @@ async function loadWorkoutData() {
   sundayDate.setDate(sundayDate.getDate() + 6)
   const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
   const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
     supabase.from("workout_planning")
@@ -398,7 +400,7 @@ async function loadWorkoutData() {
       .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
       .order("datum", { ascending: true }),
     supabase.from("workouts")
-      .select(`id, naam, dag_type, workout_oefeningen ( id )`)
+      .select(`id, naam, dag_type, schema_type, workout_oefeningen ( id )`)
       .eq("is_template", true)
       .order("naam", { ascending: true }),
   ])
@@ -465,7 +467,7 @@ async function chooseSelfWorkout(workoutId) {
 
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
   // Stap 1: check of er al een planning bestaat voor vandaag
   const { data: existing } = await supabase
@@ -1732,7 +1734,12 @@ return (
               {(() => {
                 const niveauMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
                 const allowed = niveauMap[trainingLocation] || null
-                const filtered = workoutLibrary.filter(w => !allowed || allowed.includes(w.niveau))
+                const isSplitUser = sportFrequentie >= 5 && fitnessLevel.toLowerCase() === "gevorderd" && trainingLocation === "Gym"
+                const filtered = workoutLibrary.filter(w => {
+                  if (allowed && !allowed.includes(w.niveau)) return false
+                  if (isSplitUser) return w.schema_type === "split"
+                  return w.schema_type !== "split"
+                })
                 const grouped = {}
                 for (const w of filtered) {
                   const key = w.niveau
@@ -1827,6 +1834,38 @@ return (
                           </a>
                         )}
                       </div>
+                      {oe.instructies?.length > 0 && (
+                        <div style={{ marginBottom: 8 }}>
+                          <button onClick={() => setOpenSections(prev => ({ ...prev, [`${oe.id}_instructies`]: !prev[`${oe.id}_instructies`] }))}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 10 }}>{openSections[`${oe.id}_instructies`] ? "▲" : "▼"}</span>
+                            Hoe doe je dit?
+                          </button>
+                          {openSections[`${oe.id}_instructies`] && (
+                            <ul style={{ margin: "6px 0 0 0", paddingLeft: 16 }}>
+                              {oe.instructies.map((stap, i) => (
+                                <li key={i} style={{ color: C.textSub, fontSize: 12, marginBottom: 3 }}>{stap}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                      {oe.fouten?.length > 0 && (
+                        <div style={{ marginBottom: 10 }}>
+                          <button onClick={() => setOpenSections(prev => ({ ...prev, [`${oe.id}_fouten`]: !prev[`${oe.id}_fouten`] }))}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#f97316", fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 10 }}>{openSections[`${oe.id}_fouten`] ? "▲" : "▼"}</span>
+                            Let op
+                          </button>
+                          {openSections[`${oe.id}_fouten`] && (
+                            <ul style={{ margin: "6px 0 0 0", paddingLeft: 16 }}>
+                              {oe.fouten.map((fout, i) => (
+                                <li key={i} style={{ color: "#f97316", fontSize: 12, marginBottom: 3 }}>{fout}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                       {prev && (
                         <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 10 }}>Vorige keer: {prev} kg</p>
                       )}

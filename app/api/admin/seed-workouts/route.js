@@ -56,6 +56,28 @@ const OEFENINGEN = [
   { naam: "Cable Crunch", naam_en: "Cable Crunch", niveau: "gym", spiergroep: "core, buik", dag_type: "core", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=2fbujeH3F0E", instructies: ["Knielen voor kabel", "Touw achter hoofd", "Crunch naar beneden", "Heupen blijven stil"], fouten: ["Met heupen bewegen", "Nek trekken"] },
   // GYM — SHOULDERS (for gym full body)
   { naam: "Shoulder Press", naam_en: "Barbell Shoulder Press", niveau: "gym", spiergroep: "schouders, triceps", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=2yjwXTZQDDI", instructies: ["Stang of dumbbells op schouderhoogte", "Zittend, rug recht", "Druk omhoog boven hoofd", "Gecontroleerd zakken"], fouten: ["Rug hol trekken", "Polsen achterover buigen"] },
+  // GYM — NIEUW (split schema + extra)
+  { naam: "Dumbbell Shrug", naam_en: "Dumbbell Shrug", niveau: "gym", spiergroep: "trapezius, nek", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=g6qbq4Lf1FI", instructies: ["Sta rechtop, dumbbells aan zij", "Schouders recht omhoog richting oren", "Bovenaan even vasthouden", "Gecontroleerd terug zakken"], fouten: ["Hoofd vooruit steken", "Schouders rollen — simpelweg omhoog/omlaag", "Te snel bewegen"] },
+  { naam: "Leg Extension", naam_en: "Leg Extension", niveau: "gym", spiergroep: "quadriceps", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=swVSHNW9mJ0", instructies: ["Zit in het apparaat, knieën op 90 graden", "Voeten achter de rolkussen", "Strek beide benen volledig", "Gecontroleerd terug buigen"], fouten: ["Te zwaar gewicht — rug van de stoel", "Te snel laten zakken", "Niet volledig uitstrekken"] },
+  { naam: "Seated Leg Curl", naam_en: "Seated Leg Curl", niveau: "gym", spiergroep: "hamstrings", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=ELOCsoDSmrg", instructies: ["Zit in het apparaat, kussen op de bovenbenen", "Trek hielen naar onder de stoel", "Knijp hamstrings bovenaan samen", "Gecontroleerd terug"], fouten: ["Heupen optillen van de stoel", "Te snel laten terugkomen", "Rug naar achter leunen"] },
+  { naam: "Pull-up", naam_en: "Pull-up", niveau: "gym", spiergroep: "rug, biceps", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=eGo4IYlbE5g", instructies: ["Grijp stang iets breder dan schouderbreed", "Hang volledig gestrekt", "Trek omhoog tot kin over de stang", "Gecontroleerd terug zakken"], fouten: ["Lichaam schommelen", "Niet volledig zakken onderaan", "Nek omhoog steken"] },
+  { naam: "Dumbbell Fly", naam_en: "Dumbbell Fly", niveau: "gym", spiergroep: "borst, schouders", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=eozdVDA78K0", instructies: ["Lig op bank, dumbbells boven borst", "Licht gebogen ellebogen", "Hef armen zijwaarts naar beneden", "Trek terug omhoog als een knuffel"], fouten: ["Armen te ver laten zakken", "Ellebogen te recht — blessurerisico", "Te zwaar gewicht"] },
+  { naam: "Hammer Curl", naam_en: "Hammer Curl", niveau: "gym", spiergroep: "biceps, onderarm", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=zC3nLlEvin4", instructies: ["Dumbbells met neutrale grip — duimen omhoog", "Ellebogen stil aan zij", "Curl omhoog naar schouder", "Gecontroleerd zakken"], fouten: ["Ellebogen bewegen mee naar voren", "Schommelen met romp"] },
+  { naam: "Skull Crusher", naam_en: "Skull Crusher", niveau: "gym", spiergroep: "triceps", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=d_KZxkY_0cM", instructies: ["Lig op bank, stang boven borst", "Ellebogen wijzen naar plafond", "Laat stang zakken naar voorhoofd", "Strek armen terug omhoog"], fouten: ["Ellebogen te wijd gaan", "Te snel laten zakken", "Rug van bank halen"] },
+  { naam: "Hip Thrust Barbell", naam_en: "Barbell Hip Thrust", niveau: "gym", spiergroep: "billen, hamstrings", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=xDmFkJxPzeM", instructies: ["Rug tegen bank, stang op heupen", "Voeten plat op de grond", "Duw heupen omhoog tot horizontaal", "Knijp billen samen bovenaan"], fouten: ["Kin op borst — kijk omhoog", "Niet volledig uitstrekken", "Knieën naar binnen zakken"] },
+  { naam: "Hack Squat", naam_en: "Hack Squat", niveau: "gym", spiergroep: "quadriceps, billen", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=0tn5K9NlCfo", instructies: ["Rug plat tegen het apparaat", "Voeten op platform, schouderbreedte", "Zak tot 90 graden of dieper", "Duw terug omhoog"], fouten: ["Knieën naar binnen", "Rug van platform laten komen"] },
+  { naam: "Cable Bicep Curl", naam_en: "Cable Bicep Curl", niveau: "gym", spiergroep: "biceps", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=NFzTWp2qpiE", instructies: ["Kabel op laagste stand, rechte stang", "Ellebogen stil aan zij", "Curl omhoog naar schouders", "Gecontroleerd terug"], fouten: ["Ellebogen bewegen mee", "Schommelen met romp"] },
+  { naam: "Seated Calf Raise", naam_en: "Seated Calf Raise", niveau: "gym", spiergroep: "kuiten (soleus)", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=JbyjNymZOt0", instructies: ["Zit in apparaat, kussen op knieën", "Hielen zo laag mogelijk", "Duw op de tenen omhoog", "Gecontroleerd terug zakken"], fouten: ["Te snel bewegen", "Niet volledig uitstrekken"] },
+  { naam: "Chest Fly Machine", naam_en: "Pec Deck Fly", niveau: "gym", spiergroep: "borst", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=Z57CtFmRMxA", instructies: ["Rugsteuning goed instellen", "Armen op handgrepen", "Breng armen samen voor de borst", "Gecontroleerd terug"], fouten: ["Te ver naar achter gaan", "Armen te recht — licht buigen"] },
+  { naam: "Incline Barbell Press", naam_en: "Incline Barbell Press", niveau: "gym", spiergroep: "bovenborst, schouders", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=SrqOu55lrYU", instructies: ["Bank op 30-45 graden", "Grip iets breder dan schouderbreed", "Stang zakken naar bovenborst", "Duw omhoog"], fouten: ["Bank te steil — wordt shoulder press", "Stang laten stuiteren op borst"] },
+  { naam: "Arnold Press", naam_en: "Arnold Press", niveau: "gym", spiergroep: "schouders", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=6Z15_WdXmVw", instructies: ["Begin met dumbbells voor gezicht, palmen naar je toe", "Draai palmen naar buiten tijdens het drukken", "Strek armen volledig boven hoofd", "Gecontroleerd terug — draai mee terug"], fouten: ["Rug hol trekken", "Te snel draaien — focus op rotatie"] },
+  { naam: "T-Bar Row", naam_en: "T-Bar Row", niveau: "gym", spiergroep: "rug, biceps", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=j3Igk5nyZE4", instructies: ["Borst op het kussen, overhand grip", "Trek stang naar je borst", "Ellebogen langs het lichaam", "Gecontroleerd terug uitstrekken"], fouten: ["Romp omhoog trekken", "Ellebogen te wijd"] },
+  // HOMEGYM — NIEUW
+  { naam: "Weerstandsband Pull-Apart", naam_en: "Band Pull-Apart", niveau: "homegym", spiergroep: "achterste schouder, rug", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=IF_q8DvbAKc", instructies: ["Houd band op borsthoogte, armen gestrekt", "Trek band uit elkaar richting borst", "Schouderbladen samen knijpen", "Gecontroleerd terug"], fouten: ["Armen zakken tijdens beweging", "Te snel terug"] },
+  { naam: "Dumbbell Front Raise", naam_en: "Dumbbell Front Raise", niveau: "homegym", spiergroep: "schouders (voor)", dag_type: "push", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=hRJ6tR5-if0", instructies: ["Sta rechtop, dumbbell voor de dijen", "Hef arm recht omhoog tot schouderhoogte", "Gecontroleerd zakken", "Wissel af of doe beide tegelijk"], fouten: ["Te zwaar — lichaam schommelen", "Boven schouderhoogte heffen"] },
+  { naam: "Dumbbell Pullover", naam_en: "Dumbbell Pullover", niveau: "homegym", spiergroep: "rug, borst", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=FK4rHfWBPdI", instructies: ["Lig op bank, schouderbladen op bank", "Dumbbell boven borst met beide handen", "Laat dumbbell achter hoofd zakken", "Trek terug boven borst"], fouten: ["Heupen te laag laten zakken", "Ellebogen te wijd"] },
+  { naam: "Single Leg Deadlift DB", naam_en: "Single Leg Romanian Deadlift", niveau: "homegym", spiergroep: "billen, hamstrings, balans", dag_type: "legs", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=y1SBgNUuRSQ", instructies: ["Sta op één been, dumbbell in tegenovergestelde hand", "Kantel voorover, vrij been naar achter", "Rug recht blijven", "Duw door staande been terug omhoog"], fouten: ["Rug afronden", "Vrij been naar de zijkant — moet achter blijven"] },
+  { naam: "Hammer Curl DB", naam_en: "Hammer Curl Dumbbell", niveau: "homegym", spiergroep: "biceps, onderarm", dag_type: "pull", schema_type: "alle", youtube_url: "https://www.youtube.com/watch?v=zC3nLlEvin4", instructies: ["Dumbbells met neutrale grip — duimen omhoog", "Ellebogen stil aan zij", "Curl omhoog naar schouder", "Gecontroleerd zakken"], fouten: ["Ellebogen bewegen mee naar voren", "Schommelen met romp"] },
 ]
 
 // ── Standaard workouts definitie ───────────────────────────────
@@ -84,6 +106,12 @@ const WORKOUTS_DATA = [
   { naam: "Gym Push", niveau: "gym", schema_type: "push_pull_legs", dag_type: "push", beschrijving: "Push dag in de gym", oefeningen: [{ naam: "Bench Press", sets: 4, reps: "8-10", rust: 120 }, { naam: "Incline Dumbbell Press", sets: 3, reps: "10", rust: 90 }, { naam: "Cable Lateral Raise", sets: 3, reps: "12", rust: 60 }, { naam: "Tricep Pushdown", sets: 3, reps: "12", rust: 60 }, { naam: "Overhead Tricep Extension", sets: 3, reps: "10", rust: 60 }] },
   { naam: "Gym Pull", niveau: "gym", schema_type: "push_pull_legs", dag_type: "pull", beschrijving: "Pull dag in de gym", oefeningen: [{ naam: "Deadlift", sets: 4, reps: "5-6", rust: 180 }, { naam: "Cable Row", sets: 3, reps: "10-12", rust: 90 }, { naam: "Lat Pulldown", sets: 3, reps: "10-12", rust: 90 }, { naam: "Face Pull kabel", sets: 3, reps: "15", rust: 60 }, { naam: "Barbell Curl", sets: 3, reps: "10", rust: 60 }] },
   { naam: "Gym Legs", niveau: "gym", schema_type: "push_pull_legs", dag_type: "legs", beschrijving: "Leg dag in de gym", oefeningen: [{ naam: "Barbell Squat", sets: 4, reps: "8", rust: 150 }, { naam: "Romanian Deadlift Barbell", sets: 3, reps: "10", rust: 120 }, { naam: "Leg Press", sets: 3, reps: "12", rust: 90 }, { naam: "Walking Lunge", sets: 3, reps: "10 per been", rust: 90 }, { naam: "Cable Crunch", sets: 3, reps: "15", rust: 60 }] },
+  // 5-DAAGS SPLIT (gevorderd, gym)
+  { naam: "Split Push Gym", niveau: "gym", schema_type: "split", dag_type: "push", beschrijving: "5-daags split — dag 1: borst, schouders, triceps", oefeningen: [{ naam: "Bench Press", sets: 4, reps: "6-8", rust: 150 }, { naam: "Incline Dumbbell Press", sets: 3, reps: "10", rust: 120 }, { naam: "Arnold Press", sets: 3, reps: "10", rust: 90 }, { naam: "Cable Lateral Raise", sets: 4, reps: "12", rust: 60 }, { naam: "Tricep Pushdown", sets: 3, reps: "12", rust: 60 }, { naam: "Dumbbell Shrug", sets: 3, reps: "15", rust: 60 }] },
+  { naam: "Split Legs A Gym", niveau: "gym", schema_type: "split", dag_type: "legs", beschrijving: "5-daags split — dag 2: quadriceps focus", oefeningen: [{ naam: "Barbell Squat", sets: 4, reps: "6-8", rust: 180 }, { naam: "Leg Extension", sets: 3, reps: "12", rust: 90 }, { naam: "Romanian Deadlift Barbell", sets: 3, reps: "10", rust: 120 }, { naam: "Seated Leg Curl", sets: 3, reps: "12", rust: 90 }, { naam: "Walking Lunge", sets: 3, reps: "10 per been", rust: 90 }, { naam: "Calf Raise", sets: 4, reps: "15", rust: 45 }] },
+  { naam: "Split Pull Gym", niveau: "gym", schema_type: "split", dag_type: "pull", beschrijving: "5-daags split — dag 3: rug, biceps", oefeningen: [{ naam: "Deadlift", sets: 4, reps: "5", rust: 180 }, { naam: "Cable Row", sets: 4, reps: "8-10", rust: 120 }, { naam: "Lat Pulldown", sets: 3, reps: "10-12", rust: 90 }, { naam: "Face Pull kabel", sets: 3, reps: "15", rust: 60 }, { naam: "Barbell Curl", sets: 3, reps: "10", rust: 60 }, { naam: "Hammer Curl", sets: 3, reps: "12", rust: 60 }] },
+  { naam: "Split Legs B Gym", niveau: "gym", schema_type: "split", dag_type: "legs", beschrijving: "5-daags split — dag 4: hamstrings en billen focus", oefeningen: [{ naam: "Leg Press", sets: 4, reps: "10", rust: 120 }, { naam: "Romanian Deadlift Barbell", sets: 4, reps: "8-10", rust: 120 }, { naam: "Leg Extension", sets: 3, reps: "15", rust: 60 }, { naam: "Hip Thrust Barbell", sets: 4, reps: "10", rust: 90 }, { naam: "Seated Calf Raise", sets: 4, reps: "15", rust: 45 }, { naam: "Cable Crunch", sets: 3, reps: "15", rust: 60 }] },
+  { naam: "Split Full Upper Gym", niveau: "gym", schema_type: "split", dag_type: "upper", beschrijving: "5-daags split — dag 5: volledig bovenlichaam", oefeningen: [{ naam: "Bench Press", sets: 4, reps: "8", rust: 120 }, { naam: "Cable Row", sets: 4, reps: "8-10", rust: 90 }, { naam: "Shoulder Press", sets: 3, reps: "10", rust: 90 }, { naam: "Lat Pulldown", sets: 3, reps: "10-12", rust: 90 }, { naam: "Cable Lateral Raise", sets: 3, reps: "12", rust: 60 }, { naam: "Tricep Pushdown", sets: 3, reps: "12", rust: 60 }, { naam: "Barbell Curl", sets: 3, reps: "10", rust: 60 }] },
 ]
 
 export async function GET(request) {
@@ -146,17 +174,18 @@ export async function GET(request) {
       results.reset = true
     }
 
-    // 1. Seed oefeningen — alleen als tabel leeg is
-    const { count: oeCount } = await supabase
-      .from("oefeningen")
-      .select("id", { count: "exact", head: true })
-
-    if (oeCount === 0) {
-      const { error: oeErr } = await supabase.from("oefeningen").insert(OEFENINGEN)
-      if (oeErr) results.errors.push("Oefeningen: " + oeErr.message)
-    } else {
-      results.skipped = `oefeningen (${oeCount} al aanwezig)`
+    // 1. Seed oefeningen — additief: alleen nieuwe namen toevoegen
+    const { data: bestaandeOef } = await supabase.from("oefeningen").select("naam")
+    const bestaandeNamen = new Set((bestaandeOef || []).map(o => o.naam))
+    let nieuweOef = 0
+    for (const oe of OEFENINGEN) {
+      if (!bestaandeNamen.has(oe.naam)) {
+        const { error: oeErr } = await supabase.from("oefeningen").insert(oe)
+        if (oeErr) results.errors.push(`Oefening ${oe.naam}: ` + oeErr.message)
+        else nieuweOef++
+      }
     }
+    results.nieuwOefeningen = nieuweOef
 
     // 2. Fetch alle oefeningen voor naam→id map
     const { data: allOef } = await supabase.from("oefeningen").select("id, naam, naam_en, gif_url")
@@ -206,6 +235,26 @@ export async function GET(request) {
         "Walking Lunge":                "walking lunge",
         "Cable Crunch":                 "crunch",
         "Shoulder Press":               "barbell military",
+        "Dumbbell Shrug":               "dumbbell shrug",
+        "Leg Extension":                "leg extension",
+        "Seated Leg Curl":              "seated leg curl",
+        "Pull-up":                      "pull-up",
+        "Dumbbell Fly":                 "dumbbell fly",
+        "Hammer Curl":                  "hammer curl",
+        "Skull Crusher":                "skull crusher",
+        "Hip Thrust Barbell":           "barbell hip thrust",
+        "Hack Squat":                   "hack squat",
+        "Cable Bicep Curl":             "cable bicep curl",
+        "Seated Calf Raise":            "seated calf raise",
+        "Chest Fly Machine":            "pec deck",
+        "Incline Barbell Press":        "incline barbell press",
+        "Arnold Press":                 "arnold press",
+        "T-Bar Row":                    "t bar row",
+        "Weerstandsband Pull-Apart":    "band pull apart",
+        "Dumbbell Front Raise":         "front raise",
+        "Dumbbell Pullover":            "dumbbell pullover",
+        "Single Leg Deadlift DB":       "single leg deadlift",
+        "Hammer Curl DB":               "hammer curl",
       }
       // Als zoekterm geen match geeft — gebruik gif van vergelijkbare oefening
       const FALLBACKS = {
@@ -257,25 +306,22 @@ export async function GET(request) {
       }
     }
 
-    // 3. Seed workouts — alleen als er nog geen system workouts zijn
-    const { count: wCount } = await supabase
-      .from("workouts")
-      .select("id", { count: "exact", head: true })
-      .eq("coach_email", "system")
-
-    if (wCount === 0) {
-      const workoutInserts = WORKOUTS_DATA.map(w => ({
-        naam: w.naam,
-        niveau: w.niveau,
-        schema_type: w.schema_type,
-        dag_type: w.dag_type,
-        beschrijving: w.beschrijving || null,
-        coach_email: "system",
-        is_template: true,
-      }))
-      const { error: wErr } = await supabase.from("workouts").insert(workoutInserts)
-      if (wErr) results.errors.push("Workouts: " + wErr.message)
+    // 3. Seed workouts — additief: alleen nieuwe namen toevoegen
+    const { data: bestaandeWorkouts } = await supabase
+      .from("workouts").select("naam").eq("coach_email", "system")
+    const bestaandeWorkoutNamen = new Set((bestaandeWorkouts || []).map(w => w.naam))
+    let nieuweWorkouts = 0
+    for (const w of WORKOUTS_DATA) {
+      if (!bestaandeWorkoutNamen.has(w.naam)) {
+        const { error: wErr } = await supabase.from("workouts").insert({
+          naam: w.naam, niveau: w.niveau, schema_type: w.schema_type, dag_type: w.dag_type,
+          beschrijving: w.beschrijving || null, coach_email: "system", is_template: true,
+        })
+        if (wErr) results.errors.push(`Workout ${w.naam}: ` + wErr.message)
+        else nieuweWorkouts++
+      }
     }
+    results.nieuweWorkouts = nieuweWorkouts
 
     // 4. Fetch alle workouts voor naam→id map
     const { data: allWorkouts } = await supabase
