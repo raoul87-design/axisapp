@@ -140,11 +140,24 @@ async function getDailyQuestionCount(publicUserId) {
 }
 
 // Haal de laatste 10 gespreksmomenten op (5 user + 5 assistant, gesorteerd oud→nieuw)
+function dateLabelNL(isoDate) {
+  const todayAms = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  const msgAms   = new Date(new Date(isoDate).toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  todayAms.setHours(0, 0, 0, 0)
+  msgAms.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((todayAms - msgAms) / 86400000)
+  if (diffDays === 0) return "vandaag"
+  if (diffDays === 1) return "gisteren"
+  const d = msgAms.getDate().toString().padStart(2, "0")
+  const m = (msgAms.getMonth() + 1).toString().padStart(2, "0")
+  return `${d}/${m}`
+}
+
 async function getConversationHistory(publicUserId) {
   if (!publicUserId) return []
   const { data, error } = await supabase
     .from("conversations")
-    .select("role, content")
+    .select("role, content, created_at")
     .eq("user_id", publicUserId)
     .order("created_at", { ascending: false })
     .limit(10)
@@ -160,7 +173,8 @@ async function getConversationHistory(publicUserId) {
   let lastRole = null
   for (const msg of sorted) {
     if (msg.role !== lastRole) {
-      valid.push({ role: msg.role, content: msg.content })
+      const label = msg.created_at ? dateLabelNL(msg.created_at) : "eerder"
+      valid.push({ role: msg.role, content: `[${label}] ${msg.content}` })
       lastRole = msg.role
     }
   }
@@ -254,6 +268,12 @@ function buildSystemPrompt(tone, userData, clientContext, faqItems = []) {
   const today = getNLDate()
 
   const contextBlock = `
+
+TIJDSBESEF:
+Vandaag is ${today}. Berichten in de gespreksgeschiedenis zijn voorzien van een datum label ([vandaag], [gisteren] of [dd/mm]).
+Reageer ALLEEN op het meest recente bericht van de gebruiker.
+Breng NOOIT oude plannen, activiteiten of onderwerpen ter sprake tenzij de gebruiker er zelf naar vraagt.
+Gebruik de gespreksgeschiedenis alleen als context — niet als onderwerp van gesprek.
 
 CLIENTCONTEXT:
 ${name ? `Naam: ${name}` : ""}
