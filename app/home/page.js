@@ -401,7 +401,7 @@ async function loadWorkoutData() {
         .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
         .order("datum", { ascending: true }),
       supabase.from("workouts")
-        .select(`id, naam, dag_type, schema_type, workout_oefeningen ( id )`)
+        .select(`id, naam, niveau, dag_type, schema_type, workout_oefeningen ( id )`)
         .eq("is_template", true)
         .order("naam", { ascending: true }),
     ])
@@ -1768,6 +1768,7 @@ return (
                 const getSectionOpen = (niveau) => {
                   const key = `lib_${niveau}`
                   if (openSections && key in openSections) return openSections[key]
+                  if (!trainingLocation) return true
                   return !defaultOpen || defaultOpen.includes(niveau)
                 }
                 const toggleSection = (niveau) => {
