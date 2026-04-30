@@ -524,10 +524,16 @@ async function autoWorkoutCommitment(workoutNaam, forDate) {
 
 async function cancelWorkout() {
   if (!todayWorkout || !user) return
+  const workoutNaam = todayWorkout.workout?.naam
   await supabase.from("workout_planning").delete().eq("id", todayWorkout.id)
+  if (workoutNaam) {
+    await supabase.from("commitments").delete()
+      .eq("user_id", user.id).eq("date", getNLDate()).eq("text", `💪 ${workoutNaam}`)
+  }
   setTodayWorkout(null)
   setSetLogs({})
   setWorkoutScreen("overview")
+  loadCommitments()
 }
 
 async function finishWorkout() {
