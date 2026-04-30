@@ -1738,53 +1738,73 @@ return (
               </div>
 
               {(() => {
-                const niveauMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
-                const allowed = niveauMap[trainingLocation] || null
-                const filtered = workoutLibrary.filter(w => !allowed || allowed.includes(w.niveau))
-                const grouped = {}
-                for (const w of filtered) {
-                  const key = w.niveau
-                  if (!grouped[key]) grouped[key] = []
-                  grouped[key].push(w)
+                const niveauMatchMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
+                const defaultOpen = niveauMatchMap[trainingLocation] || null
+                const niveauMeta = {
+                  gym:             { label: "Gym",            icon: "🏋️" },
+                  homegym:         { label: "Home Gym",       icon: "🏠" },
+                  lichaamsgewicht: { label: "Lichaamsgewicht", icon: "💪" },
                 }
-                const niveauLabel = { lichaamsgewicht: "Lichaamsgewicht", homegym: "Thuis (dumbbells)", gym: "Gym" }
+                const ORDER = ["gym", "homegym", "lichaamsgewicht"]
+                const grouped = {}
+                for (const w of workoutLibrary) {
+                  if (!grouped[w.niveau]) grouped[w.niveau] = []
+                  grouped[w.niveau].push(w)
+                }
+                const isOpen = (niveau) => {
+                  const key = `lib_${niveau}`
+                  if (key in openSections) return openSections[key]
+                  return !defaultOpen || defaultOpen.includes(niveau)
+                }
+                const toggle = (niveau) => {
+                  const key = `lib_${niveau}`
+                  setOpenSections(prev => ({ ...prev, [key]: !isOpen(niveau) }))
+                }
 
-                if (filtered.length === 0) {
+                if (workoutLibrary.length === 0) return (
+                  <div style={{ textAlign: "center", padding: "40px 0" }}>
+                    <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
+                  </div>
+                )
+
+                return ORDER.filter(n => grouped[n]?.length).map(niveau => {
+                  const { label, icon } = niveauMeta[niveau] || { label: niveau, icon: "" }
+                  const open = isOpen(niveau)
+                  const workouts = grouped[niveau]
                   return (
-                    <div style={{ textAlign: "center", padding: "40px 0" }}>
-                      <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
-                      <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Vraag je coach om workouts toe te voegen</p>
+                    <div key={niveau} style={{ marginBottom: 16 }}>
+                      <button onClick={() => toggle(niveau)}
+                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0", marginBottom: open ? 10 : 0 }}>
+                        <span style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold" }}>
+                          {icon} {label}
+                        </span>
+                        <span style={{ color: C.textDim, fontSize: 12 }}>{open ? "▲" : "▼"}</span>
+                      </button>
+                      {open && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {workouts.map(w => {
+                            const isSelected = pickerSelected === w.id
+                            return (
+                              <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
+                                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                                <div>
+                                  <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
+                                  <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
+                                    {w.workout_oefeningen?.length || 0} oefeningen
+                                  </p>
+                                </div>
+                                {isSelected
+                                  ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span>
+                                  : <span style={{ color: C.textDim, fontSize: 18 }}>○</span>
+                                }
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   )
-                }
-
-                return Object.entries(grouped).map(([niveau, workouts]) => (
-                  <div key={niveau} style={{ marginBottom: 24 }}>
-                    <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
-                      {niveauLabel[niveau] || niveau}
-                    </p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {workouts.map(w => {
-                        const isSelected = pickerSelected === w.id
-                        return (
-                          <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
-                            style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
-                            <div>
-                              <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
-                              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
-                                {w.dag_type} · {w.workout_oefeningen?.length || 0} oefeningen
-                              </p>
-                            </div>
-                            {isSelected
-                              ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span>
-                              : <span style={{ color: C.textDim, fontSize: 18 }}>○</span>
-                            }
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))
+                })
               })()}
 
               {pickerSelected && (
