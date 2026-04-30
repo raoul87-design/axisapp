@@ -383,49 +383,56 @@ async function loadProgressData() {
 async function loadWorkoutData() {
   if (!user) return
   setWorkoutLoading(true)
-  const today = getNLDate()
-  const monday = getMondayNL()
-  const sundayDate = new Date(monday + "T12:00:00")
-  sundayDate.setDate(sundayDate.getDate() + 6)
-  const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+  try {
+    const today = getNLDate()
+    const monday = getMondayNL()
+    const sundayDate = new Date(monday + "T12:00:00")
+    sundayDate.setDate(sundayDate.getDate() + 6)
+    const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
+    const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
-  const [{ data: planning }, { data: weekPlan }, { data: libraryData }] = await Promise.all([
-    supabase.from("workout_planning")
-      .select(PLANNING_SELECT)
-      .eq("user_id", user.id).eq("datum", today).maybeSingle(),
-    supabase.from("workout_planning")
-      .select(`id, datum, gedaan, workout:workout_id ( naam, dag_type )`)
-      .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
-      .order("datum", { ascending: true }),
-    supabase.from("workouts")
-      .select(`id, naam, dag_type, schema_type, workout_oefeningen ( id )`)
-      .eq("is_template", true)
-      .order("naam", { ascending: true }),
-  ])
+    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }] = await Promise.all([
+      supabase.from("workout_planning")
+        .select(PLANNING_SELECT)
+        .eq("user_id", user.id).eq("datum", today).maybeSingle(),
+      supabase.from("workout_planning")
+        .select(`id, datum, gedaan, workout:workout_id ( naam, dag_type )`)
+        .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
+        .order("datum", { ascending: true }),
+      supabase.from("workouts")
+        .select(`id, naam, dag_type, schema_type, workout_oefeningen ( id )`)
+        .eq("is_template", true)
+        .order("naam", { ascending: true }),
+    ])
 
-  console.log("[loadWorkoutData] planning:", planning)
-  console.log("[loadWorkoutData] user.id:", user?.id)
-  setTodayWorkout(planning || null)
-  setWeekWorkouts(weekPlan || [])
-  setWorkoutLibrary(libraryData || [])
-  if (planning?.gedaan) setWorkoutScreen("done")
+    console.log("[loadWorkoutData] user.id:", user?.id)
+    console.log("[loadWorkoutData] planning:", planning, "err:", planErr)
+    console.log("[loadWorkoutData] libraryData count:", libraryData?.length, "err:", libErr)
 
-  if (planning?.workout?.workout_oefeningen?.length) {
-    const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
-    const { data: prev } = await supabase
-      .from("workout_sets").select("oefening_id, gewicht, datum")
-      .eq("user_id", user.id)
-      .in("oefening_id", ids).not("gewicht", "is", null)
-      .order("datum", { ascending: false })
-    const map = {}
-    for (const s of prev || []) {
-      if (!map[s.oefening_id]) map[s.oefening_id] = s.gewicht
+    setTodayWorkout(planning || null)
+    setWeekWorkouts(weekPlan || [])
+    setWorkoutLibrary(libraryData || [])
+    if (planning?.gedaan) setWorkoutScreen("done")
+
+    if (planning?.workout?.workout_oefeningen?.length) {
+      const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
+      const { data: prev } = await supabase
+        .from("workout_sets").select("oefening_id, gewicht, datum")
+        .eq("user_id", user.id)
+        .in("oefening_id", ids).not("gewicht", "is", null)
+        .order("datum", { ascending: false })
+      const map = {}
+      for (const s of prev || []) {
+        if (!map[s.oefening_id]) map[s.oefening_id] = s.gewicht
+      }
+      setPrevWeights(map)
     }
-    setPrevWeights(map)
+  } catch (err) {
+    console.error("[loadWorkoutData] error:", err)
+  } finally {
+    setWorkoutLoading(false)
   }
-  setWorkoutLoading(false)
 }
 
 function startWorkoutFromPlanning(planning) {
@@ -1737,46 +1744,49 @@ return (
                 )}
               </div>
 
-              {(() => {
+              {workoutLibrary.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
+                  <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Herlaad de pagina als dit onverwacht is</p>
+                </div>
+              ) : (() => {
+                console.log("[WorkoutPicker] library:", workoutLibrary.length, "openSections:", openSections, "trainingLocation:", trainingLocation)
                 const niveauMatchMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
                 const defaultOpen = niveauMatchMap[trainingLocation] || null
                 const niveauMeta = {
-                  gym:             { label: "Gym",            icon: "🏋️" },
-                  homegym:         { label: "Home Gym",       icon: "🏠" },
+                  gym:             { label: "Gym",             icon: "🏋️" },
+                  homegym:         { label: "Home Gym",        icon: "🏠" },
                   lichaamsgewicht: { label: "Lichaamsgewicht", icon: "💪" },
                 }
                 const ORDER = ["gym", "homegym", "lichaamsgewicht"]
                 const grouped = {}
                 for (const w of workoutLibrary) {
-                  if (!grouped[w.niveau]) grouped[w.niveau] = []
-                  grouped[w.niveau].push(w)
+                  const n = w.niveau || "overig"
+                  if (!grouped[n]) grouped[n] = []
+                  grouped[n].push(w)
                 }
-                const isOpen = (niveau) => {
+                const getSectionOpen = (niveau) => {
                   const key = `lib_${niveau}`
-                  if (key in openSections) return openSections[key]
+                  if (openSections && key in openSections) return openSections[key]
                   return !defaultOpen || defaultOpen.includes(niveau)
                 }
-                const toggle = (niveau) => {
+                const toggleSection = (niveau) => {
                   const key = `lib_${niveau}`
-                  setOpenSections(prev => ({ ...prev, [key]: !isOpen(niveau) }))
+                  const current = getSectionOpen(niveau)
+                  setOpenSections(prev => ({ ...(prev || {}), [key]: !current }))
                 }
 
-                if (workoutLibrary.length === 0) return (
-                  <div style={{ textAlign: "center", padding: "40px 0" }}>
-                    <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
-                  </div>
-                )
-
-                return ORDER.filter(n => grouped[n]?.length).map(niveau => {
-                  const { label, icon } = niveauMeta[niveau] || { label: niveau, icon: "" }
-                  const open = isOpen(niveau)
-                  const workouts = grouped[niveau]
+                const niveaux = ORDER.filter(n => grouped[n]?.length > 0)
+                return niveaux.map(niveau => {
+                  const meta = niveauMeta[niveau] || { label: niveau, icon: "" }
+                  const open = getSectionOpen(niveau)
+                  const workouts = grouped[niveau] || []
                   return (
                     <div key={niveau} style={{ marginBottom: 16 }}>
-                      <button onClick={() => toggle(niveau)}
+                      <button onClick={() => toggleSection(niveau)}
                         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0", marginBottom: open ? 10 : 0 }}>
                         <span style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold" }}>
-                          {icon} {label}
+                          {meta.icon} {meta.label}
                         </span>
                         <span style={{ color: C.textDim, fontSize: 12 }}>{open ? "▲" : "▼"}</span>
                       </button>
@@ -1790,7 +1800,7 @@ return (
                                 <div>
                                   <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
                                   <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>
-                                    {w.workout_oefeningen?.length || 0} oefeningen
+                                    {(w.workout_oefeningen || []).length} oefeningen
                                   </p>
                                 </div>
                                 {isSelected
