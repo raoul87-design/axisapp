@@ -1734,12 +1734,7 @@ return (
               {(() => {
                 const niveauMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
                 const allowed = niveauMap[trainingLocation] || null
-                const isSplitUser = sportFrequentie >= 5 && fitnessLevel.toLowerCase() === "gevorderd" && trainingLocation === "Gym"
-                const filtered = workoutLibrary.filter(w => {
-                  if (allowed && !allowed.includes(w.niveau)) return false
-                  if (isSplitUser) return w.schema_type === "split"
-                  return w.schema_type !== "split"
-                })
+                const filtered = workoutLibrary.filter(w => !allowed || allowed.includes(w.niveau))
                 const grouped = {}
                 for (const w of filtered) {
                   const key = w.niveau
