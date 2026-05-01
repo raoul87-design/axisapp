@@ -78,7 +78,7 @@ function Nav() {
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/logo/AXIS-wordmark-light.svg" alt="AXIS" style={{ height: 28, display: "block" }} />
+        <AxisLogo variant="streak" size={20} />
 
         {/* Desktop links */}
         <div className="nav-links" style={{ display: "flex", gap: 32 }}>
