@@ -47,11 +47,12 @@ export default function Login() {
         setIsSignUp(false)
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setError(error.message)
       } else {
-        router.replace("/home")
+        const { data: profile } = await supabase.from("users").select("role").eq("auth_user_id", signInData.user.id).maybeSingle()
+        router.replace(profile?.role === "coach" ? "/dashboard" : "/home")
       }
     }
   }

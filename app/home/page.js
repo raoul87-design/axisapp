@@ -42,6 +42,7 @@ const [chatMessages,    setChatMessages]   = useState([])
 const [chatInput,       setChatInput]      = useState("")
 const [chatLoading,     setChatLoading]    = useState(false)
 
+const [userRole,        setUserRole]        = useState("")
 const [publicUserId,    setPublicUserId]    = useState(null)
 const [reminders,       setReminders]       = useState([])
 const [showAddReminder, setShowAddReminder] = useState(false)
@@ -232,8 +233,9 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight").eq("auth_user_id", user.id).maybeSingle()
-  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| data:", data)
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role").eq("auth_user_id", user.id).maybeSingle()
+  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL")
+  if (data?.role)              setUserRole(data.role)
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
   if (data?.sport_frequentie)  setSportFrequentie(data.sport_frequentie)
@@ -243,6 +245,7 @@ async function checkFirstUse() {
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
   if (data?.target_weight)     setDoelGewicht(data.target_weight)
+  if (data?.role === "coach") return  // coaches slaan onboarding over
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
 
@@ -1021,6 +1024,11 @@ return (
       </p>
     </div>
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {userRole === "coach" && (
+        <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#0a1a0f", border: "1px solid #22c55e33", color: GREEN, fontSize: 12, fontWeight: "bold", textDecoration: "none" }}>
+          📊 Dashboard
+        </a>
+      )}
       {streak > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
@@ -1035,6 +1043,18 @@ return (
         {showSettings && (
           <div style={{ position: "absolute", right: 0, top: 36, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "6px 0", minWidth: 216, zIndex: 100, boxShadow: "0 8px 28px rgba(0,0,0,0.28)", overflow: "hidden" }}>
             <style>{`.ax-menu-btn { transition: background 0.12s; } .ax-menu-btn:hover { background: ${theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"} !important; }`}</style>
+
+            {/* Coach Dashboard */}
+            {userRole === "coach" && (
+              <>
+                <a href="/dashboard"
+                  style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 14px", background: "none", color: GREEN, fontSize: 13, boxSizing: "border-box", textDecoration: "none", fontWeight: "bold" }}>
+                  <span style={{ fontSize: 14, width: 18, textAlign: "center" }}>📊</span>
+                  <span style={{ textAlign: "left" }}>Coach Dashboard →</span>
+                </a>
+                <div style={{ height: 1, background: C.borderSub }} />
+              </>
+            )}
 
             {/* Email */}
             <div style={{ padding: "8px 14px 10px" }}>
