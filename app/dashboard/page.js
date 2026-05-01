@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { AxisLogo } from "../../components/AxisLogo"
 
 const COACH_EMAILS = ["raoul87@gmail.com", "jobbrinkman1998@gmail.com"]
 const GREEN = "#22c55e"
@@ -14,7 +15,7 @@ function Sidebar({ active, setActive }) {
   return (
     <div style={{ width: 220, minHeight: "100vh", background: "#0a0a0a", borderRight: `1px solid ${BORDER}`, padding: "28px 0", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "0 24px 32px" }}>
-        <img src="/logo.png" alt="AXIS" style={{ width: 90, height: 34, mixBlendMode: "screen" }} />
+        <AxisLogo variant="breathe" size={18} />
         <p style={{ color: "#333", fontSize: 10, letterSpacing: 1.5, marginTop: 6, textTransform: "uppercase" }}>Coach Dashboard</p>
       </div>
       {nav.map(item => (

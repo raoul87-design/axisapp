@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { AxisLogo } from "../../components/AxisLogo";
 
 export default function Login() {
 
@@ -77,7 +78,7 @@ export default function Login() {
       flexDirection: "column",
     }}>
 
-      <h1 style={{ fontSize: 40, marginBottom: 8 }}>AXIS</h1>
+      <div style={{ marginBottom: 8 }}><AxisLogo variant="loader" size={40} /></div>
       <p style={{ color: "#888", fontSize: 13, marginBottom: 24 }}>
         {isForgot ? "Wachtwoord vergeten" : isSignUp ? "Maak een account aan" : "Log in op je account"}
       </p>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { AxisLogo } from "../components/AxisLogo"
 
 const G = "#22c55e"
 const BG = "#0f0f0f"
@@ -77,7 +78,7 @@ function Nav() {
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
+        <img src="/logo/AXIS-wordmark-light.svg" alt="AXIS" style={{ height: 28, display: "block" }} />
 
         {/* Desktop links */}
         <div className="nav-links" style={{ display: "flex", gap: 32 }}>
@@ -550,7 +551,7 @@ export default function Website() {
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>AXIS</span>
+            <AxisLogo variant="bracket" size={18} />
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>Commit. Execute. Reflect. Recover.</p>
           </div>
           <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
