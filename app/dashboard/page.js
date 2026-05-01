@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { AxisLogo } from "../../components/AxisLogo"
 
-const COACH_EMAILS = ["raoul87@gmail.com", "jobbrinkman1998@gmail.com"]
 const GREEN = "#22c55e"
 const CARD_BG = "#111"
 const BORDER = "#1e1e1e"
@@ -159,9 +158,14 @@ export default function Dashboard() {
   const [savingFaq,   setSavingFaq]   = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
-      if (!COACH_EMAILS.includes(session.user.email)) { router.replace("/home"); return }
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("auth_user_id", session.user.id)
+        .maybeSingle()
+      if (!profile || profile.role !== "coach") { router.replace("/home"); return }
       setAuthProfile(session.user)
       setAuthorized(true)
     })

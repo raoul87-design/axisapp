@@ -135,6 +135,7 @@ export default function InvitePage() {
         target_weight:      preData.target_weight      || null,
         sport_frequentie:   preData.sport_frequentie   || null,
         coach_email:        coachEmail,
+        role:               "client",
         ...(formatted ? { whatsapp_number: formatted } : {}),
       }
       const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
@@ -162,7 +163,7 @@ export default function InvitePage() {
           .upsert({ whatsapp_number: formatted, auth_user_id: user.id }, { onConflict: "whatsapp_number" })
       }
       await supabase.from("users")
-        .update({ coach_email: coachEmail })
+        .update({ coach_email: coachEmail, role: "client" })
         .eq("auth_user_id", user.id)
       await supabase.from("invite_links")
         .update({ gebruikt: true })

@@ -127,6 +127,7 @@ export default function SignupPage() {
       fitness_level: niveau || null,
       current_weight: huidigGewicht ? parseFloat(huidigGewicht) : null,
       target_weight:  doelGewicht   ? parseFloat(doelGewicht)   : null,
+      role: "b2c",
       ...extra,
     }
     const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
