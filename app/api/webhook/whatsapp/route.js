@@ -274,6 +274,7 @@ Vandaag is ${today}. Berichten in de gespreksgeschiedenis zijn voorzien van een 
 Reageer ALLEEN op het meest recente bericht van de gebruiker.
 Breng NOOIT oude plannen, activiteiten of onderwerpen ter sprake tenzij de gebruiker er zelf naar vraagt.
 Gebruik de gespreksgeschiedenis alleen als context — niet als onderwerp van gesprek.
+Schrijf NOOIT datum labels ([vandaag], [gisteren], [dd/mm]) in je antwoord — die zijn alleen voor intern gebruik.
 
 CLIENTCONTEXT:
 ${name ? `Naam: ${name}` : ""}
@@ -997,14 +998,11 @@ async function handleMessage(from, body) {
         await sendWhatsApp(from, reply)
         return
       }
-      // Enkel commitment → AI coach reply met geheugen
+      // Enkel commitment → direct bevestigen, geen AI conversatie
       if (commitments.length === 1 && metrics.length === 0) {
-        console.log("=== [4] ENKEL COMMITMENT — AI COACH REPLY MET GEHEUGEN ===")
+        console.log("=== [4] ENKEL COMMITMENT — DIRECT BEVESTIGEN ===")
         const userId = userData?.auth_user_id
         const today  = getNLDate()
-
-        console.log("auth_user_id:", userId)
-        console.log("Saving commitment:", commitments[0].tekst, "| date:", today)
 
         if (!userId) {
           console.error("Geen auth_user_id — commitment niet opgeslagen")
@@ -1012,34 +1010,17 @@ async function handleMessage(from, body) {
           return
         }
 
-        const [insertResult, history, clientContext] = await Promise.all([
-          supabase.from("commitments").insert({ user_id: userId, text: commitments[0].tekst, date: today, done: false, category: classifyCommitmentCategory(commitments[0].tekst) }),
-          getConversationHistory(userData?.id),
-          getClientContext(userData),
-        ])
-
-        if (insertResult.error) {
-          console.error("Commitment INSERT error:", insertResult.error.message, "| code:", insertResult.error.code, "| details:", insertResult.error.details)
-        } else {
-          console.log("Commitment saved OK | user_id:", userId, "| text:", commitments[0].tekst)
-        }
-
-        const systemPrompt = buildSystemPrompt(tone, userData, clientContext, faqItems)
-        const messages     = [...history, { role: "user", content: body }]
-
-        const aiResponse = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 256,
-          system: systemPrompt,
-          messages,
+        const { error } = await supabase.from("commitments").insert({
+          user_id: userId, text: commitments[0].tekst, date: today,
+          done: false, category: classifyCommitmentCategory(commitments[0].tekst),
         })
-        const reply = aiResponse.content[0].text
+        if (error) console.error("Commitment INSERT error:", error.message)
+        else console.log("Commitment saved OK | user_id:", userId, "| text:", commitments[0].tekst)
 
-        await Promise.all([
-          saveConversation(userData?.id, "user", body),
-          saveConversation(userData?.id, "assistant", reply),
-        ])
+        const reply = buildConfirmation([{ categorie: "COMMITMENT", tekst: commitments[0].tekst }])
+          || `✅ ${commitments[0].tekst} genoteerd. Go! 🔥`
 
+        await saveConversation(userData?.id, "user", body)
         await sendWhatsApp(from, reply)
         return
       }
