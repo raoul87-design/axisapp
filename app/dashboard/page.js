@@ -145,6 +145,12 @@ export default function Dashboard() {
   const [generatingInvite, setGeneratingInvite] = useState(false)
   const [copiedCode,       setCopiedCode]       = useState("")
 
+  const [showClientModal, setShowClientModal] = useState(false)
+  const [clientStep,      setClientStep]      = useState(1)
+  const [clientForm,      setClientForm]      = useState({ naam: "", email: "", doelen: [], huidigGewicht: "", doelGewicht: "", locaties: [], frequentie: 0, niveau: "" })
+  const [sendingInvite,   setSendingInvite]   = useState(false)
+  const [inviteSentUrl,   setInviteSentUrl]   = useState("")
+
   const [faqItems,    setFaqItems]    = useState([])
   const [showFaqModal, setShowFaqModal] = useState(false)
   const [faqForm,     setFaqForm]     = useState({ vraag: "", antwoord: "" })
@@ -252,7 +258,7 @@ export default function Dashboard() {
   async function loadInviteLinks(coachEmail) {
     const { data } = await supabase
       .from("invite_links")
-      .select("id, code, gebruikt, created_at")
+      .select("id, code, gebruikt, created_at, client_email, pre_data")
       .eq("coach_email", coachEmail)
       .order("created_at", { ascending: false })
       .limit(10)
@@ -272,6 +278,51 @@ export default function Dashboard() {
     })
     if (!error) await loadInviteLinks(authProfile.email)
     setGeneratingInvite(false)
+  }
+
+  async function generateInviteWithData() {
+    if (!authProfile?.email || sendingInvite) return
+    setSendingInvite(true)
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map(b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
+      .join("")
+    const pre_data = {
+      naam:               clientForm.naam.trim() || null,
+      doelen:             clientForm.doelen,
+      training_locations: clientForm.locaties,
+      fitness_level:      clientForm.niveau     || null,
+      current_weight:     clientForm.huidigGewicht ? parseFloat(clientForm.huidigGewicht) : null,
+      target_weight:      clientForm.doelGewicht   ? parseFloat(clientForm.doelGewicht)   : null,
+      sport_frequentie:   clientForm.frequentie    || null,
+    }
+    const { error } = await supabase.from("invite_links").insert({
+      coach_email:  authProfile.email,
+      code,
+      gebruikt:     false,
+      client_email: clientForm.email.trim() || null,
+      pre_data,
+    })
+    if (error) { setSendingInvite(false); return }
+
+    const inviteUrl = `${window.location.origin}/invite/${code}`
+
+    if (clientForm.email.trim()) {
+      await fetch("/api/invite/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to:        clientForm.email.trim(),
+          name:      clientForm.naam.trim() || null,
+          inviteUrl,
+          coachName: authProfile.user_metadata?.full_name || authProfile.user_metadata?.name || null,
+        }),
+      })
+    }
+
+    await loadInviteLinks(authProfile.email)
+    setInviteSentUrl(inviteUrl)
+    setSendingInvite(false)
+    setClientStep(8)
   }
 
   function copyInviteLink(code) {
@@ -954,37 +1005,44 @@ export default function Dashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Invite Links</p>
                 <button
-                  onClick={generateInviteLink}
-                  disabled={generatingInvite}
-                  style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 12, cursor: generatingInvite ? "default" : "pointer", opacity: generatingInvite ? 0.6 : 1 }}
+                  onClick={() => { setClientForm({ naam: "", email: "", doelen: [], huidigGewicht: "", doelGewicht: "", locaties: [], frequentie: 0, niveau: "" }); setClientStep(1); setInviteSentUrl(""); setShowClientModal(true) }}
+                  style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 12, cursor: "pointer" }}
                 >
-                  {generatingInvite ? "Genereren..." : "+ Genereer invite link"}
+                  + Voeg client toe
                 </button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {inviteLinks.length === 0 && (
                   <p style={{ color: "#333", fontSize: 13 }}>Nog geen invite links aangemaakt.</p>
                 )}
-                {inviteLinks.map(link => (
-                  <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "#0a0a0a", border: `1px solid ${link.gebruikt ? "#1a1a1a" : BORDER}` }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, color: link.gebruikt ? "#333" : "#aaa", fontFamily: "monospace", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        axisapp.nl/invite/{link.code}
-                      </p>
-                      <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#555", margin: "3px 0 0" }}>
-                        {link.gebruikt ? "Gebruikt" : "Actief"}
-                      </p>
+                {inviteLinks.map(link => {
+                  const clientName = link.pre_data?.naam || link.client_email || null
+                  return (
+                    <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "#0a0a0a", border: `1px solid ${link.gebruikt ? "#1a1a1a" : BORDER}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {clientName && (
+                          <p style={{ fontSize: 12, color: link.gebruikt ? "#444" : "#ccc", fontWeight: "bold", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {clientName}
+                          </p>
+                        )}
+                        <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#aaa", fontFamily: "monospace", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          axisapp.nl/invite/{link.code}
+                        </p>
+                        <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#555", margin: "3px 0 0" }}>
+                          {link.gebruikt ? "Gebruikt" : "Actief"}
+                        </p>
+                      </div>
+                      {!link.gebruikt && (
+                        <button
+                          onClick={() => copyInviteLink(link.code)}
+                          style={{ marginLeft: 12, padding: "5px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: copiedCode === link.code ? GREEN : "#666", fontSize: 11, cursor: "pointer", flexShrink: 0 }}
+                        >
+                          {copiedCode === link.code ? "Gekopieerd!" : "Kopieer"}
+                        </button>
+                      )}
                     </div>
-                    {!link.gebruikt && (
-                      <button
-                        onClick={() => copyInviteLink(link.code)}
-                        style={{ marginLeft: 12, padding: "5px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: copiedCode === link.code ? GREEN : "#666", fontSize: 11, cursor: "pointer", flexShrink: 0 }}
-                      >
-                        {copiedCode === link.code ? "Gekopieerd!" : "Kopieer"}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -1045,6 +1103,237 @@ export default function Dashboard() {
 
       </div>
     </div>
+
+    {/* ── CLIENT MODAL ── */}
+    {showClientModal && (() => {
+      const iStyle = { width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }
+      const btnP   = { padding: "10px 20px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 13, cursor: "pointer", fontWeight: "bold" }
+      const btnG   = { padding: "10px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "transparent", color: "#555", fontSize: 13, cursor: "pointer" }
+      const chkBtn = (sel) => ({ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "#0a0a0a", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal", width: "100%" })
+      const optBtn = (sel) => ({ padding: "12px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "#0a0a0a", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal" })
+      const firstName = clientForm.naam.trim().split(" ")[0] || "de client"
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+          <div style={{ background: "#111", border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: "100%", maxWidth: 460 }}>
+
+            {clientStep < 8 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", margin: 0 }}>Stap {clientStep} van 7</p>
+                <button onClick={() => setShowClientModal(false)} style={{ background: "none", border: "none", color: "#555", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+              </div>
+            )}
+
+            {/* Step 1 — Naam + email */}
+            {clientStep === 1 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Nieuwe client</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 24 }}>Vul de gegevens in voor je client.</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Naam *</p>
+                    <input autoFocus value={clientForm.naam} onChange={e => setClientForm(f => ({ ...f, naam: e.target.value }))}
+                      placeholder="Voor- en achternaam" style={iStyle} />
+                  </div>
+                  <div>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>
+                      E-mailadres <span style={{ color: "#333", textTransform: "none", letterSpacing: 0 }}>(voor uitnodiging)</span>
+                    </p>
+                    <input type="email" value={clientForm.email} onChange={e => setClientForm(f => ({ ...f, email: e.target.value }))}
+                      placeholder="client@email.com" style={iStyle} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setShowClientModal(false)} style={btnG}>Annuleer</button>
+                  <button onClick={() => clientForm.naam.trim() && setClientStep(2)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.naam.trim() ? 1 : 0.4, cursor: clientForm.naam.trim() ? "pointer" : "default" }}>
+                    Volgende →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2 — Doelen */}
+            {clientStep === 2 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Doelen</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Wat wil {firstName} bereiken? Meerdere mogelijk.</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+                  {["Afvallen", "Spiermassa opbouwen", "Fitter worden", "Onderhouden"].map(d => (
+                    <button key={d} onClick={() => setClientForm(f => ({ ...f, doelen: f.doelen.includes(d) ? f.doelen.filter(x => x !== d) : [...f.doelen, d] }))} style={chkBtn(clientForm.doelen.includes(d))}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{clientForm.doelen.includes(d) ? "☑" : "☐"}</span>{d}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(1)} style={btnG}>← Terug</button>
+                  <button onClick={() => clientForm.doelen.length > 0 && setClientStep(3)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.doelen.length > 0 ? 1 : 0.4, cursor: clientForm.doelen.length > 0 ? "pointer" : "default" }}>
+                    Volgende →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 3 — Gewicht */}
+            {clientStep === 3 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Gewicht</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Optioneel — voor voortgang tracking.</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                  <div>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Huidig gewicht (kg)</p>
+                    <input type="number" value={clientForm.huidigGewicht} onChange={e => setClientForm(f => ({ ...f, huidigGewicht: e.target.value }))}
+                      placeholder="bijv. 78" style={iStyle} />
+                  </div>
+                  <div>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Doelgewicht (kg)</p>
+                    <input type="number" value={clientForm.doelGewicht} onChange={e => setClientForm(f => ({ ...f, doelGewicht: e.target.value }))}
+                      placeholder="bijv. 72" style={iStyle} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(2)} style={btnG}>← Terug</button>
+                  <button onClick={() => setClientStep(4)} style={{ ...btnP, flex: 2 }}>Volgende →</button>
+                </div>
+              </>
+            )}
+
+            {/* Step 4 — Locaties */}
+            {clientStep === 4 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Trainingslocaties</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Waar traint {firstName}? Meerdere mogelijk.</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+                  {["Gym", "Thuis", "Buiten", "Op reis"].map(loc => (
+                    <button key={loc} onClick={() => setClientForm(f => ({ ...f, locaties: f.locaties.includes(loc) ? f.locaties.filter(x => x !== loc) : [...f.locaties, loc] }))} style={chkBtn(clientForm.locaties.includes(loc))}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{clientForm.locaties.includes(loc) ? "☑" : "☐"}</span>{loc}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(3)} style={btnG}>← Terug</button>
+                  <button onClick={() => clientForm.locaties.length > 0 && setClientStep(5)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.locaties.length > 0 ? 1 : 0.4, cursor: clientForm.locaties.length > 0 ? "pointer" : "default" }}>
+                    Volgende →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 5 — Frequentie */}
+            {clientStep === 5 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Sportfrequentie</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Hoe vaak per week sport {firstName}?</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} onClick={() => setClientForm(f => ({ ...f, frequentie: n }))} style={{
+                      flex: 1, minWidth: 52, padding: "14px 6px", borderRadius: 8,
+                      border: `2px solid ${clientForm.frequentie === n ? GREEN : "#2a2a2a"}`,
+                      background: clientForm.frequentie === n ? "#0a1a0f" : "#0a0a0a",
+                      color: clientForm.frequentie === n ? GREEN : "#ccc",
+                      fontSize: 16, fontWeight: "bold", cursor: "pointer",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                    }}>
+                      {n}{n === 5 ? "+" : ""}x
+                      <span style={{ fontSize: 9, color: clientForm.frequentie === n ? GREEN : "#444", fontWeight: "normal" }}>p.w.</span>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(4)} style={btnG}>← Terug</button>
+                  <button onClick={() => clientForm.frequentie > 0 && setClientStep(6)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.frequentie > 0 ? 1 : 0.4, cursor: clientForm.frequentie > 0 ? "pointer" : "default" }}>
+                    Volgende →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 6 — Niveau */}
+            {clientStep === 6 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Fitnessniveau</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Wat is het niveau van {firstName}?</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+                  {["Beginner", "Gemiddeld", "Gevorderd"].map(lvl => (
+                    <button key={lvl} onClick={() => setClientForm(f => ({ ...f, niveau: lvl }))} style={optBtn(clientForm.niveau === lvl)}>{lvl}</button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(5)} style={btnG}>← Terug</button>
+                  <button onClick={() => clientForm.niveau && setClientStep(7)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.niveau ? 1 : 0.4, cursor: clientForm.niveau ? "pointer" : "default" }}>
+                    Volgende →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 7 — Review */}
+            {clientStep === 7 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Overzicht</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Controleer de gegevens en verstuur de uitnodiging.</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 24 }}>
+                  {[
+                    { label: "Naam",           value: clientForm.naam },
+                    clientForm.email           && { label: "E-mail",         value: clientForm.email },
+                    { label: "Doelen",         value: clientForm.doelen.join(", ") },
+                    { label: "Niveau",         value: clientForm.niveau },
+                    { label: "Locaties",       value: clientForm.locaties.join(", ") },
+                    { label: "Frequentie",     value: `${clientForm.frequentie}× per week` },
+                    clientForm.huidigGewicht   && { label: "Huidig gewicht", value: `${clientForm.huidigGewicht} kg` },
+                    clientForm.doelGewicht     && { label: "Doelgewicht",    value: `${clientForm.doelGewicht} kg` },
+                  ].filter(Boolean).map(({ label, value }) => (
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 14px", borderRadius: 8, background: "#0a0a0a", border: "1px solid #1e1e1e" }}>
+                      <span style={{ color: "#555", fontSize: 12 }}>{label}</span>
+                      <span style={{ color: "#fff", fontSize: 12 }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(6)} style={btnG}>← Terug</button>
+                  <button onClick={generateInviteWithData} disabled={sendingInvite}
+                    style={{ ...btnP, flex: 2, opacity: sendingInvite ? 0.6 : 1, cursor: sendingInvite ? "default" : "pointer" }}>
+                    {sendingInvite ? "Bezig..." : clientForm.email ? "Verstuur uitnodiging →" : "Genereer invite link →"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Step 8 — Success */}
+            {clientStep === 8 && (
+              <div style={{ textAlign: "center" }}>
+                <p style={{ color: GREEN, fontSize: 36, marginBottom: 12 }}>✓</p>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 8 }}>
+                  {clientForm.email ? "Uitnodiging verstuurd!" : "Invite link aangemaakt!"}
+                </h2>
+                {clientForm.email && (
+                  <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>
+                    E-mail verstuurd naar <span style={{ color: "#ccc" }}>{clientForm.email}</span>.
+                  </p>
+                )}
+                <div style={{ background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 8, padding: "10px 14px", marginBottom: 20, textAlign: "left" }}>
+                  <p style={{ color: "#555", fontSize: 11, margin: "0 0 4px" }}>Invite link</p>
+                  <p style={{ color: "#aaa", fontSize: 12, fontFamily: "monospace", margin: 0, wordBreak: "break-all" }}>{inviteSentUrl}</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => navigator.clipboard.writeText(inviteSentUrl)}
+                    style={{ ...btnG, flex: 1, borderRadius: 8 }}>
+                    Kopieer link
+                  </button>
+                  <button onClick={() => setShowClientModal(false)} style={{ ...btnP, flex: 1 }}>
+                    Sluiten
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )
+    })()}
 
     {/* ── FAQ MODAL ── */}
     {showFaqModal && (

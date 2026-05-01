@@ -28,50 +28,49 @@ function getNLDate() {
 }
 
 export default function InvitePage() {
-  const { code }  = useParams()
-  const router    = useRouter()
+  const { code } = useParams()
+  const router   = useRouter()
 
-  const [status, setStatus]   = useState("loading") // loading | invalid | used | ready
+  const [status, setStatus]         = useState("loading")
   const [coachEmail, setCoachEmail] = useState("")
+  const [preData, setPreData]       = useState(null)
 
-  // Auth state
   const [user, setUser] = useState(null)
 
-  // Sign-up form
   const [signupEmail,    setSignupEmail]    = useState("")
   const [signupPassword, setSignupPassword] = useState("")
   const [signupError,    setSignupError]    = useState("")
   const [signingUp,      setSigningUp]      = useState(false)
 
-  // Onboarding
-  const [step,              setStep]              = useState(0) // 0 = sign up
-  const [selectedGoal,      setSelectedGoal]      = useState("")
-  const [currentWeight,     setCurrentWeight]     = useState("")
-  const [targetWeight,      setTargetWeight]      = useState("")
-  const [trainingLocation,  setTrainingLocation]  = useState("")
-  const [fitnessLevel,      setFitnessLevel]      = useState("")
-  const [commitmentText,    setCommitmentText]    = useState("")
-  const [whatsappInput,     setWhatsappInput]     = useState("")
-  const [finishing,         setFinishing]         = useState(false)
+  // Full flow onboarding state
+  const [step,             setStep]             = useState(0)
+  const [selectedGoal,     setSelectedGoal]     = useState("")
+  const [currentWeight,    setCurrentWeight]    = useState("")
+  const [targetWeight,     setTargetWeight]     = useState("")
+  const [trainingLocation, setTrainingLocation] = useState("")
+  const [fitnessLevel,     setFitnessLevel]     = useState("")
+  const [commitmentText,   setCommitmentText]   = useState("")
+  const [whatsappInput,    setWhatsappInput]    = useState("")
+  const [finishing,        setFinishing]        = useState(false)
 
-  // Validate invite code on mount
   useEffect(() => {
     async function validate() {
       const { data, error } = await supabase
         .from("invite_links")
-        .select("coach_email, gebruikt")
+        .select("coach_email, gebruikt, client_email, pre_data")
         .eq("code", code)
         .single()
 
       if (error || !data) { setStatus("invalid"); return }
       if (data.gebruikt)  { setStatus("used");    return }
       setCoachEmail(data.coach_email)
+      setPreData(data.pre_data || null)
+      if (data.client_email) setSignupEmail(data.client_email)
       setStatus("ready")
     }
     validate()
   }, [code])
 
-  // Track auth state — if user signs up they get auto-logged-in
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
       const u = session?.user ?? null
@@ -81,16 +80,15 @@ export default function InvitePage() {
     return () => listener.subscription.unsubscribe()
   }, [step])
 
-  // ── Handlers ────────────────────────────────────────────────
-
   async function handleSignUp(e) {
     e.preventDefault()
     setSignupError("")
     setSigningUp(true)
     const { error } = await supabase.auth.signUp({ email: signupEmail, password: signupPassword })
     if (error) { setSignupError(error.message); setSigningUp(false); return }
-    // onAuthStateChange will advance step to 1
   }
+
+  // ── Full flow helpers ────────────────────────────────────────
 
   async function saveGoal() {
     const payload = {
@@ -122,26 +120,53 @@ export default function InvitePage() {
     })
   }
 
+  // ── Simplified flow finish (pre_data set by coach) ───────────
+
+  async function finishSimplified(whatsapp) {
+    setFinishing(true)
+    try {
+      const formatted = whatsapp && (whatsapp.startsWith("whatsapp:") ? whatsapp : `whatsapp:${whatsapp}`)
+      const payload = {
+        naam:               preData.naam              || null,
+        doelen:             preData.doelen             || [],
+        training_locations: preData.training_locations || [],
+        fitness_level:      preData.fitness_level      || null,
+        current_weight:     preData.current_weight     || null,
+        target_weight:      preData.target_weight      || null,
+        sport_frequentie:   preData.sport_frequentie   || null,
+        coach_email:        coachEmail,
+        ...(formatted ? { whatsapp_number: formatted } : {}),
+      }
+      const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+      if (existing) {
+        await supabase.from("users").update(payload).eq("auth_user_id", user.id)
+      } else {
+        await supabase.from("users").insert({ ...payload, auth_user_id: user.id })
+      }
+      await supabase.from("invite_links").update({ gebruikt: true }).eq("code", code)
+      router.replace("/home")
+    } catch (err) {
+      console.error("Simplified finish error:", err)
+      setFinishing(false)
+    }
+  }
+
+  // ── Full flow finish ─────────────────────────────────────────
+
   async function finishOnboarding(whatsapp) {
     setFinishing(true)
     try {
-      // Link WhatsApp if provided
       if (whatsapp) {
         const formatted = whatsapp.startsWith("whatsapp:") ? whatsapp : `whatsapp:${whatsapp}`
         await supabase.from("users")
           .upsert({ whatsapp_number: formatted, auth_user_id: user.id }, { onConflict: "whatsapp_number" })
       }
-
-      // Set coach_email on user row
       await supabase.from("users")
         .update({ coach_email: coachEmail })
         .eq("auth_user_id", user.id)
-
-      // Mark invite as used
       await supabase.from("invite_links")
         .update({ gebruikt: true })
         .eq("code", code)
-
       router.replace("/home")
     } catch (err) {
       console.error("Finishing onboarding failed:", err)
@@ -151,7 +176,7 @@ export default function InvitePage() {
 
   // ── Styles ───────────────────────────────────────────────────
 
-  const totalSteps = 6
+  const totalSteps = preData ? 2 : 6
   const inputStyle = {
     width: "100%", padding: "13px 14px", borderRadius: 8,
     border: `1px solid #333`, background: "#111", color: "#fff",
@@ -226,8 +251,55 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 1 — Doel ── */}
-        {step === 1 && (
+        {/* ══ SIMPLIFIED FLOW (preData ingevuld door coach) ══════ */}
+
+        {/* Stap 1 — Bevestig gegevens */}
+        {preData && step === 1 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Jouw gegevens</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Je coach heeft dit al voor je ingevuld. Klopt alles?</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
+              {[
+                preData.naam                   && { label: "Naam",           value: preData.naam },
+                preData.doelen?.length         && { label: "Doelen",         value: preData.doelen.join(", ") },
+                preData.fitness_level          && { label: "Niveau",         value: preData.fitness_level },
+                preData.training_locations?.length && { label: "Locaties",   value: preData.training_locations.join(", ") },
+                preData.sport_frequentie       && { label: "Frequentie",     value: `${preData.sport_frequentie}× per week` },
+                preData.current_weight         && { label: "Huidig gewicht", value: `${preData.current_weight} kg` },
+                preData.target_weight          && { label: "Doelgewicht",    value: `${preData.target_weight} kg` },
+              ].filter(Boolean).map(({ label, value }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "#111", border: "1px solid #222" }}>
+                  <span style={{ color: "#555", fontSize: 13 }}>{label}</span>
+                  <span style={{ color: "#fff", fontSize: 13 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setStep(2)} style={btnPrimary}>Ziet er goed uit →</button>
+          </>
+        )}
+
+        {/* Stap 2 — WhatsApp (simplified) */}
+        {preData && step === 2 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Blijf op koers via WhatsApp</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS stuurt je dagelijks een check-in.<br />Geen app nodig — gewoon reageren.</p>
+            <input autoFocus value={whatsappInput} onChange={e => setWhatsappInput(e.target.value)}
+              placeholder="+31612345678" style={{ ...inputStyle, marginBottom: 12 }} />
+            <button onClick={() => !finishing && whatsappInput && finishSimplified(whatsappInput)}
+              disabled={finishing || !whatsappInput}
+              style={{ ...btnPrimary, marginBottom: 10, opacity: (finishing || !whatsappInput) ? 0.5 : 1, cursor: (finishing || !whatsappInput) ? "default" : "pointer" }}>
+              {finishing ? "Bezig..." : "Koppel WhatsApp →"}
+            </button>
+            <button onClick={() => !finishing && finishSimplified(null)} disabled={finishing} style={btnGhost}>
+              Sla over, ik gebruik de app
+            </button>
+          </>
+        )}
+
+        {/* ══ FULL FLOW (geen pre_data) ══════════════════════════ */}
+
+        {/* Stap 1 — Doel */}
+        {!preData && step === 1 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat is je doel?</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Kies het doel waar je nu op focust.</p>
@@ -242,8 +314,8 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 2 — Gewicht ── */}
-        {step === 2 && (
+        {/* Stap 2 — Gewicht */}
+        {!preData && step === 2 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Jouw gewicht</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Optioneel — helpt AXIS je voortgang bij te houden.</p>
@@ -262,8 +334,8 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 3 — Trainingslocatie ── */}
-        {step === 3 && (
+        {/* Stap 3 — Trainingslocatie */}
+        {!preData && step === 3 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Waar train je?</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS past de coaching aan op jouw situatie.</p>
@@ -279,8 +351,8 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 4 — Fitnessniveau ── */}
-        {step === 4 && (
+        {/* Stap 4 — Fitnessniveau */}
+        {!preData && step === 4 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat is je niveau?</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Zodat de coach je uitdaagt op jouw niveau.</p>
@@ -296,8 +368,8 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 5 — Eerste commitment ── */}
-        {step === 5 && (
+        {/* Stap 5 — Eerste commitment */}
+        {!preData && step === 5 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat ga jij vandaag doen?</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 20 }}>Kies een suggestie of typ je eigen commitment.</p>
@@ -321,8 +393,8 @@ export default function InvitePage() {
           </>
         )}
 
-        {/* ── Stap 6 — WhatsApp ── */}
-        {step === 6 && (
+        {/* Stap 6 — WhatsApp (full flow) */}
+        {!preData && step === 6 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Blijf op koers via WhatsApp</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS stuurt je dagelijks een check-in.<br />Geen app nodig — gewoon reageren.</p>
