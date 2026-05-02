@@ -209,7 +209,7 @@ export default function SignupPage() {
         {step === 2 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat wil jij bereiken?</h2>
-            <SubLabel>Meerdere antwoorden mogelijk. We stemmen je check-ins en workouts af op jouw doelen.</SubLabel>
+            <SubLabel>Meerdere antwoorden mogelijk.</SubLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
               {DOELEN_OPTIES.map(d => (
                 <button key={d} onClick={() => toggleItem(doelen, setDoelen, d)} style={checkBtn(doelen.includes(d))}>
@@ -251,7 +251,7 @@ export default function SignupPage() {
         {step === 4 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Waar train jij?</h2>
-            <SubLabel>Meerdere mogelijk. Zodat we workouts tonen die passen bij waar jij traint.</SubLabel>
+            <SubLabel>Zodat we workouts tonen die passen bij waar jij traint.</SubLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
               {LOCATIE_OPTIES.map(loc => (
                 <button key={loc} onClick={() => toggleItem(locaties, setLocaties, loc)} style={checkBtn(locaties.includes(loc))}>
