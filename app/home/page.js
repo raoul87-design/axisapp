@@ -1334,12 +1334,35 @@ return (
 
               {/* Tijd + optioneel datum */}
               <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="time"
-                  value={reminderForm.tijd}
-                  onChange={e => setReminderForm(f => ({ ...f, tijd: e.target.value }))}
-                  style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: "#ffffff", colorScheme: "dark", fontSize: 14, outline: "none" }}
-                />
+                {(() => {
+                  const selectStyle = { flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: "#ffffff", fontSize: 14, outline: "none", appearance: "none", WebkitAppearance: "none" }
+                  const [uurVal, minVal] = reminderForm.tijd ? reminderForm.tijd.split(":") : ["", ""]
+                  return (
+                    <>
+                      <select
+                        value={uurVal}
+                        onChange={e => setReminderForm(f => ({ ...f, tijd: `${e.target.value}:${minVal || "00"}` }))}
+                        style={selectStyle}
+                      >
+                        <option value="" disabled>uur</option>
+                        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={minVal}
+                        onChange={e => setReminderForm(f => ({ ...f, tijd: `${uurVal || "00"}:${e.target.value}` }))}
+                        style={selectStyle}
+                      >
+                        <option value="" disabled>min</option>
+                        {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </>
+                  )
+                })()}
+
                 {reminderForm.eenmalig && (
                   <input
                     type="date"
