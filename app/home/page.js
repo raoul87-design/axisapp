@@ -23,8 +23,9 @@ const [onboardingStep,  setOnboardingStep] = useState(1)
 const [interactionMode, setInteractionMode] = useState("")
 const [completed,       setCompleted]      = useState(null)
 const [answer,          setAnswer]         = useState("")
-const [reflectionDone,  setReflectionDone] = useState(false)
-const [reflectionTekst, setReflectionTekst] = useState("")
+const [reflectionSubmitted, setReflectionSubmitted] = useState(false)
+const [reflectionDate,      setReflectionDate]      = useState("")
+const [reflectionTekst,     setReflectionTekst]     = useState("")
 const [showAll,         setShowAll]        = useState(false)
 const [whatsappInput,   setWhatsappInput]  = useState("")
 const [whatsappLinked,  setWhatsappLinked] = useState(false)
@@ -190,7 +191,8 @@ const handleReflection = async (gehaald) => {
     tekst:   reflectionTekst || null,
   }])
   if (error) console.error("Reflectie opslaan mislukt:", error.message)
-  setReflectionDone(true)
+  setReflectionSubmitted(true)
+  setReflectionDate(getNLDate())
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -214,6 +216,11 @@ useEffect(() => {
 useEffect(() => {
   if (!user) return
   const init = async () => {
+    if (reflectionDate && reflectionDate !== getNLDate()) {
+      setReflectionSubmitted(false)
+      setReflectionDate("")
+      setReflectionTekst("")
+    }
     await checkFirstUse()
     await loadCommitments()
     await loadHistory()
@@ -1214,7 +1221,7 @@ return (
             <p style={{ fontSize: 15, marginBottom: todayState === 4 ? 16 : 0, color: todayState < 4 ? C.textMuted : C.text }}>
               {todayState < 4 ? "Klaar voor vandaag? Vink af en reflecteer." : "Heb je je commitments gehaald?"}
             </p>
-            {todayState === 4 && !reflectionDone && (
+            {todayState === 4 && !reflectionSubmitted && (
               <>
                 <textarea
                   value={reflectionTekst}
@@ -1229,7 +1236,7 @@ return (
                 </div>
               </>
             )}
-            {todayState === 4 && reflectionDone && (
+            {todayState === 4 && reflectionSubmitted && (
               <p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>✓ Reflectie opgeslagen</p>
             )}
           </div>
