@@ -349,6 +349,14 @@ async function sendWhatsApp(to, body) {
 // ── Bericht parseren ──────────────────────────────────────────
 
 async function parseCheckin(body) {
+  const trimmed = body.trim()
+  const deleteMatch = trimmed.match(/^(.*)\s+[xX]$|^[xX]$/i)
+  if (deleteMatch) {
+    const tekst = (deleteMatch[1] || "").trim()
+    console.log(`[OVERRIDE] COMMITMENT_DELETE gedetecteerd — tekst: "${tekst}"`)
+    return [{ categorie: "COMMITMENT_DELETE", tekst }]
+  }
+
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,
@@ -359,7 +367,7 @@ async function parseCheckin(body) {
 Splits het op in losse onderdelen en classificeer elk onderdeel.
 
 Geef terug als JSON array. Elk object heeft:
-- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "REMINDER" | "STOP_REMINDER" | "REMINDER_LIJST" | "OVERIG"
+- "categorie": "COMMITMENT" | "METRIC" | "VRAAG" | "REFLECTIE" | "REMINDER" | "STOP_REMINDER" | "REMINDER_LIJST" | "COMMITMENT_DELETE" | "OVERIG"
 - Voor METRIC ook: "metric_type" (kies uit: gewicht/kcal/eiwitten/koolhydraten/vetten/bloeddruk/hartslag/slaap/anders) en "waarde" (de waarde als string, bijv. "76kg" of "2000 kcal")
 - Voor COMMITMENT ook: "tekst" als bondige actie (max 8 woorden) — verwijder dagaanduidingen ("vandaag", "vandaag ga ik", "ga ik"), verbindingswoorden ("daarom", "dus"), en houd alleen de kern. Bijv. "30 min hardlopen" niet "Vandaag ga ik 30 min hardlopen"
 - Voor REMINDER ook: "tijd" (HH:MM formaat, bijv. "19:00"), "tekst" (kort wat de reminder is, bijv. "creatine innemen"), "eenmalig" (true als het om een specifieke datum gaat, false voor dagelijks), en "datum" (alleen bij eenmalig=true: gebruik "morgen", "overmorgen", een weekdagnaam zoals "vrijdag", of een datum als "2026-04-25" — null bij dagelijkse reminders)
@@ -424,6 +432,10 @@ STOP_REMINDER = verzoek om een specifieke reminder of alle reminders te stoppen:
 
 REMINDER_LIJST = verzoek om een overzicht van actieve reminders:
 - Sleutelwoorden: "welke reminders", "toon reminders", "mijn reminders", "wat zijn mijn reminders", "reminder overzicht"
+
+COMMITMENT_DELETE = verzoek om een commitment te verwijderen — eindigt op " x" of " X":
+- Sleutelwoorden: bericht eindigt op spatie gevolgd door "x" of "X"
+- Geef terug als: {"categorie":"COMMITMENT_DELETE","tekst":"[tekst voor de x]"}
 
 OVERIG = alles wat niet in bovenstaande categorieën past
 
@@ -879,17 +891,47 @@ async function handleMessage(from, body) {
     const items = await parseCheckin(body)
     console.log("Items na classificatie + override:", JSON.stringify(items))
 
-    const metrics           = items.filter((i) => i.categorie === "METRIC")
-    const commitments       = items.filter((i) => i.categorie === "COMMITMENT")
-    const commitmentsDone   = items.filter((i) => i.categorie === "COMMITMENT_DONE")
-    const vragen            = items.filter((i) => i.categorie === "VRAAG")
-    const rustdagen         = items.filter((i) => i.categorie === "RUSTDAG")
-    const reminders         = items.filter((i) => i.categorie === "REMINDER")
-    const stopReminders     = items.filter((i) => i.categorie === "STOP_REMINDER")
-    const reminderLijst     = items.filter((i) => i.categorie === "REMINDER_LIJST")
-    const workoutLogs       = items.filter((i) => i.categorie === "WORKOUT_LOG")
+    const metrics             = items.filter((i) => i.categorie === "METRIC")
+    const commitments         = items.filter((i) => i.categorie === "COMMITMENT")
+    const commitmentsDone     = items.filter((i) => i.categorie === "COMMITMENT_DONE")
+    const commitmentDeletes   = items.filter((i) => i.categorie === "COMMITMENT_DELETE")
+    const vragen              = items.filter((i) => i.categorie === "VRAAG")
+    const rustdagen           = items.filter((i) => i.categorie === "RUSTDAG")
+    const reminders           = items.filter((i) => i.categorie === "REMINDER")
+    const stopReminders       = items.filter((i) => i.categorie === "STOP_REMINDER")
+    const reminderLijst       = items.filter((i) => i.categorie === "REMINDER_LIJST")
+    const workoutLogs         = items.filter((i) => i.categorie === "WORKOUT_LOG")
 
-    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | CommitmentsDone: ${commitmentsDone.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length} | WorkoutLogs: ${workoutLogs.length}`)
+    console.log(`Metrics: ${metrics.length} | Commitments: ${commitments.length} | CommitmentsDone: ${commitmentsDone.length} | CommitmentDeletes: ${commitmentDeletes.length} | Vragen: ${vragen.length} | Rustdagen: ${rustdagen.length} | Reminders: ${reminders.length} | StopReminders: ${stopReminders.length} | ReminderLijst: ${reminderLijst.length} | WorkoutLogs: ${workoutLogs.length}`)
+
+    // Commitment verwijderen
+    if (commitmentDeletes.length > 0) {
+      console.log("=== [4] COMMITMENT_DELETE ===")
+      const userId = userData?.auth_user_id
+      const today  = getNLDate()
+      const zoekTekst = (commitmentDeletes[0].tekst || "").toLowerCase().trim()
+
+      const { data: vandaag } = await supabase
+        .from("commitments").select("id, text")
+        .eq("user_id", userId).eq("date", today)
+        .order("created_at", { ascending: false })
+
+      let match = null
+      if (zoekTekst) {
+        match = (vandaag || []).find(c => c.text.toLowerCase().trim().includes(zoekTekst) || zoekTekst.includes(c.text.toLowerCase().trim()))
+      } else {
+        match = (vandaag || [])[0]
+      }
+
+      if (match) {
+        await supabase.from("commitments").delete().eq("id", match.id)
+        console.log("Commitment verwijderd:", match.text)
+        await sendWhatsApp(from, `✅ Commitment verwijderd: ${match.text}`)
+      } else {
+        await sendWhatsApp(from, `❌ Geen commitment gevonden${zoekTekst ? ` met tekst "${zoekTekst}"` : ""}.`)
+      }
+      return
+    }
 
     // Workout log — direct afhandelen
     if (workoutLogs.length > 0) {
