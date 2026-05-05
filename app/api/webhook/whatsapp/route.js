@@ -387,6 +387,7 @@ COMMITMENT = een actie die iemand VAN PLAN IS te gaan doen (toekomst of intentie
 - Ook als er een getal bij staat: "10.000 stappen", "5km hardlopen", "1 uur fietsen", "45 min yoga"
 - Stappen met een doelgetal = COMMITMENT (geen METRIC!)
 - Andere acties/plannen voor vandaag: mediteren, lezen, koud douchen, vroeg opstaan, etc.
+- Voeding- en hydratiedoelen met een hoeveelheid zijn ook COMMITMENT — bijv. "1,5 liter water drinken", "180g eiwit halen", "1800 kcal eten". Als een bericht een hoeveelheid + voedings/drank-woord bevat met een intentie (drinken, eten, halen, bijhouden), classificeer als COMMITMENT.
 
 GEEN COMMITMENT — classificeer als OVERIG of VRAAG:
 - Klachten of pijn: "ik heb last van mijn rug", "ik ben moe", "mijn knie doet pijn"
@@ -471,14 +472,16 @@ Antwoord ALLEEN met de JSON array, geen andere tekst.`,
   try {
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Hardcoded override: alles met "stappen" = altijd COMMITMENT
+      // Hardcoded overrides: METRIC → COMMITMENT voor stappen en voedings/hydratiedoelen
       return parsed.map(item => {
         const isMetric = item.categorie === "METRIC"
         const type     = (item.metric_type || "").toLowerCase()
         const waarde   = (item.waarde || "").toLowerCase()
         const tekst    = (item.tekst   || "").toLowerCase()
-        const hasStap  = type.includes("stap") || waarde.includes("stap") || tekst.includes("stap")
-        if (isMetric && hasStap) {
+        const combined = type + " " + waarde + " " + tekst
+        const hasStap  = combined.includes("stap")
+        const hasVoeding = /water|liter|kcal|calorie|eiwit|proteïne/.test(combined)
+        if (isMetric && (hasStap || hasVoeding)) {
           const display = item.waarde || item.tekst || ""
           console.log(`[OVERRIDE] "${display}" — METRIC(${item.metric_type}) → COMMITMENT`)
           return { categorie: "COMMITMENT", tekst: display }
