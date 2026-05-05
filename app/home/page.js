@@ -23,6 +23,8 @@ const [onboardingStep,  setOnboardingStep] = useState(1)
 const [interactionMode, setInteractionMode] = useState("")
 const [completed,       setCompleted]      = useState(null)
 const [answer,          setAnswer]         = useState("")
+const [reflectionDone,  setReflectionDone] = useState(false)
+const [reflectionTekst, setReflectionTekst] = useState("")
 const [showAll,         setShowAll]        = useState(false)
 const [whatsappInput,   setWhatsappInput]  = useState("")
 const [whatsappLinked,  setWhatsappLinked] = useState(false)
@@ -180,11 +182,15 @@ function renderMarkdown(text) {
 }
 
 // ── Reflectie opslaan ─────────────────────────────────────────
-const handleSubmit = async () => {
-  if (!answer) { alert("Please add a reflection"); return }
-  const { error } = await supabase.from("reflections").insert([{ user_id: user.id, completed, answer }])
-  if (error) alert("Error saving")
-  else { setAnswer(""); setCompleted(null) }
+const handleReflection = async (gehaald) => {
+  const { error } = await supabase.from("reflections").insert([{
+    user_id: user.id,
+    datum:   getNLDate(),
+    gehaald,
+    tekst:   reflectionTekst || null,
+  }])
+  if (error) console.error("Reflectie opslaan mislukt:", error.message)
+  setReflectionDone(true)
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -1208,28 +1214,23 @@ return (
             <p style={{ fontSize: 15, marginBottom: todayState === 4 ? 16 : 0, color: todayState < 4 ? C.textMuted : C.text }}>
               {todayState < 4 ? "Klaar voor vandaag? Vink af en reflecteer." : "Heb je je commitments gehaald?"}
             </p>
-            {todayState === 4 && (
+            {todayState === 4 && !reflectionDone && (
               <>
+                <textarea
+                  value={reflectionTekst}
+                  onChange={e => setReflectionTekst(e.target.value)}
+                  placeholder="Wil je iets toevoegen voor je coach of AI? (optioneel)"
+                  rows={2}
+                  style={{ width: "100%", padding: 12, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 14, resize: "none", boxSizing: "border-box", marginBottom: 10 }}
+                />
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setCompleted(true)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === true ? "#166534" : C.cardAlt, color: completed === true ? GREEN : C.textSub, fontWeight: completed === true ? "bold" : "normal", fontSize: 14, transition: "background 0.2s" }}>Ja</button>
-                  <button onClick={() => setCompleted(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: completed === false ? "#2a1a1a" : C.cardAlt, color: completed === false ? "#ef4444" : C.textSub, fontWeight: completed === false ? "bold" : "normal", fontSize: 14, transition: "background 0.2s" }}>Nee</button>
+                  <button onClick={() => handleReflection(true)}  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: GREEN,      fontWeight: "bold", fontSize: 14 }}>Ja</button>
+                  <button onClick={() => handleReflection(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: "#ef4444", fontWeight: "bold", fontSize: 14 }}>Nee</button>
                 </div>
-                {completed !== null && (
-                  <div style={{ marginTop: 16 }}>
-                    <p style={{ color: C.textSub, fontSize: 13, marginBottom: 8 }}>
-                      {completed ? "Wat hielp je om consistent te blijven?" : "Wat stond je in de weg?"}
-                    </p>
-                    <textarea value={answer} onChange={e => setAnswer(e.target.value)}
-                      placeholder="Schrijf je reflectie..." rows={3}
-                      style={{ width: "100%", padding: 12, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 14, resize: "none", boxSizing: "border-box" }}
-                    />
-                    <button onClick={handleSubmit}
-                      style={{ marginTop: 10, background: GREEN, color: "#000", padding: "10px 20px", borderRadius: 8, border: "none", fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>
-                      Opslaan
-                    </button>
-                  </div>
-                )}
               </>
+            )}
+            {todayState === 4 && reflectionDone && (
+              <p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>✓ Reflectie opgeslagen</p>
             )}
           </div>
         </div>
