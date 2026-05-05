@@ -31,7 +31,7 @@ const [weekCheckIns,    setWeekCheckIns]   = useState(new Set())
 const [weekCommits,     setWeekCommits]    = useState(new Set())
 const [theme,           setTheme]          = useState("dark")
 const [activeTab,       setActiveTab]      = useState("vandaag")
-const [selectedGoal,    setSelectedGoal]   = useState("")
+const [selectedGoal,    setSelectedGoal]   = useState([])
 const [onboardingName,  setOnboardingName]  = useState("")
 const [currentWeightInput, setCurrentWeightInput] = useState("")
 const [targetWeightInput,  setTargetWeightInput]  = useState("")
@@ -245,7 +245,7 @@ async function checkFirstUse() {
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
   if (data?.target_weight)     setDoelGewicht(data.target_weight)
-  if (data?.role === "coach") return  // coaches slaan onboarding over
+  if (data?.role === "coach" || data?.role === "b2c") return  // coaches en b2c-gebruikers slaan home onboarding over
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
 
@@ -466,16 +466,6 @@ function startWorkout() {
 
 async function chooseSelfWorkout(workoutId) {
   if (!user || !workoutId) return
-
-  // Profiel check: goal moet ingevuld zijn (onboarding gedaan)
-  const { data: profile } = await supabase
-    .from("users").select("goal").eq("auth_user_id", user.id).maybeSingle()
-  if (!profile?.goal) {
-    alert("Maak eerst je profiel compleet via de onboarding.")
-    setActiveTab("vandaag")
-    setShowOnboarding(true)
-    return
-  }
 
   setWorkoutLoading(true)
   const today = getNLDate()
@@ -722,26 +712,30 @@ if (showOnboarding) {
           Stap {onboardingStep} van {totalSteps}
         </p>
 
-        {/* Stap 1 — Doel kiezen */}
+        {/* Stap 1 — Doel kiezen (meerkeuze, optioneel) */}
         {onboardingStep === 1 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat is je doel?</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Kies het doel waar je nu op focust.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-              {GOALS.map(g => (
-                <button key={g} onClick={() => setSelectedGoal(g)} style={{
-                  padding: "14px", borderRadius: 8, border: `2px solid ${selectedGoal === g ? GREEN : C.inputBorder}`,
-                  background: selectedGoal === g ? "#0a1a0f" : C.inputBg,
-                  color: selectedGoal === g ? GREEN : C.text,
-                  fontSize: 15, cursor: "pointer", textAlign: "left", fontWeight: selectedGoal === g ? "bold" : "normal",
-                }}>
-                  {g}
-                </button>
-              ))}
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Kies één of meerdere doelen. Je kunt altijd wijzigen.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+              {GOALS.map(g => {
+                const active = selectedGoal.includes(g)
+                return (
+                  <button key={g} onClick={() => setSelectedGoal(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])} style={{
+                    padding: "10px 18px", borderRadius: 20, border: `2px solid ${active ? GREEN : C.inputBorder}`,
+                    background: active ? "#0a1a0f" : C.inputBg,
+                    color: active ? GREEN : C.text,
+                    fontSize: 14, cursor: "pointer", fontWeight: active ? "bold" : "normal",
+                  }}>
+                    {active ? "✓ " : ""}{g}
+                  </button>
+                )
+              })}
             </div>
-            <button onClick={() => selectedGoal && setOnboardingStep(2)} style={{ ...btnPrimary, opacity: selectedGoal ? 1 : 0.4, cursor: selectedGoal ? "pointer" : "default" }}>
+            <button onClick={() => setOnboardingStep(2)} style={btnPrimary}>
               Volgende →
             </button>
+            <button onClick={() => setOnboardingStep(2)} style={btnGhost}>Sla over</button>
           </>
         )}
 
@@ -790,10 +784,10 @@ if (showOnboarding) {
                   placeholder="bijv. 72" style={inputStyle} />
               </div>
             </div>
-            <button onClick={async () => { await saveGoalData(selectedGoal, currentWeightInput, targetWeightInput); setOnboardingStep(4) }} style={btnPrimary}>
+            <button onClick={async () => { await saveGoalData(selectedGoal[0] || "", currentWeightInput, targetWeightInput); setOnboardingStep(4) }} style={btnPrimary}>
               Volgende →
             </button>
-            <button onClick={async () => { await saveGoalData(selectedGoal, null, null); setOnboardingStep(4) }} style={btnGhost}>
+            <button onClick={async () => { await saveGoalData(selectedGoal[0] || "", null, null); setOnboardingStep(4) }} style={btnGhost}>
               Sla over
             </button>
           </>
@@ -817,12 +811,12 @@ if (showOnboarding) {
               ))}
             </div>
             <button onClick={async () => {
-              if (!trainingLocation) return
-              await supabase.from("users").update({ training_location: trainingLocation }).eq("auth_user_id", user.id)
+              if (trainingLocation) await supabase.from("users").update({ training_location: trainingLocation }).eq("auth_user_id", user.id)
               setOnboardingStep(5)
-            }} style={{ ...btnPrimary, opacity: trainingLocation ? 1 : 0.4, cursor: trainingLocation ? "pointer" : "default" }}>
+            }} style={btnPrimary}>
               Volgende →
             </button>
+            <button onClick={() => setOnboardingStep(5)} style={btnGhost}>Sla over</button>
           </>
         )}
 
@@ -849,12 +843,12 @@ if (showOnboarding) {
               ))}
             </div>
             <button onClick={async () => {
-              if (!sportFrequentie) return
-              await supabase.from("users").update({ sport_frequentie: sportFrequentie }).eq("auth_user_id", user.id)
+              if (sportFrequentie) await supabase.from("users").update({ sport_frequentie: sportFrequentie }).eq("auth_user_id", user.id)
               setOnboardingStep(6)
-            }} style={{ ...btnPrimary, opacity: sportFrequentie ? 1 : 0.4, cursor: sportFrequentie ? "pointer" : "default" }}>
+            }} style={btnPrimary}>
               Volgende →
             </button>
+            <button onClick={() => setOnboardingStep(6)} style={btnGhost}>Sla over</button>
           </>
         )}
 
@@ -876,12 +870,12 @@ if (showOnboarding) {
               ))}
             </div>
             <button onClick={async () => {
-              if (!fitnessLevel) return
-              await supabase.from("users").update({ fitness_level: fitnessLevel }).eq("auth_user_id", user.id)
+              if (fitnessLevel) await supabase.from("users").update({ fitness_level: fitnessLevel }).eq("auth_user_id", user.id)
               setOnboardingStep(7)
-            }} style={{ ...btnPrimary, opacity: fitnessLevel ? 1 : 0.4, cursor: fitnessLevel ? "pointer" : "default" }}>
+            }} style={btnPrimary}>
               Volgende →
             </button>
+            <button onClick={() => setOnboardingStep(7)} style={btnGhost}>Sla over</button>
           </>
         )}
 
@@ -891,7 +885,7 @@ if (showOnboarding) {
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Wat ga jij vandaag doen?</h2>
             <p style={{ color: C.textSub, fontSize: 14, marginBottom: 20 }}>Kies een suggestie of typ je eigen commitment.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-              {(GOAL_SUGGESTIONS[selectedGoal] || []).map(s => (
+              {(GOAL_SUGGESTIONS[selectedGoal[0]] || GOAL_SUGGESTIONS["Fitter worden"] || []).map(s => (
                 <button key={s} onClick={async () => { await addCommitment(s); setOnboardingStep(8) }} style={{
                   padding: "13px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`,
                   background: C.inputBg, color: C.text, fontSize: 14, cursor: "pointer", textAlign: "left",
@@ -910,6 +904,7 @@ if (showOnboarding) {
               style={{ ...btnPrimary, opacity: text ? 1 : 0.4, cursor: text ? "pointer" : "default" }}>
               Dit is mijn commitment →
             </button>
+            <button onClick={() => setOnboardingStep(8)} style={btnGhost}>Sla over</button>
           </>
         )}
 
