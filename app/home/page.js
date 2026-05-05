@@ -327,15 +327,16 @@ async function loadHistory() {
   )
   const sortedDays = uniqueDays.sort((a, b) => new Date(b.date) - new Date(a.date))
   setHistory(sortedDays.slice(0, 7))
-  calculateStreak(sortedDays)
+  calculateStreak(sortedDays, undefined)
 }
 
 async function loadWeekData() {
   const monday = getMondayNL()
   const today  = getNLDate()
   const { data: userData } = await supabase
-    .from("users").select("id, missed_days").eq("auth_user_id", user.id).single()
+    .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).single()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
+  if (userData?.streak != null) setStreak(userData.streak)
   const pid = userData?.id
   setPublicUserId(pid)
   if (pid) loadReminders(pid)
@@ -575,13 +576,25 @@ function calculateProgress(list) {
   saveDailyScore(pct)
 }
 
-function calculateStreak(data) {
+function calculateStreak(data, dbStreak) {
+  if (dbStreak != null) return  // DB-waarde heeft prioriteit
   if (!data || data.length === 0) { setStreak(0); return }
   let count = 0
   for (let i = 0; i < data.length; i++) {
-    if (i === 0 && Number(data[i].score) === 0) continue
-    if (Number(data[i].score) > 0) count++
-    else break
+    const entry = data[i]
+    if (i === 0 && Number(entry.score) === 0) continue
+    if (Number(entry.score) > 0) {
+      if (i > 0) {
+        const prev = data[i - 1]
+        const prevDate = new Date(prev.date + "T12:00:00")
+        const currDate = new Date(entry.date + "T12:00:00")
+        prevDate.setDate(prevDate.getDate() - 1)
+        if (prevDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" }) !== entry.date) break
+      }
+      count++
+    } else {
+      break
+    }
   }
   setStreak(count)
 }
