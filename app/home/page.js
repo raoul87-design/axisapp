@@ -1181,9 +1181,9 @@ return (
         ) : (
           <>
             {commitments.slice(0, showAll ? commitments.length : 5).map(c => (
-              <div key={c.id} onClick={() => toggleDone(c.id, c.done)}
-                style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${C.borderSub}`, cursor: "pointer" }}>
-                <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : `2px solid ${C.border}`, background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div key={c.id}
+                style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${C.borderSub}` }}>
+                <div onClick={() => toggleDone(c.id, c.done)} style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : `2px solid ${C.border}`, background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                   {c.done && <span style={{ color: "#000", fontSize: 13, fontWeight: "bold" }}>✓</span>}
                 </div>
                 {(CATEGORY_ICON[c.category] || CATEGORY_ICON[classifyCommitment(c.text)]) && (
@@ -1191,9 +1191,17 @@ return (
                     {CATEGORY_ICON[c.category] || CATEGORY_ICON[classifyCommitment(c.text)]}
                   </span>
                 )}
-                <span style={{ fontSize: 15, color: c.done ? C.textMuted : C.text, textDecoration: c.done ? "line-through" : "none" }}>
+                <span onClick={() => toggleDone(c.id, c.done)} style={{ fontSize: 15, color: c.done ? C.textMuted : C.text, textDecoration: c.done ? "line-through" : "none", flex: 1, cursor: "pointer" }}>
                   {c.text}
                 </span>
+                {!c.done && (
+                  <button onClick={async () => {
+                    await supabase.from("commitments").delete().eq("id", c.id)
+                    setCommitments(prev => prev.filter(x => x.id !== c.id))
+                  }} style={{ background: "none", border: "none", color: C.textDim, fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1, flexShrink: 0 }}>
+                    ×
+                  </button>
+                )}
               </div>
             ))}
             {commitments.length > 5 && (
