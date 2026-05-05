@@ -1331,7 +1331,7 @@ return (
                   type="time"
                   value={reminderForm.tijd}
                   onChange={e => setReminderForm(f => ({ ...f, tijd: e.target.value }))}
-                  style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.tijd ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
+                  style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: "#ffffff", colorScheme: "dark", fontSize: 14, outline: "none" }}
                 />
                 {reminderForm.eenmalig && (
                   <input
@@ -1339,7 +1339,7 @@ return (
                     value={reminderForm.datum}
                     min={getNLDate()}
                     onChange={e => setReminderForm(f => ({ ...f, datum: e.target.value }))}
-                    style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: reminderForm.datum ? C.text : C.textMuted, fontSize: 14, outline: "none" }}
+                    style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: "#ffffff", colorScheme: "dark", fontSize: 14, outline: "none" }}
                   />
                 )}
               </div>
