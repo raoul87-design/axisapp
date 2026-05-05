@@ -76,6 +76,7 @@ const [todayWorkout,     setTodayWorkout]     = useState(null)
 const [weekWorkouts,     setWeekWorkouts]     = useState([])
 const [setLogs,          setSetLogs]          = useState({})
 const [prevWeights,      setPrevWeights]      = useState({})
+const [prevSets,         setPrevSets]         = useState({})
 const [workoutLoading,   setWorkoutLoading]   = useState(false)
 const [workoutLibrary,   setWorkoutLibrary]   = useState([])
 const [pickerSelected,   setPickerSelected]   = useState(null)
@@ -437,15 +438,22 @@ async function loadWorkoutData() {
     if (planning?.workout?.workout_oefeningen?.length) {
       const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
       const { data: prev } = await supabase
-        .from("workout_sets").select("oefening_id, gewicht, datum")
+        .from("workout_sets").select("oefening_id, gewicht, reps_gedaan, set_nummer, datum")
         .eq("user_id", user.id)
-        .in("oefening_id", ids).not("gewicht", "is", null)
+        .in("oefening_id", ids)
         .order("datum", { ascending: false })
-      const map = {}
+        .order("set_nummer", { ascending: true })
+      const weightMap = {}
+      const setsMap = {}
       for (const s of prev || []) {
-        if (!map[s.oefening_id]) map[s.oefening_id] = s.gewicht
+        if (!weightMap[s.oefening_id] && s.gewicht != null) weightMap[s.oefening_id] = s.gewicht
+        if (!setsMap[s.oefening_id]) setsMap[s.oefening_id] = { date: s.datum, sets: [] }
+        if (setsMap[s.oefening_id].date === s.datum) setsMap[s.oefening_id].sets.push(s)
       }
-      setPrevWeights(map)
+      const prevSetsMap = {}
+      for (const [id, val] of Object.entries(setsMap)) prevSetsMap[id] = val.sets
+      setPrevWeights(weightMap)
+      setPrevSets(prevSetsMap)
     }
   } catch (err) {
     console.error("[loadWorkoutData] error:", err)
@@ -1207,12 +1215,8 @@ return (
             background: todayState === 4 ? "#0d1a10" : C.card,
             borderRadius: 12,
             padding: 20,
-            border: todayState === 4
-              ? `1px solid #1a4d2a`
-              : todayState === 2
-              ? `1px dashed ${C.border}`
-              : `1px solid ${C.border}`,
-            animation: todayState === 4 ? "pulseGlow 2.5s ease-in-out infinite" : "none",
+            border: todayState === 4 && !reflectionSubmitted ? `1px solid #1a4d2a` : `1px solid ${C.border}`,
+            animation: todayState === 4 && !reflectionSubmitted ? "pulseGlow 2.5s ease-in-out infinite" : "none",
             transition: "background 0.4s ease, border-color 0.4s ease",
           }}>
             {todayState === 4 && (
@@ -1987,9 +1991,6 @@ return (
                           )}
                         </div>
                       )}
-                      {prev && (
-                        <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 10 }}>Vorige keer: {prev} kg</p>
-                      )}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, paddingBottom: 2 }}>
                           <span style={{ color: C.textDim, fontSize: 11 }}>#</span>
@@ -1997,23 +1998,34 @@ return (
                           <span style={{ color: C.textDim, fontSize: 11 }}>Kg</span>
                           <span></span>
                         </div>
-                        {sets.map((s, si) => (
-                          <div key={si} style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
-                            <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
-                            <input type="number" value={s.reps} placeholder={wo.reps || "—"}
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
-                              style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
-                            />
-                            <input type="number" value={s.gewicht} placeholder="0"
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
-                              style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
-                            />
-                            <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
-                              style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              {s.done ? "✓" : ""}
-                            </button>
-                          </div>
-                        ))}
+                        {sets.map((s, si) => {
+                          const ps = prevSets[oe.id]?.[si]
+                          const hint = ps
+                            ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps_gedaan != null ? `× ${ps.reps_gedaan}` : null].filter(Boolean).join(" ")
+                            : null
+                          return (
+                            <div key={si}>
+                              <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
+                                <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
+                                <input type="number" value={s.reps} placeholder={wo.reps || "—"}
+                                  onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                  style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                                />
+                                <input type="number" value={s.gewicht} placeholder="0"
+                                  onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                  style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                                />
+                                <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
+                                  style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  {s.done ? "✓" : ""}
+                                </button>
+                              </div>
+                              {hint && (
+                                <p style={{ color: C.textDim, fontSize: 11, margin: "2px 0 4px 28px" }}>Vorige keer: {hint}</p>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )
