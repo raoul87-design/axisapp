@@ -586,7 +586,7 @@ async function saveBuilder() {
       .maybeSingle()
     const { data: workout, error: wErr } = await supabase
       .from("workouts")
-      .insert({ naam: builderNaam.trim(), created_by: profile?.id, visibility: "personal", is_template: false })
+      .insert({ naam: builderNaam.trim(), created_by: profile?.id, visibility: "personal", is_template: false, niveau: "beginner" })
       .select("id")
       .single()
     if (wErr) throw wErr
