@@ -284,7 +284,7 @@ export default function Dashboard() {
       const { data: profile } = await supabase.from("users").select("id").eq("auth_user_id", authProfile.id).maybeSingle()
       const { data: workout, error: wErr } = await supabase
         .from("workouts")
-        .insert({ naam: sbNaam.trim(), created_by: profile?.id, visibility: sbVisibility, is_template: sbVisibility === "template" })
+        .insert({ naam: sbNaam.trim(), created_by: profile?.id, visibility: sbVisibility, is_template: sbVisibility === "template", coach_email: authProfile.email })
         .select("id")
         .single()
       if (wErr) throw wErr
