@@ -419,6 +419,8 @@ async function loadWorkoutData() {
 
     const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
+    const { data: profile } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+
     const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData }] = await Promise.all([
       supabase.from("workout_planning")
         .select(PLANNING_SELECT)
@@ -433,7 +435,7 @@ async function loadWorkoutData() {
         .order("naam", { ascending: true }),
       supabase.from("workouts")
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
-        .eq("created_by", user.id)
+        .eq("created_by", profile?.id)
         .eq("visibility", "personal"),
     ])
 
