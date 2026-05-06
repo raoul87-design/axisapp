@@ -1981,13 +1981,19 @@ return (
                 const getSectionOpen = (niveau) => {
                   const key = `lib_${niveau}`
                   if (openSections && key in openSections) return openSections[key]
-                  if (!trainingLocation) return true
-                  return !defaultOpen || defaultOpen.includes(niveau)
+                  return false
                 }
                 const toggleSection = (niveau) => {
                   const key = `lib_${niveau}`
                   const current = getSectionOpen(niveau)
                   setOpenSections(prev => ({ ...(prev || {}), [key]: !current }))
+                }
+                const getCoachSectionOpen = () => {
+                  if (openSections && "coach_schemas" in openSections) return openSections["coach_schemas"]
+                  return true
+                }
+                const toggleCoachSection = () => {
+                  setOpenSections(prev => ({ ...(prev || {}), coach_schemas: !getCoachSectionOpen() }))
                 }
 
                 const niveaux = ORDER.filter(n => grouped[n]?.length > 0)
