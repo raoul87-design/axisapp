@@ -623,6 +623,14 @@ async function saveBuilder() {
   }
 }
 
+function getCoachSectionOpen() {
+  if (openSections && "coach_schemas" in openSections) return openSections["coach_schemas"]
+  return true
+}
+function toggleCoachSection() {
+  setOpenSections(prev => ({ ...(prev || {}), coach_schemas: !getCoachSectionOpen() }))
+}
+
 async function autoWorkoutCommitment(workoutNaam, forDate) {
   if (!workoutNaam || !user) return
   const tekst = `💪 ${workoutNaam}`
@@ -2027,14 +2035,6 @@ return (
                   const current = getSectionOpen(niveau)
                   setOpenSections(prev => ({ ...(prev || {}), [key]: !current }))
                 }
-                const getCoachSectionOpen = () => {
-                  if (openSections && "coach_schemas" in openSections) return openSections["coach_schemas"]
-                  return true
-                }
-                const toggleCoachSection = () => {
-                  setOpenSections(prev => ({ ...(prev || {}), coach_schemas: !getCoachSectionOpen() }))
-                }
-
                 const niveaux = ORDER.filter(n => grouped[n]?.length > 0)
                 return niveaux.map(niveau => {
                   const meta = niveauMeta[niveau] || { label: niveau, icon: "" }
