@@ -10,7 +10,7 @@ const CARD_BG = "#111"
 const BORDER = "#1e1e1e"
 
 function Sidebar({ active, setActive }) {
-  const nav = ["Overview", "Clients", "Commitments", "Insights", "Settings"]
+  const nav = ["Overview", "Clients", "Commitments", "Schema's", "Insights", "Settings"]
   return (
     <div style={{ width: 220, minHeight: "100vh", background: "#0a0a0a", borderRight: `1px solid ${BORDER}`, padding: "28px 0", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "0 24px 32px" }}>
@@ -157,6 +157,17 @@ export default function Dashboard() {
   const [editingFaqId, setEditingFaqId] = useState(null)
   const [savingFaq,   setSavingFaq]   = useState(false)
 
+  // Schema builder
+  const [schemaView,      setSchemaView]      = useState("list") // "list" | "builder"
+  const [coachSchemas,    setCoachSchemas]    = useState([])
+  const [sbNaam,          setSbNaam]          = useState("")
+  const [sbVisibility,    setSbVisibility]    = useState("coach")
+  const [sbItems,         setSbItems]         = useState([])
+  const [sbSearch,        setSbSearch]        = useState("")
+  const [sbResults,       setSbResults]       = useState([])
+  const [sbAssignTo,      setSbAssignTo]      = useState("")
+  const [sbSaving,        setSbSaving]        = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace("/login"); return }
@@ -176,6 +187,8 @@ export default function Dashboard() {
     loadAll(authProfile.email)
     loadInviteLinks(authProfile.email)
     loadFaq(authProfile.email)
+    supabase.from("users").select("id").eq("auth_user_id", authProfile.id).maybeSingle()
+      .then(({ data }) => { if (data?.id) loadCoachSchemas(data.id) })
   }, [authorized, authProfile])
 
   async function loadAll(coachEmail) {
@@ -229,6 +242,75 @@ export default function Dashboard() {
     setDeactivatedIds(prev => new Set([...prev, userId]))
     const { error } = await supabase.from("users").update({ active: false }).eq("id", userId)
     if (error) console.error("Deactivate failed:", error.message)
+  }
+
+  async function loadCoachSchemas(coachUserId) {
+    const { data } = await supabase
+      .from("workouts")
+      .select("id, naam, visibility, created_at, workout_oefeningen(id)")
+      .eq("created_by", coachUserId)
+      .in("visibility", ["coach", "template"])
+      .order("created_at", { ascending: false })
+    setCoachSchemas(data || [])
+  }
+
+  async function sbSearchOefeningen(q) {
+    setSbSearch(q)
+    if (q.trim().length < 2) { setSbResults([]); return }
+    const { data } = await supabase
+      .from("oefeningen")
+      .select("id, naam, spiergroep")
+      .ilike("naam", `%${q}%`)
+      .order("naam", { ascending: true })
+      .limit(20)
+    setSbResults(data || [])
+  }
+
+  function sbAddOefening(oe) {
+    if (sbItems.find(x => x.oefening_id === oe.id)) return
+    setSbItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 3, reps: 10 }])
+    setSbSearch("")
+    setSbResults([])
+  }
+
+  function sbUpdateItem(id, field, val) {
+    setSbItems(prev => prev.map(x => x.oefening_id === id ? { ...x, [field]: Math.max(1, Number(val) || 1) } : x))
+  }
+
+  async function saveCoachSchema() {
+    if (!sbNaam.trim() || sbItems.length === 0 || !authProfile) return
+    setSbSaving(true)
+    try {
+      const { data: profile } = await supabase.from("users").select("id").eq("auth_user_id", authProfile.id).maybeSingle()
+      const { data: workout, error: wErr } = await supabase
+        .from("workouts")
+        .insert({ naam: sbNaam.trim(), created_by: profile?.id, visibility: sbVisibility, is_template: sbVisibility === "template" })
+        .select("id")
+        .single()
+      if (wErr) throw wErr
+      const rows = sbItems.map((item, i) => ({
+        workout_id: workout.id, oefening_id: item.oefening_id,
+        sets: item.sets, reps: item.reps, volgorde: i + 1,
+      }))
+      await supabase.from("workout_oefeningen").insert(rows)
+      if (sbAssignTo) {
+        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+        await supabase.from("workout_planning").insert({ user_id: sbAssignTo, workout_id: workout.id, datum: today, gedaan: false })
+      }
+      setSbNaam("")
+      setSbItems([])
+      setSbSearch("")
+      setSbResults([])
+      setSbAssignTo("")
+      setSbVisibility("coach")
+      await loadCoachSchemas(profile?.id)
+      setSchemaView("list")
+    } catch (err) {
+      console.error("saveCoachSchema error:", err)
+      alert("Opslaan mislukt: " + err.message)
+    } finally {
+      setSbSaving(false)
+    }
   }
 
   async function loadFaq(coachEmail) {
@@ -984,6 +1066,141 @@ export default function Dashboard() {
               )
             })()}
 
+          </div>
+        )}
+
+        {/* ── SCHEMA'S ── */}
+        {activeNav === "Schema's" && (
+          <div style={{ maxWidth: 680 }}>
+            {schemaView === "list" && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                  <h2 style={{ color: "#fff", fontSize: 20, margin: 0 }}>Schema's</h2>
+                  <button onClick={() => { setSbNaam(""); setSbItems([]); setSbSearch(""); setSbResults([]); setSbAssignTo(""); setSbVisibility("coach"); setSchemaView("builder") }}
+                    style={{ padding: "10px 20px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 13, color: "#000" }}>
+                    + Maak schema
+                  </button>
+                </div>
+
+                {coachSchemas.length === 0 ? (
+                  <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 40, textAlign: "center" }}>
+                    <p style={{ color: "#555", fontSize: 14 }}>Nog geen schema's aangemaakt.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {coachSchemas.map(s => (
+                      <div key={s.id} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <p style={{ color: "#fff", fontSize: 15, fontWeight: "bold", margin: 0 }}>{s.naam}</p>
+                          <p style={{ color: "#555", fontSize: 12, marginTop: 4 }}>{(s.workout_oefeningen || []).length} oefeningen · {s.visibility === "template" ? "Iedereen" : "Eigen clients"}</p>
+                        </div>
+                        <span style={{ background: s.visibility === "template" ? "#14532d" : "#1a1a00", color: s.visibility === "template" ? GREEN : "#facc15", fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>
+                          {s.visibility === "template" ? "Publiek" : "Coach"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {schemaView === "builder" && (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+                  <button onClick={() => setSchemaView("list")}
+                    style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 13, padding: 0 }}>
+                    ← Terug
+                  </button>
+                  <h2 style={{ color: "#fff", fontSize: 20, margin: 0 }}>Nieuw schema</h2>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  {/* Naam */}
+                  <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Naam</p>
+                    <input value={sbNaam} onChange={e => setSbNaam(e.target.value)}
+                      placeholder="Bijv. Push dag A"
+                      style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #222", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none" }} />
+                  </div>
+
+                  {/* Visibility */}
+                  <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14 }}>Zichtbaarheid</p>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      {[["coach", "Eigen clients"], ["template", "Iedereen (publiek)"]].map(([val, label]) => (
+                        <button key={val} onClick={() => setSbVisibility(val)}
+                          style={{ flex: 1, padding: "12px 16px", border: `2px solid ${sbVisibility === val ? GREEN : "#222"}`, borderRadius: 8, background: sbVisibility === val ? "#0a1a0f" : "#111", color: sbVisibility === val ? GREEN : "#666", fontSize: 13, fontWeight: "bold", cursor: "pointer" }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Toewijzen aan client */}
+                  <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Toewijzen aan client (optioneel)</p>
+                    <select value={sbAssignTo} onChange={e => setSbAssignTo(e.target.value)}
+                      style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #222", background: "#111", color: sbAssignTo ? "#fff" : "#555", fontSize: 14, outline: "none" }}>
+                      <option value="">— Niet toewijzen —</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name || u.whatsapp_number || u.id}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Oefeningen */}
+                  <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24 }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Oefeningen</p>
+                    <input value={sbSearch} onChange={e => sbSearchOefeningen(e.target.value)}
+                      placeholder="Zoek oefening..."
+                      style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #222", background: "#111", color: "#fff", fontSize: 14, boxSizing: "border-box", outline: "none", marginBottom: sbResults.length > 0 ? 4 : 16 }} />
+                    {sbResults.length > 0 && (
+                      <div style={{ border: "1px solid #222", borderRadius: 8, marginBottom: 16, overflow: "hidden" }}>
+                        {sbResults.map(oe => (
+                          <button key={oe.id} onClick={() => sbAddOefening(oe)}
+                            style={{ width: "100%", padding: "10px 14px", background: sbItems.find(x => x.oefening_id === oe.id) ? "#1a1a1a" : "#111", border: "none", borderBottom: "1px solid #1a1a1a", color: sbItems.find(x => x.oefening_id === oe.id) ? "#444" : "#fff", fontSize: 14, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between" }}>
+                            <span>{oe.naam}</span>
+                            <span style={{ color: "#444", fontSize: 12 }}>{oe.spiergroep || ""}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {sbItems.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {sbItems.map((item, i) => (
+                          <div key={item.oefening_id} style={{ background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 8, padding: "12px 14px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                              <span style={{ color: "#fff", fontSize: 14, fontWeight: "bold" }}>{i + 1}. {item.naam}</span>
+                              <button onClick={() => setSbItems(prev => prev.filter(x => x.oefening_id !== item.oefening_id))}
+                                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
+                            </div>
+                            <div style={{ display: "flex", gap: 12 }}>
+                              {["sets", "reps"].map(field => (
+                                <label key={field} style={{ flex: 1 }}>
+                                  <p style={{ color: "#444", fontSize: 11, marginBottom: 4, textTransform: "capitalize" }}>{field}</p>
+                                  <input type="number" min={1} value={item[field]}
+                                    onChange={e => sbUpdateItem(item.oefening_id, field, e.target.value)}
+                                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #222", background: "#111", color: "#fff", fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {sbItems.length === 0 && sbResults.length === 0 && sbSearch.length < 2 && (
+                      <p style={{ color: "#444", fontSize: 13, textAlign: "center", paddingTop: 8 }}>Zoek en voeg oefeningen toe</p>
+                    )}
+                  </div>
+
+                  <button onClick={saveCoachSchema} disabled={sbSaving || !sbNaam.trim() || sbItems.length === 0}
+                    style={{ width: "100%", padding: 14, background: sbSaving || !sbNaam.trim() || sbItems.length === 0 ? "#1a2a1a" : GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: sbSaving || !sbNaam.trim() || sbItems.length === 0 ? "#444" : "#000" }}>
+                    {sbSaving ? "Opslaan..." : "Schema opslaan"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

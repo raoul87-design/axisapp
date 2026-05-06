@@ -82,6 +82,12 @@ const [workoutLoading,   setWorkoutLoading]   = useState(false)
 const [workoutLibrary,   setWorkoutLibrary]   = useState([])
 const [pickerSelected,   setPickerSelected]   = useState(null)
 const [openSections,     setOpenSections]     = useState({})
+const [myWorkouts,       setMyWorkouts]       = useState([])
+const [builderNaam,      setBuilderNaam]      = useState("")
+const [builderItems,     setBuilderItems]     = useState([])
+const [builderSearch,    setBuilderSearch]    = useState("")
+const [builderResults,   setBuilderResults]   = useState([])
+const [builderSaving,    setBuilderSaving]    = useState(false)
 
 const chatBottomRef = useRef(null)
 const router = useRouter()
@@ -413,7 +419,7 @@ async function loadWorkoutData() {
 
     const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
-    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }] = await Promise.all([
+    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData }] = await Promise.all([
       supabase.from("workout_planning")
         .select(PLANNING_SELECT)
         .eq("user_id", user.id).eq("datum", today).maybeSingle(),
@@ -422,9 +428,13 @@ async function loadWorkoutData() {
         .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
         .order("datum", { ascending: true }),
       supabase.from("workouts")
-        .select(`id, naam, niveau, dag_type, schema_type, workout_oefeningen ( id )`)
+        .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
         .eq("is_template", true)
         .order("naam", { ascending: true }),
+      supabase.from("workouts")
+        .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
+        .eq("created_by", user.id)
+        .eq("visibility", "personal"),
     ])
 
     console.log("[loadWorkoutData] user.id:", user?.id)
@@ -434,6 +444,7 @@ async function loadWorkoutData() {
     setTodayWorkout(planning || null)
     setWeekWorkouts(weekPlan || [])
     setWorkoutLibrary(libraryData || [])
+    setMyWorkouts(personalData || [])
     if (planning?.gedaan) setWorkoutScreen("done")
 
     if (planning?.workout?.workout_oefeningen?.length) {
@@ -532,6 +543,67 @@ async function chooseSelfWorkout(workoutId) {
     startWorkoutFromPlanning(fresh)
   } else {
     setWorkoutLoading(false)
+  }
+}
+
+// ── Schema builder ────────────────────────────────────────────
+
+async function searchOefeningen(q) {
+  setBuilderSearch(q)
+  if (q.trim().length < 2) { setBuilderResults([]); return }
+  const { data } = await supabase
+    .from("oefeningen")
+    .select("id, naam, spiergroep")
+    .ilike("naam", `%${q}%`)
+    .order("naam", { ascending: true })
+    .limit(20)
+  setBuilderResults(data || [])
+}
+
+function addBuilderOefening(oe) {
+  if (builderItems.find(x => x.oefening_id === oe.id)) return
+  setBuilderItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 3, reps: 10 }])
+  setBuilderSearch("")
+  setBuilderResults([])
+}
+
+function removeBuilderOefening(id) {
+  setBuilderItems(prev => prev.filter(x => x.oefening_id !== id))
+}
+
+function updateBuilderItem(id, field, val) {
+  setBuilderItems(prev => prev.map(x => x.oefening_id === id ? { ...x, [field]: Math.max(1, Number(val) || 1) } : x))
+}
+
+async function saveBuilder() {
+  if (!builderNaam.trim() || builderItems.length === 0 || !user) return
+  setBuilderSaving(true)
+  try {
+    const { data: workout, error: wErr } = await supabase
+      .from("workouts")
+      .insert({ naam: builderNaam.trim(), created_by: user.id, visibility: "personal", is_template: false })
+      .select("id")
+      .single()
+    if (wErr) throw wErr
+    const rows = builderItems.map((item, i) => ({
+      workout_id: workout.id, oefening_id: item.oefening_id,
+      sets: item.sets, reps: item.reps, volgorde: i + 1,
+    }))
+    const { error: oeErr } = await supabase.from("workout_oefeningen").insert(rows)
+    if (oeErr) throw oeErr
+    setBuilderNaam("")
+    setBuilderItems([])
+    const { data: fresh } = await supabase
+      .from("workouts")
+      .select("id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen(id)")
+      .eq("created_by", user.id).eq("visibility", "personal")
+    setMyWorkouts(fresh || [])
+    setWorkoutScreen("picker")
+  } catch (err) {
+    console.error("saveBuilder error:", err)
+    alert("Opslaan mislukt: " + err.message)
+  } finally {
+    setBuilderSaving(false)
   }
 }
 
@@ -1854,12 +1926,36 @@ return (
                 )}
               </div>
 
-              {workoutLibrary.length === 0 ? (
+              {/* ── Mijn schema's ── */}
+              {myWorkouts.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold", marginBottom: 10 }}>
+                    Mijn schema's
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {myWorkouts.map(w => {
+                      const isSelected = pickerSelected === w.id
+                      return (
+                        <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
+                          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : GREEN + "55"}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                          <div>
+                            <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
+                            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
+                          </div>
+                          {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: GREEN, fontSize: 16 }}>★</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {workoutLibrary.length === 0 && myWorkouts.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
                   <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
                   <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Herlaad de pagina als dit onverwacht is</p>
                 </div>
-              ) : (() => {
+              ) : workoutLibrary.length === 0 ? null : (() => {
                 console.log("[WorkoutPicker] library:", workoutLibrary.length, "openSections:", openSections, "trainingLocation:", trainingLocation)
                 const niveauMatchMap = { "Gym": ["gym"], "Thuis": ["homegym", "lichaamsgewicht"], "Buiten": ["lichaamsgewicht"], "Wisselend": null }
                 const defaultOpen = niveauMatchMap[trainingLocation] || null
@@ -1936,6 +2032,90 @@ return (
                   </button>
                 </div>
               )}
+
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
+                <button onClick={() => { setBuilderNaam(""); setBuilderItems([]); setBuilderSearch(""); setBuilderResults([]); setWorkoutScreen("builder") }}
+                  style={{ width: "100%", padding: "13px 16px", background: "transparent", border: `1.5px dashed ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 14, cursor: "pointer" }}>
+                  + Maak eigen schema
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── SCHEMA BUILDER ── */}
+          {workoutScreen === "builder" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <button onClick={() => setWorkoutScreen("picker")}
+                  style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                  ← Terug
+                </button>
+                <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Maak eigen schema</h3>
+              </div>
+
+              {/* Naam */}
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Naam van je schema</p>
+                <input value={builderNaam} onChange={e => setBuilderNaam(e.target.value)}
+                  placeholder="Bijv. Push dag A"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, boxSizing: "border-box", outline: "none" }} />
+              </div>
+
+              {/* Oefeningen zoeken */}
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Oefeningen toevoegen</p>
+                <input value={builderSearch} onChange={e => searchOefeningen(e.target.value)}
+                  placeholder="Zoek op naam..."
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, boxSizing: "border-box", outline: "none" }} />
+                {builderResults.length > 0 && (
+                  <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, overflow: "hidden" }}>
+                    {builderResults.map(oe => (
+                      <button key={oe.id} onClick={() => addBuilderOefening(oe)}
+                        style={{ width: "100%", padding: "11px 14px", background: builderItems.find(x => x.oefening_id === oe.id) ? C.cardAlt : C.card, border: "none", borderBottom: `1px solid ${C.border}`, color: builderItems.find(x => x.oefening_id === oe.id) ? C.textDim : C.text, fontSize: 14, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between" }}>
+                        <span>{oe.naam}</span>
+                        <span style={{ color: C.textDim, fontSize: 12 }}>{oe.spiergroep || ""}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Toegevoegde oefeningen */}
+              {builderItems.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Schema ({builderItems.length} oefeningen)</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {builderItems.map((item, i) => (
+                      <div key={item.oefening_id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <span style={{ color: C.text, fontSize: 14, fontWeight: "bold" }}>{i + 1}. {item.naam}</span>
+                          <button onClick={() => removeBuilderOefening(item.oefening_id)}
+                            style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
+                        </div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <label style={{ flex: 1 }}>
+                            <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Sets</p>
+                            <input type="number" min={1} max={10} value={item.sets}
+                              onChange={e => updateBuilderItem(item.oefening_id, "sets", e.target.value)}
+                              style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
+                          </label>
+                          <label style={{ flex: 1 }}>
+                            <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Reps</p>
+                            <input type="number" min={1} max={100} value={item.reps}
+                              onChange={e => updateBuilderItem(item.oefening_id, "reps", e.target.value)}
+                              style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={saveBuilder} disabled={builderSaving || !builderNaam.trim() || builderItems.length === 0}
+                style={{ width: "100%", padding: 14, background: builderSaving || !builderNaam.trim() || builderItems.length === 0 ? "#1a2a1a" : GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: builderSaving || !builderNaam.trim() || builderItems.length === 0 ? "#444" : "#000" }}>
+                {builderSaving ? "Opslaan..." : "Schema opslaan"}
+              </button>
             </>
           )}
 
