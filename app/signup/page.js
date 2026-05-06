@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { normalizeWhatsapp } from "../../lib/whatsapp"
 
 const GREEN = "#22c55e"
 const BG    = "#0f0f0f"
@@ -143,8 +144,19 @@ export default function SignupPage() {
     try {
       await saveToUsers()
       if (withWhatsapp) {
-        const formatted = withWhatsapp.startsWith("whatsapp:") ? withWhatsapp : `whatsapp:${withWhatsapp}`
-        await supabase.from("users").upsert({ whatsapp_number: formatted, auth_user_id: user.id }, { onConflict: "whatsapp_number" })
+        const formatted = normalizeWhatsapp(withWhatsapp)
+        const { data: existing } = await supabase.from("users")
+          .select("id, auth_user_id")
+          .eq("whatsapp_number", formatted)
+          .maybeSingle()
+        if (existing && existing.auth_user_id !== user.id) {
+          // Number belongs to a different user row (e.g. bare row from first WA message) — merge it
+          await supabase.from("users").update({ auth_user_id: user.id }).eq("id", existing.id)
+        } else {
+          await supabase.from("users")
+            .update({ whatsapp_number: formatted })
+            .eq("auth_user_id", user.id)
+        }
       }
       router.replace("/home")
     } catch (err) {

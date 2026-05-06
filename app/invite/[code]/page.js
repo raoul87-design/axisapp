@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
+import { normalizeWhatsapp } from "../../../lib/whatsapp"
 
 const GREEN = "#22c55e"
 const BG    = "#0f0f0f"
@@ -125,7 +126,7 @@ export default function InvitePage() {
   async function finishSimplified(whatsapp) {
     setFinishing(true)
     try {
-      const formatted = whatsapp && (whatsapp.startsWith("whatsapp:") ? whatsapp : `whatsapp:${whatsapp}`)
+      const formatted = whatsapp ? normalizeWhatsapp(whatsapp) : null
       const payload = {
         naam:               preData.naam              || null,
         doelen:             preData.doelen             || [],
@@ -138,9 +139,14 @@ export default function InvitePage() {
         role:               "client",
         ...(formatted ? { whatsapp_number: formatted } : {}),
       }
-      const { data: existing } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
-      if (existing) {
-        await supabase.from("users").update(payload).eq("auth_user_id", user.id)
+      // Check by auth_user_id first, then by WhatsApp number to avoid duplicates
+      let { data: row } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+      if (!row && formatted) {
+        const { data: byWa } = await supabase.from("users").select("id").eq("whatsapp_number", formatted).maybeSingle()
+        row = byWa ?? null
+      }
+      if (row) {
+        await supabase.from("users").update({ ...payload, auth_user_id: user.id }).eq("id", row.id)
       } else {
         await supabase.from("users").insert({ ...payload, auth_user_id: user.id })
       }
@@ -158,9 +164,19 @@ export default function InvitePage() {
     setFinishing(true)
     try {
       if (whatsapp) {
-        const formatted = whatsapp.startsWith("whatsapp:") ? whatsapp : `whatsapp:${whatsapp}`
-        await supabase.from("users")
-          .upsert({ whatsapp_number: formatted, auth_user_id: user.id }, { onConflict: "whatsapp_number" })
+        const formatted = normalizeWhatsapp(whatsapp)
+        const { data: existing } = await supabase.from("users")
+          .select("id, auth_user_id")
+          .eq("whatsapp_number", formatted)
+          .maybeSingle()
+        if (existing && existing.auth_user_id !== user.id) {
+          // Bare row from prior WA message — merge with current auth account
+          await supabase.from("users").update({ auth_user_id: user.id }).eq("id", existing.id)
+        } else {
+          await supabase.from("users")
+            .update({ whatsapp_number: formatted })
+            .eq("auth_user_id", user.id)
+        }
       }
       await supabase.from("users")
         .update({ coach_email: coachEmail, role: "client" })

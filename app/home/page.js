@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { normalizeWhatsapp } from "../../lib/whatsapp"
 import { AxisLogo } from "../../components/AxisLogo"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
 
@@ -640,7 +641,15 @@ async function toggleDone(id, current) {
 
 async function linkWhatsapp(number) {
   if (!number || !user) return false
-  const formatted = number.startsWith("whatsapp:") ? number : `whatsapp:${number}`
+  const formatted = normalizeWhatsapp(number)
+  const { data: existing } = await supabase.from("users")
+    .select("id, auth_user_id")
+    .eq("whatsapp_number", formatted)
+    .maybeSingle()
+  if (existing && existing.auth_user_id !== user.id) {
+    alert("Dit nummer is al gekoppeld aan een ander account.")
+    return false
+  }
   const { error } = await supabase.from("users")
     .update({ whatsapp_number: formatted })
     .eq("auth_user_id", user.id)

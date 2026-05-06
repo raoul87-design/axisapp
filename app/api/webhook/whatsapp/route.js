@@ -2,6 +2,7 @@ import { waitUntil } from "@vercel/functions"
 import twilio from "twilio"
 import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
+import { normalizeWhatsapp } from "../../../../lib/whatsapp"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -84,9 +85,6 @@ function getTone(streak, missedDays) {
   return "medium"
 }
 
-function normalizeNumber(raw) {
-  return raw.replace(/^(whatsapp:)0/, "$1+31")
-}
 
 function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
@@ -1135,7 +1133,7 @@ async function handleMessage(from, body) {
 export async function POST(request) {
   const formData = await request.formData()
 
-  const from = normalizeNumber(formData.get("From"))
+  const from = normalizeWhatsapp(formData.get("From"))
   const body = formData.get("Body")
 
   console.log("=== [1] BERICHT ONTVANGEN ===")
