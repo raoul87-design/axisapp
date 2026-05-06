@@ -202,6 +202,7 @@ const handleReflection = async (gehaald) => {
   if (error) console.error("Reflectie opslaan mislukt:", error.message)
   setReflectionSubmitted(true)
   setReflectionDate(getNLDate())
+  localStorage.setItem("axis_reflection_" + getNLDate(), "true")
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -230,6 +231,7 @@ useEffect(() => {
       setReflectionDate("")
       setReflectionTekst("")
     }
+    if (localStorage.getItem("axis_reflection_" + getNLDate()) === "true") setReflectionSubmitted(true)
     await checkFirstUse()
     await loadCommitments()
     await loadHistory()
