@@ -200,10 +200,8 @@ const handleReflection = async (gehaald) => {
     tekst:   reflectionTekst || null,
   }])
   if (error) console.error("Reflectie opslaan mislukt:", error.message)
-  const today = getNLDate()
   setReflectionSubmitted(true)
-  setReflectionDate(today)
-  localStorage.setItem("axis-reflection-date", today)
+  setReflectionDate(getNLDate())
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -227,16 +225,10 @@ useEffect(() => {
 useEffect(() => {
   if (!user) return
   const init = async () => {
-    const today = getNLDate()
-    const savedDate = localStorage.getItem("axis-reflection-date")
-    if (savedDate === today) {
-      setReflectionSubmitted(true)
-      setReflectionDate(today)
-    } else if (savedDate && savedDate !== today) {
+    if (reflectionDate && reflectionDate !== getNLDate()) {
       setReflectionSubmitted(false)
       setReflectionDate("")
       setReflectionTekst("")
-      localStorage.removeItem("axis-reflection-date")
     }
     await checkFirstUse()
     await loadCommitments()
