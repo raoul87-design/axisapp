@@ -579,9 +579,14 @@ async function saveBuilder() {
   if (!builderNaam.trim() || builderItems.length === 0 || !user) return
   setBuilderSaving(true)
   try {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle()
     const { data: workout, error: wErr } = await supabase
       .from("workouts")
-      .insert({ naam: builderNaam.trim(), created_by: user.id, visibility: "personal", is_template: false })
+      .insert({ naam: builderNaam.trim(), created_by: profile?.id, visibility: "personal", is_template: false })
       .select("id")
       .single()
     if (wErr) throw wErr
