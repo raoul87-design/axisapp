@@ -83,6 +83,7 @@ const [workoutLibrary,   setWorkoutLibrary]   = useState([])
 const [pickerSelected,   setPickerSelected]   = useState(null)
 const [openSections,     setOpenSections]     = useState({})
 const [myWorkouts,       setMyWorkouts]       = useState([])
+const [coachWorkouts,    setCoachWorkouts]    = useState([])
 const [builderNaam,      setBuilderNaam]      = useState("")
 const [builderItems,     setBuilderItems]     = useState([])
 const [builderSearch,    setBuilderSearch]    = useState("")
@@ -419,9 +420,9 @@ async function loadWorkoutData() {
 
     const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
-    const { data: profile } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+    const { data: profile } = await supabase.from("users").select("id, coach_email").eq("auth_user_id", user.id).maybeSingle()
 
-    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData }] = await Promise.all([
+    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData }, { data: coachData }] = await Promise.all([
       supabase.from("workout_planning")
         .select(PLANNING_SELECT)
         .eq("user_id", user.id).eq("datum", today).maybeSingle(),
@@ -437,6 +438,13 @@ async function loadWorkoutData() {
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
         .eq("created_by", profile?.id)
         .eq("visibility", "personal"),
+      profile?.coach_email
+        ? supabase.from("workouts")
+            .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
+            .eq("visibility", "coach")
+            .eq("coach_email", profile.coach_email)
+            .order("naam", { ascending: true })
+        : Promise.resolve({ data: [] }),
     ])
 
     console.log("[loadWorkoutData] user.id:", user?.id)
@@ -447,6 +455,7 @@ async function loadWorkoutData() {
     setWeekWorkouts(weekPlan || [])
     setWorkoutLibrary(libraryData || [])
     setMyWorkouts(personalData || [])
+    setCoachWorkouts(coachData || [])
     if (planning?.gedaan) setWorkoutScreen("done")
 
     if (planning?.workout?.workout_oefeningen?.length) {
@@ -1957,7 +1966,37 @@ return (
                 </div>
               )}
 
-              {workoutLibrary.length === 0 && myWorkouts.length === 0 ? (
+              {/* ── Van mijn coach ── */}
+              {coachWorkouts.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <button onClick={toggleCoachSection}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0", marginBottom: getCoachSectionOpen() ? 10 : 0 }}>
+                    <span style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold" }}>
+                      Van mijn coach
+                    </span>
+                    <span style={{ color: C.textDim, fontSize: 12 }}>{getCoachSectionOpen() ? "▲" : "▼"}</span>
+                  </button>
+                  {getCoachSectionOpen() && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {coachWorkouts.map(w => {
+                        const isSelected = pickerSelected === w.id
+                        return (
+                          <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
+                            style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                            <div>
+                              <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
+                              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
+                            </div>
+                            {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: C.textDim, fontSize: 18 }}>○</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {workoutLibrary.length === 0 && myWorkouts.length === 0 && coachWorkouts.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
                   <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
                   <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Herlaad de pagina als dit onverwacht is</p>
