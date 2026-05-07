@@ -92,7 +92,12 @@ export async function GET(request) {
       .map(([date, score]) => ({ date, score: Number(score) }))
       .sort((a, b) => (a.date < b.date ? 1 : -1))     // newest first
     const newStreak = computeStreak(sorted)
-    if (newStreak !== (user.streak ?? 0)) {
+    const curStreak = user.streak ?? 0
+    console.log(`[DEBUG] User ${user.auth_user_id}:`)
+    console.log(`  Calculated: ${newStreak}`)
+    console.log(`  Current DB: ${curStreak}`)
+    console.log(`  Changed: ${newStreak !== curStreak}`)
+    if (newStreak !== curStreak) {
       toUpdate.push({ id: user.id, streak: newStreak })
     }
   }
