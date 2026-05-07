@@ -6,9 +6,13 @@ const supabase = createClient(
 )
 
 function getNLDate(daysAgo = 0) {
-  const d = new Date()
-  if (daysAgo) d.setDate(d.getDate() - daysAgo)
-  return d.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+  // Get NL "today" as a string first, then subtract — avoids UTC/NL date mismatch
+  // (e.g. 00:30 NL = 22:30 UTC previous day, so UTC date arithmetic gives wrong answer)
+  const todayNL = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+  if (daysAgo === 0) return todayNL
+  const d = new Date(todayNL + "T12:00:00")  // noon on NL today — safe across DST
+  d.setDate(d.getDate() - daysAgo)
+  return d.toLocaleDateString("en-CA")
 }
 
 // Pure: compute streak from rows sorted newest-first, already deduplicated per date.
@@ -41,8 +45,8 @@ export async function GET(request) {
 
   console.log("=== [CALCULATE-STREAKS] START ===")
 
-  const cutoff     = getNLDate(90)
-  const yesterday  = getNLDate(1)   // today is still in progress — only count complete days
+  const cutoff = getNLDate(90)
+  const today  = getNLDate(0)
 
   // Read 1: all users with an auth account
   const { data: users, error: uErr } = await supabase
@@ -55,12 +59,13 @@ export async function GET(request) {
     return new Response(JSON.stringify({ error: uErr.message }), { status: 500 })
   }
 
-  // Read 2: daily_results up to AND INCLUDING yesterday — today is excluded
+  // Read 2: daily_results strictly BEFORE today — lt() is safer than lte(yesterday)
+  // because it never depends on correct yesterday arithmetic
   const { data: allResults, error: rErr } = await supabase
     .from("daily_results")
     .select("user_id, date, score")
     .gte("date", cutoff)
-    .lte("date", yesterday)
+    .lt("date", today)
     .order("date", { ascending: false })
 
   if (rErr) {
