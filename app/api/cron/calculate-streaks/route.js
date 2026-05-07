@@ -11,13 +11,14 @@ function getNLDate(daysAgo = 0) {
   return d.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
-// Pure: compute streak from rows sorted newest-first, already deduplicated per date
+// Pure: compute streak from rows sorted newest-first, already deduplicated per date.
+// A day counts only when its highest score >= 100 (fully completed).
 function computeStreak(rows) {
   if (!rows || rows.length === 0) return 0
-  if (Number(rows[0].score) === 0) return 0
+  if (Number(rows[0].score) < 100) return 0
   let count = 0
   for (let i = 0; i < rows.length; i++) {
-    if (Number(rows[i].score) > 0) {
+    if (Number(rows[i].score) >= 100) {
       if (i > 0) {
         const prevDate = new Date(rows[i - 1].date + "T12:00:00")
         prevDate.setDate(prevDate.getDate() - 1)
@@ -40,8 +41,8 @@ export async function GET(request) {
 
   console.log("=== [CALCULATE-STREAKS] START ===")
 
-  const cutoff = getNLDate(90)
-  const today  = getNLDate()
+  const cutoff     = getNLDate(90)
+  const yesterday  = getNLDate(1)   // today is still in progress — only count complete days
 
   // Read 1: all users with an auth account
   const { data: users, error: uErr } = await supabase
@@ -54,12 +55,12 @@ export async function GET(request) {
     return new Response(JSON.stringify({ error: uErr.message }), { status: 500 })
   }
 
-  // Read 2: all daily_results from the last 90 days — one query for all users
+  // Read 2: daily_results up to AND INCLUDING yesterday — today is excluded
   const { data: allResults, error: rErr } = await supabase
     .from("daily_results")
     .select("user_id, date, score")
     .gte("date", cutoff)
-    .lte("date", today)
+    .lte("date", yesterday)
     .order("date", { ascending: false })
 
   if (rErr) {
