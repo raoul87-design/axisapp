@@ -360,7 +360,9 @@ async function loadWeekData() {
   const { data: userData } = await supabase
     .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).single()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
-  if (userData?.streak != null) setStreak(userData.streak)
+  // Only override streak when the DB has a positive value (WhatsApp-confirmed streak).
+  // If DB streak is 0, let calculateStreak() use daily_results instead.
+  if (userData?.streak) setStreak(userData.streak)
   const pid = userData?.id
   setPublicUserId(pid)
   if (pid) loadReminders(pid)
@@ -697,12 +699,13 @@ function calculateProgress(list) {
 }
 
 function calculateStreak(data, dbStreak) {
-  if (dbStreak != null) return  // DB-waarde heeft prioriteit
+  if (dbStreak != null && dbStreak > 0) return  // DB-waarde heeft prioriteit (alleen als > 0)
   if (!data || data.length === 0) { setStreak(0); return }
   let count = 0
   for (let i = 0; i < data.length; i++) {
     const entry = data[i]
-    if (i === 0 && Number(entry.score) === 0) continue
+    // Als vandaag geen score heeft → streak is 0, niet doorrekenen vanaf gisteren
+    if (i === 0 && Number(entry.score) === 0) { setStreak(0); return }
     if (Number(entry.score) > 0) {
       if (i > 0) {
         const prev = data[i - 1]
