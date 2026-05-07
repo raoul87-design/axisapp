@@ -351,7 +351,6 @@ async function loadHistory() {
   )
   const sortedDays = uniqueDays.sort((a, b) => new Date(b.date) - new Date(a.date))
   setHistory(sortedDays.slice(0, 7))
-  calculateStreak(sortedDays, undefined)
 }
 
 async function loadWeekData() {
@@ -360,9 +359,7 @@ async function loadWeekData() {
   const { data: userData } = await supabase
     .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).single()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
-  // Only override streak when the DB has a positive value (WhatsApp-confirmed streak).
-  // If DB streak is 0, let calculateStreak() use daily_results instead.
-  if (userData?.streak) setStreak(userData.streak)
+  if (userData?.streak != null) setStreak(userData.streak)
   const pid = userData?.id
   setPublicUserId(pid)
   if (pid) loadReminders(pid)
@@ -698,29 +695,6 @@ function calculateProgress(list) {
   saveDailyScore(pct)
 }
 
-function calculateStreak(data, dbStreak) {
-  if (dbStreak != null && dbStreak > 0) return  // DB-waarde heeft prioriteit (alleen als > 0)
-  if (!data || data.length === 0) { setStreak(0); return }
-  let count = 0
-  for (let i = 0; i < data.length; i++) {
-    const entry = data[i]
-    // Als vandaag geen score heeft → streak is 0, niet doorrekenen vanaf gisteren
-    if (i === 0 && Number(entry.score) === 0) { setStreak(0); return }
-    if (Number(entry.score) > 0) {
-      if (i > 0) {
-        const prev = data[i - 1]
-        const prevDate = new Date(prev.date + "T12:00:00")
-        const currDate = new Date(entry.date + "T12:00:00")
-        prevDate.setDate(prevDate.getDate() - 1)
-        if (prevDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" }) !== entry.date) break
-      }
-      count++
-    } else {
-      break
-    }
-  }
-  setStreak(count)
-}
 
 async function saveDailyScore(score) {
   if (!user) return
