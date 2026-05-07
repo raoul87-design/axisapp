@@ -44,6 +44,7 @@ export async function GET(request) {
   }
 
   console.log("=== [CALCULATE-STREAKS] START ===")
+  console.log(`[DEBUG] today=${getNLDate(0)}  cutoff=${getNLDate(90)}`)
 
   const cutoff = getNLDate(90)
   const today  = getNLDate(0)
@@ -94,6 +95,7 @@ export async function GET(request) {
     const newStreak = computeStreak(sorted)
     const curStreak = user.streak ?? 0
     console.log(`[DEBUG] User ${user.auth_user_id}:`)
+    console.log(`  Days (newest→oldest): ${sorted.slice(0, 7).map(r => `${r.date}(${r.score})`).join(" ")}`)
     console.log(`  Calculated: ${newStreak}`)
     console.log(`  Current DB: ${curStreak}`)
     console.log(`  Changed: ${newStreak !== curStreak}`)
