@@ -1300,52 +1300,42 @@ return (
 
       {/* ── REFLECTIE ── */}
       {todayState > 1 && (
-        <div style={{ marginBottom: 32, opacity: todayState === 2 ? 0.45 : todayState === 3 ? 0.75 : 1, transition: "opacity 0.4s ease" }}>
+        <div style={{ marginBottom: 32, opacity: todayState === 2 ? 0.35 : todayState === 3 ? 0.6 : 1, transition: "opacity 0.4s ease" }}>
           {todayState === 4 && <div style={{ height: 1, background: C.borderSub, marginBottom: 24 }} />}
-          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Reflectie</p>
+          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 12 }}>Reflectie</p>
           <div style={{
-            background: todayState === 4 ? "#0d1a10" : C.card,
-            borderRadius: 12,
-            padding: 20,
-            border: todayState === 4 && !reflectionSubmitted ? `1px solid #1a4d2a` : `1px solid ${C.border}`,
-            animation: todayState === 4 && !reflectionSubmitted ? "pulseGlow 2.5s ease-in-out infinite" : "none",
-            transition: "background 0.4s ease, border-color 0.4s ease",
+            background: C.card,
+            borderRadius: 10,
+            padding: 14,
+            border: `1px solid ${C.border}`,
+            transition: "opacity 0.4s ease",
           }}>
-            {todayState === 4 && (
-              <p style={{ color: GREEN, fontSize: 12, margin: "0 0 12px", letterSpacing: 0.5 }}>🎯 Alle commitments voltooid</p>
-            )}
-            <p style={{ fontSize: 15, marginBottom: todayState === 4 ? 16 : 0, color: todayState < 4 ? C.textMuted : C.text }}>
-              {todayState < 4 ? "Klaar voor vandaag? Vink af en reflecteer." : "Heb je je commitments gehaald?"}
+            <p style={{ fontSize: 13, marginBottom: todayState === 4 && !reflectionSubmitted ? 12 : 0, color: C.textMuted }}>
+              {todayState < 4 ? "Vink commitments af om te reflecteren." : "Heb je je commitments gehaald?"}
             </p>
             {todayState === 4 && !reflectionSubmitted && (
               <>
                 <textarea
                   value={reflectionTekst}
                   onChange={e => setReflectionTekst(e.target.value)}
-                  placeholder="Wil je iets toevoegen voor je coach of AI? (optioneel)"
+                  placeholder="Toelichting voor coach of AI (optioneel)"
                   rows={2}
-                  style={{ width: "100%", padding: 12, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 14, resize: "none", boxSizing: "border-box", marginBottom: 10 }}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, background: C.inputBg, color: C.text, border: `1px solid ${C.inputBorder}`, fontSize: 13, resize: "none", boxSizing: "border-box", marginBottom: 8 }}
                 />
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => handleReflection(true)}  style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: GREEN,      fontWeight: "bold", fontSize: 14 }}>Ja</button>
-                  <button onClick={() => handleReflection(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: "#ef4444", fontWeight: "bold", fontSize: 14 }}>Nee</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => handleReflection(true)}  style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: GREEN,      fontWeight: "600", fontSize: 13 }}>Ja</button>
+                  <button onClick={() => handleReflection(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer", background: C.cardAlt, color: "#ef4444", fontWeight: "600", fontSize: 13 }}>Nee</button>
                 </div>
               </>
             )}
             {todayState === 4 && reflectionSubmitted && (
-              <p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>✓ Reflectie opgeslagen</p>
+              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>✓ Opgeslagen</p>
             )}
           </div>
         </div>
       )}
 
       <div style={{ marginBottom: 32 }}>
-        <style>{`
-          @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 8px #22c55e55, 0 0 16px #22c55e22; }
-            50%       { box-shadow: 0 0 12px #22c55e88, 0 0 24px #22c55e44; }
-          }
-        `}</style>
         <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Deze week</p>
         {(() => {
           const dagNamen = ["ma", "di", "wo", "do", "vr", "za", "zo"]
