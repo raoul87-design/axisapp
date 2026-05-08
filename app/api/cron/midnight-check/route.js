@@ -1,16 +1,11 @@
 import twilio from "twilio"
 import Anthropic from "@anthropic-ai/sdk"
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin as supabase } from "../../../../lib/supabase"
 
 // Vereiste migratie (eenmalig uitvoeren in Supabase SQL editor):
 //   ALTER TABLE users ADD COLUMN IF NOT EXISTS kcal_nudge_sent_at TIMESTAMPTZ;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-const supabase = createClient(
-  "https://zdqrrprjkddlxszmtcmx.supabase.co",
-  process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
-)
 
 function firstName(name) {
   if (!name?.trim()) return null

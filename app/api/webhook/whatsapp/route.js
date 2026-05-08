@@ -1,15 +1,10 @@
 import { waitUntil } from "@vercel/functions"
 import twilio from "twilio"
 import Anthropic from "@anthropic-ai/sdk"
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin as supabase } from "../../../../lib/supabase"
 import { normalizeWhatsapp } from "../../../../lib/whatsapp"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-const supabase = createClient(
-  "https://zdqrrprjkddlxszmtcmx.supabase.co",
-  process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
-)
 
 // Voedings- en caloriekennis — toegevoegd aan alle system prompts
 const NUTRITION_KNOWLEDGE = `

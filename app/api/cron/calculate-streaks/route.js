@@ -1,9 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
-
-const supabase = createClient(
-  "https://zdqrrprjkddlxszmtcmx.supabase.co",
-  process.env.SUPABASE_SERVICE_KEY || "sb_publishable__cdXODEiCbsHvycy6uuB_g_SIIgI6YH"
-)
+import { supabaseAdmin as supabase } from "../../../../lib/supabase"
 
 function getNLDate(daysAgo = 0) {
   // Get NL "today" as a string first, then subtract — avoids UTC/NL date mismatch
