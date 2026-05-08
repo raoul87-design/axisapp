@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { calculateTDEE } from "../../lib/calculateTDEE"
 import { normalizeWhatsapp } from "../../lib/whatsapp"
 import { AxisLogo } from "../../components/AxisLogo"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
@@ -60,6 +61,11 @@ const [koolhydratenDoel,   setKoolhydratenDoel]    = useState("")
 const [vettenDoel,         setVettenDoel]          = useState("")
 const [doelenDoorCoach,    setDoelenDoorCoach]     = useState(false)
 const [savingGoals,        setSavingGoals]         = useState(false)
+
+const [tdeeForm,       setTdeeForm]       = useState({ weight_kg: "", height_cm: "", age: "", gender: "male", activity_level: "moderately_active" })
+const [tdeeResult,     setTdeeResult]     = useState(null)
+const [showTdeeForm,   setShowTdeeForm]   = useState(false)
+const [savingTdee,     setSavingTdee]     = useState(false)
 
 // ── Voortgang state ───────────────────────────────────────────
 const [metricsWeight,    setMetricsWeight]    = useState([])
@@ -257,7 +263,7 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role").eq("auth_user_id", user.id).maybeSingle()
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level").eq("auth_user_id", user.id).maybeSingle()
   console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL")
   if (data?.role)              setUserRole(data.role)
   if (data?.training_location) setTrainingLocation(data.training_location)
@@ -269,6 +275,13 @@ async function checkFirstUse() {
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
   if (data?.target_weight)     setDoelGewicht(data.target_weight)
+  setTdeeForm(prev => ({
+    ...prev,
+    height_cm:      data?.height_cm      ? String(data.height_cm)      : prev.height_cm,
+    age:            data?.age            ? String(data.age)            : prev.age,
+    gender:         data?.gender         ?? prev.gender,
+    activity_level: data?.activity_level ?? prev.activity_level,
+  }))
   if (data?.role === "coach" || data?.role === "b2c") return  // coaches en b2c-gebruikers slaan home onboarding over
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
@@ -284,6 +297,43 @@ async function saveNutritionGoals() {
   }).eq("auth_user_id", user.id)
   setSavingGoals(false)
   setShowNutritionModal(false)
+}
+
+function handleCalculateTdee() {
+  const { weight_kg, height_cm, age, gender, activity_level } = tdeeForm
+  if (!weight_kg || !height_cm || !age) return
+  const result = calculateTDEE({
+    weight_kg:      parseFloat(weight_kg),
+    height_cm:      parseFloat(height_cm),
+    age:            parseInt(age),
+    gender,
+    activity_level,
+  })
+  setTdeeResult(result)
+  setKcalDoel(String(result.tdee))
+  setEiwittenDoel(String(result.eiwitten))
+  setKoolhydratenDoel(String(result.koolhydraten))
+  setVettenDoel(String(result.vetten))
+}
+
+async function saveTdeeAsGoals() {
+  if (!tdeeResult || savingTdee) return
+  setSavingTdee(true)
+  await supabase.from("users").update({
+    height_cm:          parseFloat(tdeeForm.height_cm) || null,
+    gender:             tdeeForm.gender,
+    age:                parseInt(tdeeForm.age) || null,
+    activity_level:     tdeeForm.activity_level,
+    tdee_value:         tdeeResult.tdee,
+    kcal_doel:          tdeeResult.tdee,
+    eiwitten_doel:      tdeeResult.eiwitten,
+    koolhydraten_doel:  tdeeResult.koolhydraten,
+    vetten_doel:        tdeeResult.vetten,
+  }).eq("auth_user_id", user.id)
+  setSavingTdee(false)
+  setShowNutritionModal(false)
+  setShowTdeeForm(false)
+  setTdeeResult(null)
 }
 
 async function saveGoalData(goal, cw, tw) {
@@ -1081,10 +1131,75 @@ if (showNutritionModal) {
           ))}
         </div>
         {!readonly && (
-          <button onClick={saveNutritionGoals} disabled={!kcalDoel || savingGoals}
-            style={{ width: "100%", marginTop: 20, padding: "13px", background: (!kcalDoel || savingGoals) ? C.cardAlt : GREEN, border: "none", borderRadius: 8, color: (!kcalDoel || savingGoals) ? C.textMuted : "#000", fontWeight: "bold", fontSize: 15, cursor: (!kcalDoel || savingGoals) ? "default" : "pointer" }}>
-            {savingGoals ? "Opslaan..." : "Opslaan"}
-          </button>
+          <>
+            <button onClick={() => { setShowTdeeForm(v => !v); setTdeeResult(null) }}
+              style={{ width: "100%", marginTop: 16, padding: "10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textMuted, fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+              {showTdeeForm ? "▲ Bereken via TDEE" : "▼ Bereken via TDEE"}
+            </button>
+            {showTdeeForm && (
+              <div style={{ marginTop: 12, padding: 16, background: C.cardAlt, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                  {[
+                    { label: "Gewicht (kg)", key: "weight_kg", placeholder: "bijv. 80" },
+                    { label: "Lengte (cm)",  key: "height_cm", placeholder: "bijv. 180" },
+                    { label: "Leeftijd",     key: "age",       placeholder: "bijv. 30" },
+                  ].map(({ label, key, placeholder }) => (
+                    <div key={key}>
+                      <p style={{ color: C.textMuted, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 5 }}>{label}</p>
+                      <input type="number" value={tdeeForm[key]} placeholder={placeholder}
+                        onChange={e => setTdeeForm(prev => ({ ...prev, [key]: e.target.value }))}
+                        style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    </div>
+                  ))}
+                  <div>
+                    <p style={{ color: C.textMuted, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 5 }}>Geslacht</p>
+                    <select value={tdeeForm.gender} onChange={e => setTdeeForm(prev => ({ ...prev, gender: e.target.value }))}
+                      style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 13, outline: "none" }}>
+                      <option value="male">Man</option>
+                      <option value="female">Vrouw</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <p style={{ color: C.textMuted, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 5 }}>Activiteitsniveau</p>
+                  <select value={tdeeForm.activity_level} onChange={e => setTdeeForm(prev => ({ ...prev, activity_level: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 13, outline: "none" }}>
+                    <option value="sedentary">Sedentair (weinig/geen sport)</option>
+                    <option value="lightly_active">Licht actief (1-3x/week)</option>
+                    <option value="moderately_active">Matig actief (3-5x/week)</option>
+                    <option value="very_active">Zeer actief (6-7x/week)</option>
+                  </select>
+                </div>
+                <button onClick={handleCalculateTdee} disabled={!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age}
+                  style={{ width: "100%", padding: "10px", background: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? C.card : C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? C.textDim : C.textSub, fontSize: 13, cursor: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? "default" : "pointer" }}>
+                  Bereken
+                </button>
+                {tdeeResult && (
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: C.card, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                      {[
+                        { label: "TDEE",         value: `${tdeeResult.tdee} kcal`, color: GREEN },
+                        { label: "Eiwit",        value: `${tdeeResult.eiwitten}g`,     color: "#60a5fa" },
+                        { label: "Koolh.",       value: `${tdeeResult.koolhydraten}g`, color: "#facc15" },
+                        { label: "Vetten",       value: `${tdeeResult.vetten}g`,       color: "#f97316" },
+                        { label: "BMR",          value: `${tdeeResult.bmr} kcal`,      color: C.textMuted },
+                      ].map(({ label, value, color }) => (
+                        <div key={label}>
+                          <p style={{ color: C.textDim, fontSize: 9, margin: "0 0 2px" }}>{label}</p>
+                          <p style={{ color, fontSize: 13, fontWeight: "bold", margin: 0 }}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ color: C.textDim, fontSize: 11, marginTop: 8, marginBottom: 0 }}>Ingevuld in je doelen — klik Opslaan om te bevestigen.</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <button onClick={tdeeResult ? saveTdeeAsGoals : saveNutritionGoals} disabled={!kcalDoel || savingGoals || savingTdee}
+              style={{ width: "100%", marginTop: 16, padding: "13px", background: (!kcalDoel || savingGoals || savingTdee) ? C.cardAlt : GREEN, border: "none", borderRadius: 8, color: (!kcalDoel || savingGoals || savingTdee) ? C.textMuted : "#000", fontWeight: "bold", fontSize: 15, cursor: (!kcalDoel || savingGoals || savingTdee) ? "default" : "pointer" }}>
+              {(savingGoals || savingTdee) ? "Opslaan..." : "Opslaan"}
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -1297,6 +1412,37 @@ return (
           </>
         )}
       </div>
+
+      {/* ── NUTRITION CARD ── */}
+      {kcalDoel && (
+        <div onClick={() => setShowNutritionModal(true)} style={{ marginBottom: 24, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 20 }}>
+            <div>
+              <p style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 3px" }}>Kcal doel</p>
+              <p style={{ fontSize: 16, fontWeight: "bold", color: C.text, margin: 0 }}>{kcalDoel}</p>
+            </div>
+            {eiwittenDoel && (
+              <div>
+                <p style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 3px" }}>Eiwit</p>
+                <p style={{ fontSize: 16, fontWeight: "bold", color: "#60a5fa", margin: 0 }}>{eiwittenDoel}g</p>
+              </div>
+            )}
+            {koolhydratenDoel && (
+              <div>
+                <p style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 3px" }}>Koolh.</p>
+                <p style={{ fontSize: 16, fontWeight: "bold", color: "#facc15", margin: 0 }}>{koolhydratenDoel}g</p>
+              </div>
+            )}
+            {vettenDoel && (
+              <div>
+                <p style={{ fontSize: 9, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 3px" }}>Vetten</p>
+                <p style={{ fontSize: 16, fontWeight: "bold", color: "#f97316", margin: 0 }}>{vettenDoel}g</p>
+              </div>
+            )}
+          </div>
+          <span style={{ color: C.textDim, fontSize: 16 }}>›</span>
+        </div>
+      )}
 
       {/* ── REFLECTIE ── */}
       {todayState > 1 && (
