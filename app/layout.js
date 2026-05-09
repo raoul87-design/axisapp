@@ -16,7 +16,7 @@ export const metadata = {
   description: "Commit. Execute. Reflect. Recover.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.svg",
     apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
