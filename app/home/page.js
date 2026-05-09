@@ -653,9 +653,19 @@ async function saveBuilder() {
       .select("id")
       .eq("auth_user_id", user.id)
       .maybeSingle()
+    const payload = {
+      naam: builderNaam.trim(),
+      created_by: user.id,
+      visibility: "personal",
+      is_template: false,
+      niveau: "beginner",
+      schema_type: "custom",
+      dag_type: "custom",
+    }
+    console.log("[saveBuilder] insert payload:", payload)
     const { data: workout, error: wErr } = await supabase
       .from("workouts")
-      .insert({ naam: builderNaam.trim(), created_by: profile?.id, visibility: "personal", is_template: false, niveau: "beginner" })
+      .insert(payload)
       .select("id")
       .single()
     if (wErr) throw wErr
