@@ -745,6 +745,7 @@ async function cancelWorkout() {
   setSetLogs({})
   setWorkoutScreen("picker")
   loadCommitments()
+  loadWeekData()
 }
 
 async function finishWorkout() {
@@ -773,8 +774,14 @@ async function finishWorkout() {
     console.warn("[finishWorkout] geen sets om op te slaan (rows leeg)")
   }
   await supabase.from("workout_planning").update({ gedaan: true }).eq("id", todayWorkout.id)
+  if (todayWorkout.workout?.naam) {
+    await supabase.from("commitments")
+      .update({ done: true })
+      .eq("user_id", user.id).eq("date", today).eq("text", `💪 ${todayWorkout.workout.naam}`)
+  }
   setTodayWorkout(prev => ({ ...prev, gedaan: true }))
   setWorkoutScreen("done")
+  loadCommitments()
 }
 
 function calculateProgress(list) {
