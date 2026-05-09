@@ -1258,8 +1258,8 @@ return (
     const dateStr   = new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })
     const dateDisplay = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
     return (
-  <div style={{ padding: "20px 20px 0" }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+  <div style={{ padding: "22px 22px 22px", borderBottom: "1px solid #1f1f1f" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
         <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 2 }}>AXIS</span>
@@ -1332,65 +1332,62 @@ return (
         )}
       </div>
     </div>
-    <p style={{ color: "#6b7280", fontSize: 13, margin: "0 0 6px" }}>{greeting}</p>
-    <p style={{ color: "#ffffff", fontSize: 26, fontWeight: "bold", margin: "0 0 20px", letterSpacing: -0.5 }}>{dateDisplay}</p>
+    <p style={{ color: "#9a9a9a", fontSize: 13, margin: "0 0 4px" }}>{greeting}</p>
+    <p style={{ color: "#fafafa", fontSize: 26, fontWeight: "bold", margin: 0, letterSpacing: -0.5 }}>{dateDisplay}</p>
   </div>
     )
   })()}
 
-  {/* DIVIDER */}
-  <div style={{ height: 1, background: "#1f1f1f", marginBottom: 0 }} />
-
   {/* ── TAB: VANDAAG ─────────────────────────────────────────── */}
   {activeTab === "vandaag" && (
-    <div style={{ padding: "0 20px", paddingBottom: TAB_H + 80 }}>
+    <div style={{ padding: "22px 22px 0", paddingBottom: TAB_H + 80 }}>
 
       {/* ── COMMITMENT ── */}
-      <div style={{ marginTop: 24 }}>
-        <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Commitment</p>
+      <div style={{ marginTop: 0 }}>
+        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Commitment</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {commitments.map(c => (
-            <div key={c.id} style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div key={c.id} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
               <div onClick={() => toggleDone(c.id, c.done)}
-                style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : "2px solid #444", background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : "2px solid #3a3a3a", background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                 {c.done && <span style={{ color: "#000", fontSize: 12, fontWeight: "bold" }}>✓</span>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span onClick={() => toggleDone(c.id, c.done)}
-                  style={{ fontSize: 14, color: c.done ? "#6b7280" : "#ffffff", textDecoration: c.done ? "line-through" : "none", cursor: "pointer", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  style={{ fontSize: 14, color: c.done ? "#5e5e5e" : "#fafafa", textDecoration: c.done ? "line-through" : "none", cursor: "pointer", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.text}
                 </span>
-                {c.done && <p style={{ color: "#6b7280", fontSize: 11, margin: "3px 0 0" }}>Voltooid</p>}
+                {c.done && <p style={{ color: "#5e5e5e", fontSize: 11, margin: "3px 0 0" }}>Voltooid</p>}
               </div>
               {!c.done && (
                 <button onClick={async () => { await supabase.from("commitments").delete().eq("id", c.id); setCommitments(prev => prev.filter(x => x.id !== c.id)) }}
-                  style={{ background: "none", border: "none", color: "#444", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1, flexShrink: 0 }}>×</button>
+                  style={{ background: "none", border: "none", color: "#5e5e5e", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1, flexShrink: 0 }}>×</button>
               )}
             </div>
           ))}
           {showAddCommit ? (
-            <div style={{ background: "#161616", border: "1px dashed #444", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ background: "#141414", border: "1px dashed #2c2c2c", borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
               <input value={text} onChange={e => setText(e.target.value)} autoFocus
                 onKeyDown={e => { if (e.key === "Enter" && text) { addCommitment(); setShowAddCommit(false) } if (e.key === "Escape") { setText(""); setShowAddCommit(false) } }}
                 placeholder="Typ een commitment..."
-                style={{ flex: 1, background: "transparent", border: "none", color: "#fff", fontSize: 14, outline: "none" }} />
+                style={{ flex: 1, background: "transparent", border: "none", color: "#fafafa", fontSize: 14, outline: "none" }} />
               <button onClick={() => { if (text) { addCommitment(); setShowAddCommit(false) } else { setText(""); setShowAddCommit(false) } }}
-                style={{ background: "none", border: "none", color: text ? GREEN : "#555", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }}>
+                style={{ background: "none", border: "none", color: text ? GREEN : "#5e5e5e", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: 0 }}>
                 {text ? "↑" : "×"}
               </button>
             </div>
           ) : (
             <button onClick={() => setShowAddCommit(true)}
-              style={{ background: "transparent", border: "1px dashed #333", borderRadius: 12, padding: "13px 16px", color: "#6b7280", fontSize: 14, cursor: "pointer", textAlign: "left", width: "100%" }}>
-              + Voeg commitment toe
+              style={{ background: "transparent", border: "1px dashed #2c2c2c", borderRadius: 14, padding: 18, color: "#5e5e5e", fontSize: 14, cursor: "pointer", width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 16, fontWeight: 400 }}>+</span> Voeg commitment toe
             </button>
           )}
         </div>
       </div>
 
       {/* ── WORKOUT ── */}
-      <div style={{ marginTop: 24 }}>
-        <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Workout</p>
+      <div style={{ marginTop: 26 }}>
+        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Workout</p>
         {todayWorkout ? (
           <div style={{ background: "#0d2818", border: `2px solid ${GREEN}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
@@ -1438,8 +1435,8 @@ return (
       )}
 
       {/* ── DEZE WEEK ── */}
-      <div style={{ marginTop: 24 }}>
-        <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Deze week</p>
+      <div style={{ marginTop: 26 }}>
+        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Deze week</p>
         {(() => {
           const dagNamen = ["ma", "di", "wo", "do", "vr", "za", "zo"]
           const today    = getNLDate()
@@ -1456,7 +1453,7 @@ return (
           const actiefDagen = weekDagen.filter(d => weekCheckIns.has(d) && (scoreMap[d] ?? 0) > 0).length
           return (
             <>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
                 {weekDagen.map((datum, i) => {
                   const isToekomst   = datum > today
                   const isVandaag    = datum === today
@@ -1465,27 +1462,34 @@ return (
                   const isVoltooid   = !isToekomst && !isVandaag && heeftCheckIn && score > 0
                   const isGemist     = !isToekomst && !isVandaag && !heeftCheckIn
                   return (
-                    <div key={datum} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                      <div style={{
-                        width: "100%", aspectRatio: "1", borderRadius: 8,
-                        background:  isVandaag ? "#000000" : isVoltooid ? "#0a1a0f" : isGemist ? "#1f0a0a" : "#1a1a1a",
-                        border:      isVandaag ? `2px solid ${GREEN}` : isVoltooid ? `1px solid ${GREEN}55` : isGemist ? "1px solid #3d1a1a" : "1px solid #2a2a2a",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
+                    <div key={datum} style={{
+                      aspectRatio: "1 / 1.18", borderRadius: 9, position: "relative",
+                      background:  isVoltooid ? "rgba(34,197,94,0.12)" : isGemist ? "rgba(239,68,68,0.12)" : "transparent",
+                      border:      isVandaag
+                        ? `1px solid ${GREEN}`
+                        : isVoltooid ? "1px solid rgba(34,197,94,0.40)"
+                        : isGemist  ? "1px solid rgba(239,68,68,0.35)"
+                        : "1px solid #1f1f1f",
+                      boxShadow: isVandaag ? "inset 0 0 0 2px rgba(34,197,94,0.18)" : "none",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
+                      padding: "0 0 5px",
+                    }}>
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {isVandaag && (
-                          <div style={{ width: 10, height: 10, borderRadius: "50%", border: `2px solid ${GREEN}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {heeftCheckIn && score > 0 && <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN }} />}
-                          </div>
+                          <svg width={10} height={10} viewBox="0 0 10 10">
+                            <circle cx={5} cy={5} r={2.5} fill={GREEN} />
+                          </svg>
                         )}
                         {isVoltooid && <span style={{ color: GREEN, fontSize: 12, fontWeight: "bold" }}>✓</span>}
-                        {isGemist   && <span style={{ color: "#ef4444", fontSize: 13, fontWeight: "bold" }}>✕</span>}
+                        {isGemist   && <span style={{ color: "#ef4444", fontSize: 12, fontWeight: "bold" }}>✕</span>}
+                        {isToekomst && <span style={{ color: "#5e5e5e", fontSize: 12, opacity: 0.25 }}>·</span>}
                       </div>
-                      <span style={{ fontSize: 10, color: isVandaag ? GREEN : "#6b7280", fontWeight: isVandaag ? "bold" : "normal" }}>{dagNamen[i]}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: isVandaag ? GREEN : "#5e5e5e" }}>{dagNamen[i]}</span>
                     </div>
                   )
                 })}
               </div>
-              <p style={{ color: "#6b7280", fontSize: 12, marginTop: 12, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
+              <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", color: "#5e5e5e", fontSize: 10.5, letterSpacing: "0.14em", marginTop: 10, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
             </>
           )
         })()}
@@ -1493,38 +1497,38 @@ return (
 
       {/* ── VOEDING ── */}
       {kcalDoel && (
-        <div style={{ marginTop: 24 }}>
-          <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Voeding</p>
+        <div style={{ marginTop: 26 }}>
+          <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Voeding</p>
           <div onClick={() => setShowNutritionModal(true)}
-            style={{ background: "#161616", border: "1px solid #262626", borderRadius: 12, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, flex: 1 }}>
               {[
-                { label: "KCAL",   value: kcalDoel,         unit: null,  color: "#ffffff" },
-                { label: "EIWIT",  value: eiwittenDoel,     unit: "g",   color: "#60a5fa" },
-                { label: "KOOLH.", value: koolhydratenDoel, unit: "g",   color: "#fb923c" },
-                { label: "VETTEN", value: vettenDoel,       unit: "g",   color: "#f43f5e" },
-              ].map(({ label, value, unit, color }) => (
+                { label: "KCAL",   value: kcalDoel,         unit: null },
+                { label: "EIWIT",  value: eiwittenDoel,     unit: "g"  },
+                { label: "KOOLH.", value: koolhydratenDoel, unit: "g"  },
+                { label: "VETTEN", value: vettenDoel,       unit: "g"  },
+              ].map(({ label, value, unit }) => (
                 <div key={label}>
-                  <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
-                  <p style={{ fontSize: 18, fontWeight: "bold", color: value ? color : "#333", margin: 0, lineHeight: 1 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.14em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
+                  <p style={{ fontSize: 19, fontWeight: 800, color: value ? "#fafafa" : "#3a3a3a", margin: 0, lineHeight: 1 }}>
                     {value || "—"}
-                    {value && unit && <span style={{ fontSize: 11, color: "#6b7280", fontWeight: "normal", marginLeft: 1 }}>{unit}</span>}
+                    {value && unit && <span style={{ fontSize: 11, fontWeight: 500, color: "#5e5e5e", marginLeft: 1 }}>{unit}</span>}
                   </p>
                 </div>
               ))}
             </div>
-            <span style={{ color: "#444", fontSize: 16, flexShrink: 0, marginLeft: 8 }}>›</span>
+            <span style={{ color: "#5e5e5e", fontSize: 18, flexShrink: 0, marginLeft: 8 }}>›</span>
           </div>
         </div>
       )}
 
       {/* ── REMINDERS ── */}
-      <div style={{ marginTop: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: 0 }}>Reminders</p>
+      <div style={{ marginTop: 26 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 24, marginBottom: 12 }}>
+          <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: 0 }}>Reminders</p>
           <button onClick={() => { setShowAddReminder(v => !v); setReminderForm({ tekst: "", tijd: "", eenmalig: false, datum: "" }) }}
-            style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${showAddReminder ? "#333" : GREEN + "44"}`, background: showAddReminder ? "transparent" : "#0a1a0f", color: showAddReminder ? "#6b7280" : GREEN, fontSize: 12, cursor: "pointer" }}>
-            {showAddReminder ? "Annuleren" : "+ Toevoegen"}
+            style={{ padding: "5px 11px", borderRadius: 7, border: `1px solid ${showAddReminder ? "#3a3a3a" : "#262626"}`, background: "transparent", color: showAddReminder ? "#fafafa" : "#9a9a9a", fontSize: 11.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            {showAddReminder ? "Annuleren" : <><span style={{ fontSize: 13, fontWeight: 400, color: "#5e5e5e" }}>+</span> Toevoegen</>}
           </button>
         </div>
           {showAddReminder && (
@@ -1579,21 +1583,21 @@ return (
             {reminders.map(r => {
               const isExpired = r.eenmalig && r.datum && r.datum < getNLDate()
               return (
-                <div key={r.id} style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div key={r.id} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 12, padding: "14px 16px 14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: "bold", color: r.actief && !isExpired ? "#fff" : "#6b7280", margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <p style={{ fontSize: 14.5, fontWeight: 600, color: r.actief && !isExpired ? "#fafafa" : "#5e5e5e", margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {r.tekst}
                     </p>
-                    <p style={{ fontSize: 11, color: isExpired ? "#7a3030" : "#a1a1aa", margin: "3px 0 0" }}>
+                    <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: isExpired ? "#7a3030" : "#5e5e5e", margin: "3px 0 0" }}>
                       {fmtTime(r.tijd)} · {r.eenmalig ? (isExpired ? "Verlopen" : fmtReminderDate(r.datum)) : "Dagelijks"}
                     </p>
                   </div>
                   <button onClick={() => toggleReminder(r.id, r.actief)} disabled={isExpired}
-                    style={{ width: 38, height: 22, borderRadius: 11, border: "none", background: r.actief && !isExpired ? GREEN : "#1a1a1a", cursor: isExpired ? "default" : "pointer", position: "relative", flexShrink: 0, transition: "background 0.2s" }}>
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: r.actief && !isExpired ? 18 : 4, transition: "left 0.2s" }} />
+                    style={{ width: 42, height: 24, borderRadius: 14, border: "none", background: r.actief && !isExpired ? GREEN : "#2c2c2c", cursor: isExpired ? "default" : "pointer", position: "relative", flexShrink: 0, transition: "background 150ms" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: r.actief && !isExpired ? 20 : 2, transition: "left 150ms", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
                   </button>
                   <button onClick={() => deleteReminder(r.id)}
-                    style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
+                    style={{ background: "none", border: "none", color: "#5e5e5e", cursor: "pointer", fontSize: 18, padding: "0 2px", flexShrink: 0, lineHeight: 1 }}>×</button>
                 </div>
               )
             })}
@@ -2367,54 +2371,44 @@ return (
   )}
 
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
-  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50 }}>
+  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50, padding: "8px 8px 22px", boxSizing: "border-box" }}>
 
-    {/* Vandaag */}
-    <button onClick={() => setActiveTab("vandaag")}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
-      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
-        <circle cx={11} cy={11} r={9}
-          stroke={activeTab === "vandaag" ? GREEN : "#555"} strokeWidth={1.5}
-          fill={activeTab === "vandaag" ? "#0a1a0f" : "none"} />
-        <path d="M7 11l3 3 5-5" stroke={activeTab === "vandaag" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      {activeTab === "vandaag" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Vandaag</span>}
-    </button>
-
-    {/* Voortgang */}
-    <button onClick={() => setActiveTab("voortgang")}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
-      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
-        <polyline points="3,16 8,10 12,13 19,5"
-          stroke={activeTab === "voortgang" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d="M17 5h2v2" stroke={activeTab === "voortgang" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      {activeTab === "voortgang" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Voortgang</span>}
-    </button>
-
-    {/* Workout */}
-    <button onClick={() => setActiveTab("workout")}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
-      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
-        <path d="M3 11h2M17 11h2M5 11l2-3h8l2 3M5 11l2 3h8l2-3"
-          stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={3} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} />
-        <circle cx={19} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} />
-      </svg>
-      {activeTab === "workout" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Workout</span>}
-    </button>
-
-    {/* Coach */}
-    <button onClick={() => setActiveTab("coach")}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
-      <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
-        <path d="M4 4h14a1 1 0 011 1v9a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"
-          stroke={activeTab === "coach" ? GREEN : "#555"} strokeWidth={1.5}
-          strokeLinecap="round" strokeLinejoin="round"
-          fill={activeTab === "coach" ? "#0a1a0f" : "none"} />
-      </svg>
-      {activeTab === "coach" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Coach</span>}
-    </button>
+    {[
+      { id: "vandaag",   label: "Vandaag",   icon: (c) => (
+        <svg width={20} height={20} viewBox="0 0 22 22" fill="none">
+          <circle cx={11} cy={11} r={9} stroke={c} strokeWidth={1.5} fill={c === GREEN ? "#0a1a0f" : "none"} />
+          <path d="M7 11l3 3 5-5" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )},
+      { id: "voortgang", label: "Voortgang", icon: (c) => (
+        <svg width={20} height={20} viewBox="0 0 22 22" fill="none">
+          <polyline points="3,16 8,10 12,13 19,5" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M17 5h2v2" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )},
+      { id: "workout",   label: "Workout",   icon: (c) => (
+        <svg width={20} height={20} viewBox="0 0 22 22" fill="none">
+          <path d="M3 11h2M17 11h2M5 11l2-3h8l2 3M5 11l2 3h8l2-3" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx={3} cy={11} r={1.5} stroke={c} strokeWidth={1.5} />
+          <circle cx={19} cy={11} r={1.5} stroke={c} strokeWidth={1.5} />
+        </svg>
+      )},
+      { id: "coach",     label: "Coach",     icon: (c) => (
+        <svg width={20} height={20} viewBox="0 0 22 22" fill="none">
+          <path d="M4 4h14a1 1 0 011 1v9a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill={c === GREEN ? "#0a1a0f" : "none"} />
+        </svg>
+      )},
+    ].map(({ id, label, icon }) => {
+      const active = activeTab === id
+      const col = active ? GREEN : "#5e5e5e"
+      return (
+        <button key={id} onClick={() => setActiveTab(id)}
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          {icon(col)}
+          <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, color: col, letterSpacing: "0.08em" }}>{label}</span>
+        </button>
+      )
+    })}
 
   </div>
 
