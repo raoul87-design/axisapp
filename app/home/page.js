@@ -855,9 +855,10 @@ async function sendChat(messageText) {
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
     if (!res.ok || !data.content) throw new Error(data.error || "Geen antwoord ontvangen")
     setChatMessages(prev => [...prev, { role: "assistant", content: data.content, time: replyTime }])
-  } catch {
+  } catch (err) {
+    console.error("[sendChat] fout:", err?.message, err)
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
-    setChatMessages(prev => [...prev, { role: "assistant", content: "Er ging iets mis. Probeer opnieuw.", time: replyTime }])
+    setChatMessages(prev => [...prev, { role: "assistant", content: `Fout: ${err?.message || "onbekend"}. Probeer opnieuw.`, time: replyTime }])
   }
   setChatLoading(false)
 }
@@ -1877,10 +1878,11 @@ return (
                   style={{
                     maxWidth: "80%", padding: "12px 16px",
                     borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                    background: msg.role === "user" ? "#1a2e1a" : "#141414",
+                    background: msg.role === "user" ? "#1c1c1c" : "#141414",
                     color: "#fafafa",
                     fontSize: 14, lineHeight: 1.5,
-                    border: msg.role === "user" ? "1px solid rgba(34,197,94,0.13)" : "1px solid #1f1f1f",
+                    border: msg.role === "user" ? "1px solid #333" : "1px solid #1f1f1f",
+                    wordBreak: "break-word", whiteSpace: "pre-wrap",
                   }}
                 />
                 {msg.time && (
