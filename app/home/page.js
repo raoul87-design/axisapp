@@ -1262,7 +1262,7 @@ return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
-        <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 0.3 }}>AXIS</span>
+        <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 2 }}>AXIS</span>
       </div>
       <div style={{ position: "relative" }}>
         <button onClick={() => setShowSettings(!showSettings)}
@@ -1389,23 +1389,28 @@ return (
       </div>
 
       {/* ── WORKOUT ── */}
-      {todayWorkout && (
-        <div style={{ marginTop: 24 }}>
-          <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Workout</p>
-          <div onClick={() => setActiveTab("workout")}
-            style={{ background: "#0a1a0f", border: `2px solid ${GREEN}44`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+      <div style={{ marginTop: 24 }}>
+        <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Workout</p>
+        {todayWorkout ? (
+          <div style={{ background: "#0d2818", border: `2px solid ${GREEN}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
               <p style={{ fontSize: 16, fontWeight: "bold", color: "#fff", margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{todayWorkout.workout?.naam || "Workout"}</p>
               <p style={{ fontSize: 12, color: "#a1a1aa", margin: 0 }}>
                 {todayWorkout.workout?.workout_oefeningen?.length ?? 0} oefeningen · {todayWorkout.gedaan ? "Voltooid ✓" : workoutScreen === "active" ? "Bezig..." : "Nog niet gestart"}
               </p>
             </div>
-            <div style={{ background: todayWorkout.gedaan ? "transparent" : GREEN, color: todayWorkout.gedaan ? GREEN : "#000", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: "bold", border: todayWorkout.gedaan ? `1px solid ${GREEN}44` : "none", flexShrink: 0 }}>
+            <button onClick={() => setActiveTab("workout")}
+              style={{ background: todayWorkout.gedaan ? "transparent" : GREEN, color: todayWorkout.gedaan ? GREEN : "#000", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: "bold", border: todayWorkout.gedaan ? `1px solid ${GREEN}44` : "none", cursor: "pointer", flexShrink: 0 }}>
               {todayWorkout.gedaan ? "Klaar ✓" : workoutScreen === "active" ? "Hervat" : "Start →"}
-            </div>
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <button onClick={() => setActiveTab("workout")}
+            style={{ background: "transparent", border: "1px dashed #333", borderRadius: 12, padding: "13px 18px", color: "#6b7280", fontSize: 14, cursor: "pointer", textAlign: "left", width: "100%" }}>
+            + Kies workout
+          </button>
+        )}
+      </div>
 
       {/* ── REFLECTIE ── */}
       {todayState > 1 && (
