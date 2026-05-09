@@ -1385,30 +1385,6 @@ return (
         </div>
       </div>
 
-      {/* ── WORKOUT ── */}
-      <div style={{ marginTop: 26 }}>
-        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Workout</p>
-        {todayWorkout ? (
-          <div style={{ background: "#0d2818", border: `2px solid ${GREEN}`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
-              <p style={{ fontSize: 16, fontWeight: "bold", color: "#fff", margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{todayWorkout.workout?.naam || "Workout"}</p>
-              <p style={{ fontSize: 12, color: "#a1a1aa", margin: 0 }}>
-                {todayWorkout.workout?.workout_oefeningen?.length ?? 0} oefeningen · {todayWorkout.gedaan ? "Voltooid ✓" : workoutScreen === "active" ? "Bezig..." : "Nog niet gestart"}
-              </p>
-            </div>
-            <button onClick={() => setActiveTab("workout")}
-              style={{ background: todayWorkout.gedaan ? "transparent" : GREEN, color: todayWorkout.gedaan ? GREEN : "#000", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: "bold", border: todayWorkout.gedaan ? `1px solid ${GREEN}44` : "none", cursor: "pointer", flexShrink: 0 }}>
-              {todayWorkout.gedaan ? "Klaar ✓" : workoutScreen === "active" ? "Hervat" : "Start →"}
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setActiveTab("workout")}
-            style={{ background: "transparent", border: "1px dashed #333", borderRadius: 12, padding: "13px 18px", color: "#6b7280", fontSize: 14, cursor: "pointer", textAlign: "left", width: "100%" }}>
-            + Kies workout
-          </button>
-        )}
-      </div>
-
       {/* ── REFLECTIE ── */}
       {todayState > 1 && (
         <div style={{ marginTop: 24, opacity: todayState === 2 ? 0.4 : todayState === 3 ? 0.65 : 1, transition: "opacity 0.4s ease" }}>
@@ -1485,7 +1461,7 @@ return (
                   )
                 })}
               </div>
-              <p style={{ fontSize: 12, color: "#5e5e5e", padding: "0 2px", marginTop: -2, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
+              <p style={{ fontSize: 12, color: "#5e5e5e", padding: "0 2px", marginTop: 10, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
             </>
           )
         })()}
