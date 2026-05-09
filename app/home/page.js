@@ -1258,10 +1258,10 @@ return (
     const dateStr   = new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })
     const dateDisplay = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
     return (
-  <div style={{ padding: "22px 22px 22px", borderBottom: "1px solid #1f1f1f" }}>
+  <div style={{ padding: "8px 22px 22px", borderBottom: "1px solid #1f1f1f" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: GREEN }} />
         <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 2 }}>AXIS</span>
       </div>
       <div style={{ position: "relative" }}>
@@ -1471,25 +1471,21 @@ return (
                         : isGemist  ? "1px solid rgba(239,68,68,0.35)"
                         : "1px solid #1f1f1f",
                       boxShadow: isVandaag ? "inset 0 0 0 2px rgba(34,197,94,0.18)" : "none",
-                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
-                      padding: "0 0 5px",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                      gap: 4,
                     }}>
-                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {isVandaag && (
-                          <svg width={10} height={10} viewBox="0 0 10 10">
-                            <circle cx={5} cy={5} r={2.5} fill={GREEN} />
-                          </svg>
-                        )}
-                        {isVoltooid && <span style={{ color: GREEN, fontSize: 12, fontWeight: "bold" }}>✓</span>}
-                        {isGemist   && <span style={{ color: "#ef4444", fontSize: 12, fontWeight: "bold" }}>✕</span>}
-                        {isToekomst && <span style={{ color: "#5e5e5e", fontSize: 12, opacity: 0.25 }}>·</span>}
+                      <div style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 8, color: isVandaag ? GREEN : isVoltooid ? GREEN : isGemist ? "#ef4444" : "#5e5e5e", opacity: isToekomst ? 0.25 : 1 }}>
+                        {isVandaag  && <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><circle cx={8} cy={8} r={2.5} fill="currentColor" /></svg>}
+                        {isVoltooid && <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5L6.5 12L13 4.5"/></svg>}
+                        {isGemist   && <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M5 5L11 11M11 5L5 11"/></svg>}
+                        {isToekomst && <span style={{ fontSize: 12, lineHeight: 1 }}>·</span>}
                       </div>
-                      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: isVandaag ? GREEN : "#5e5e5e" }}>{dagNamen[i]}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: isVandaag ? GREEN : "#5e5e5e", position: "absolute", bottom: 6, left: 0, right: 0, textAlign: "center" }}>{dagNamen[i]}</span>
                     </div>
                   )
                 })}
               </div>
-              <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", color: "#5e5e5e", fontSize: 10.5, letterSpacing: "0.14em", marginTop: 10, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
+              <p style={{ fontSize: 12, color: "#5e5e5e", padding: "0 2px", marginTop: -2, marginBottom: 0 }}>{actiefDagen} van 7 dagen actief deze week</p>
             </>
           )
         })()}
@@ -1509,7 +1505,7 @@ return (
                 { label: "VETTEN", value: vettenDoel,       unit: "g"  },
               ].map(({ label, value, unit }) => (
                 <div key={label}>
-                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.14em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
+                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.2em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
                   <p style={{ fontSize: 19, fontWeight: 800, color: value ? "#fafafa" : "#3a3a3a", margin: 0, lineHeight: 1 }}>
                     {value || "—"}
                     {value && unit && <span style={{ fontSize: 11, fontWeight: 500, color: "#5e5e5e", marginLeft: 1 }}>{unit}</span>}
@@ -1517,7 +1513,7 @@ return (
                 </div>
               ))}
             </div>
-            <span style={{ color: "#5e5e5e", fontSize: 18, flexShrink: 0, marginLeft: 8 }}>›</span>
+            <span style={{ color: "#5e5e5e", fontSize: 14, flexShrink: 0, marginLeft: 8 }}>›</span>
           </div>
         </div>
       )}
@@ -2405,7 +2401,7 @@ return (
         <button key={id} onClick={() => setActiveTab(id)}
           style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
           {icon(col)}
-          <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, color: col, letterSpacing: "0.08em" }}>{label}</span>
+          <span style={{ fontSize: 10.5, fontWeight: 500, color: col }}>{label}</span>
         </button>
       )
     })}
