@@ -732,11 +732,14 @@ async function autoWorkoutCommitment(workoutNaam, forDate) {
 
 async function cancelWorkout() {
   if (!todayWorkout || !user) return
+  console.log("[cancelWorkout] todayWorkout.id:", todayWorkout.id, "| user.id:", user.id)
   const workoutNaam = todayWorkout.workout?.naam
-  await supabase.from("workout_planning").delete().eq("id", todayWorkout.id)
+  const { error: planErr } = await supabase.from("workout_planning").delete().eq("id", todayWorkout.id)
+  console.log("[cancelWorkout] workout_planning delete:", planErr ? `ERROR: ${planErr.message} (${planErr.code})` : "OK")
   if (workoutNaam) {
-    await supabase.from("commitments").delete()
+    const { error: commitErr } = await supabase.from("commitments").delete()
       .eq("user_id", user.id).eq("date", getNLDate()).eq("text", `💪 ${workoutNaam}`)
+    console.log("[cancelWorkout] commitments delete:", commitErr ? `ERROR: ${commitErr.message} (${commitErr.code})` : "OK")
   }
   setTodayWorkout(null)
   setSetLogs({})
