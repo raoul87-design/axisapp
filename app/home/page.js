@@ -740,7 +740,7 @@ async function cancelWorkout() {
   }
   setTodayWorkout(null)
   setSetLogs({})
-  setWorkoutScreen("overview")
+  setWorkoutScreen("picker")
   loadCommitments()
 }
 
@@ -2247,7 +2247,7 @@ return (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <div>
                   <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
-                    <button onClick={() => setWorkoutScreen("overview")} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>← Terug</button>
+                    <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>← Terug</button>
                     <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, padding: 0 }}>✕ Annuleer</button>
                   </div>
                   <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>{todayWorkout?.workout?.naam}</h3>
