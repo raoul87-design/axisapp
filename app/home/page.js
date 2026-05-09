@@ -416,7 +416,7 @@ async function loadWeekData() {
   if (userData?.streak != null) setStreak(userData.streak)
   const pid = userData?.id
   setPublicUserId(pid)
-  if (pid) loadReminders(pid)
+  if (pid) { loadReminders(pid); loadChatHistory(pid) }
   const publicUserId = pid
   const [{ data: checkIns }, { data: commits }] = await Promise.all([
     publicUserId
@@ -429,6 +429,25 @@ async function loadWeekData() {
   ])
   setWeekCheckIns(new Set((checkIns || []).map(c => c.sent_at.split("T")[0])))
   setWeekCommits(new Set((commits || []).map(c => c.date)))
+}
+
+async function loadChatHistory(publicUserId) {
+  if (!publicUserId) return
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("role, content, created_at")
+    .eq("user_id", publicUserId)
+    .order("created_at", { ascending: true })
+    .limit(20)
+  if (error) { console.error("Chat history ophalen mislukt:", error.message); return }
+  if (!data?.length) return
+  setChatMessages(data.map(row => ({
+    role: row.role,
+    content: row.content,
+    time: row.created_at
+      ? new Date(row.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+      : undefined,
+  })))
 }
 
 async function loadProgressData() {
@@ -824,6 +843,7 @@ async function sendChat(messageText) {
     })
     const data = await res.json()
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+    if (!res.ok || !data.content) throw new Error(data.error || "Geen antwoord ontvangen")
     setChatMessages(prev => [...prev, { role: "assistant", content: data.content, time: replyTime }])
   } catch {
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
