@@ -1258,20 +1258,12 @@ return (
     const dateStr   = new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })
     const dateDisplay = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
     return (
-  <div style={{ padding: "24px 20px 16px" }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <div>
-        <AxisLogo variant={streak > 0 ? "pulse" : "breathe"} size={22} />
-        <p style={{ color: "#6b7280", fontSize: 12, margin: "6px 0 2px" }}>{greeting}</p>
-        <p style={{ color: "#ffffff", fontSize: 24, fontWeight: "bold", margin: 0, letterSpacing: -0.5 }}>{dateDisplay}</p>
+  <div style={{ padding: "20px 20px 0" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: GREEN }} />
+        <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 0.3 }}>AXIS</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-        {streak > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, border: `1px solid ${GREEN}44`, background: "#0a1a0f" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: GREEN }} />
-            <span style={{ color: GREEN, fontSize: 12, fontWeight: "500" }}>{streak} {streak === 1 ? "dag" : "dagen"}</span>
-          </div>
-        )}
       <div style={{ position: "relative" }}>
         <button onClick={() => setShowSettings(!showSettings)}
           style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: "4px 8px" }}>
@@ -1340,7 +1332,8 @@ return (
         )}
       </div>
     </div>
-  </div>
+    <p style={{ color: "#6b7280", fontSize: 13, margin: "0 0 6px" }}>{greeting}</p>
+    <p style={{ color: "#ffffff", fontSize: 26, fontWeight: "bold", margin: "0 0 20px", letterSpacing: -0.5 }}>{dateDisplay}</p>
   </div>
     )
   })()}
@@ -1479,8 +1472,8 @@ return (
                             {heeftCheckIn && score > 0 && <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN }} />}
                           </div>
                         )}
-                        {isVoltooid && <span style={{ color: "#fff", fontSize: 12, fontWeight: "bold" }}>✓</span>}
-                        {isGemist   && <span style={{ color: "#7a2020", fontSize: 13, fontWeight: "bold" }}>✕</span>}
+                        {isVoltooid && <span style={{ color: GREEN, fontSize: 12, fontWeight: "bold" }}>✓</span>}
+                        {isGemist   && <span style={{ color: "#ef4444", fontSize: 13, fontWeight: "bold" }}>✕</span>}
                       </div>
                       <span style={{ fontSize: 10, color: isVandaag ? GREEN : "#6b7280", fontWeight: isVandaag ? "bold" : "normal" }}>{dagNamen[i]}</span>
                     </div>
@@ -1498,32 +1491,24 @@ return (
         <div style={{ marginTop: 24 }}>
           <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: "0 0 12px" }}>Voeding</p>
           <div onClick={() => setShowNutritionModal(true)}
-            style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: 24 }}>
-              <div>
-                <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 4px" }}>Kcal</p>
-                <p style={{ fontSize: 20, fontWeight: "bold", color: "#ffffff", margin: 0 }}>{kcalDoel}</p>
-              </div>
-              {eiwittenDoel && (
-                <div>
-                  <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 4px" }}>Eiwit</p>
-                  <p style={{ fontSize: 20, fontWeight: "bold", color: "#60a5fa", margin: 0 }}>{eiwittenDoel}g</p>
+            style={{ background: "#161616", border: "1px solid #262626", borderRadius: 12, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, flex: 1 }}>
+              {[
+                { label: "KCAL",   value: kcalDoel,         unit: null,  color: "#ffffff" },
+                { label: "EIWIT",  value: eiwittenDoel,     unit: "g",   color: "#60a5fa" },
+                { label: "KOOLH.", value: koolhydratenDoel, unit: "g",   color: "#fb923c" },
+                { label: "VETTEN", value: vettenDoel,       unit: "g",   color: "#f43f5e" },
+              ].map(({ label, value, unit, color }) => (
+                <div key={label}>
+                  <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
+                  <p style={{ fontSize: 18, fontWeight: "bold", color: value ? color : "#333", margin: 0, lineHeight: 1 }}>
+                    {value || "—"}
+                    {value && unit && <span style={{ fontSize: 11, color: "#6b7280", fontWeight: "normal", marginLeft: 1 }}>{unit}</span>}
+                  </p>
                 </div>
-              )}
-              {koolhydratenDoel && (
-                <div>
-                  <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 4px" }}>Koolh.</p>
-                  <p style={{ fontSize: 20, fontWeight: "bold", color: "#fb923c", margin: 0 }}>{koolhydratenDoel}g</p>
-                </div>
-              )}
-              {vettenDoel && (
-                <div>
-                  <p style={{ fontSize: 9, letterSpacing: 1.5, color: "#6b7280", textTransform: "uppercase", margin: "0 0 4px" }}>Vetten</p>
-                  <p style={{ fontSize: 20, fontWeight: "bold", color: "#f43f5e", margin: 0 }}>{vettenDoel}g</p>
-                </div>
-              )}
+              ))}
             </div>
-            <span style={{ color: "#444", fontSize: 16, flexShrink: 0 }}>›</span>
+            <span style={{ color: "#444", fontSize: 16, flexShrink: 0, marginLeft: 8 }}>›</span>
           </div>
         </div>
       )}
@@ -1591,10 +1576,10 @@ return (
               return (
                 <div key={r.id} style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, color: r.actief && !isExpired ? "#fff" : "#6b7280", margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <p style={{ fontSize: 14, fontWeight: "bold", color: r.actief && !isExpired ? "#fff" : "#6b7280", margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {r.tekst}
                     </p>
-                    <p style={{ fontSize: 11, color: isExpired ? "#7a3030" : "#6b7280", margin: "3px 0 0" }}>
+                    <p style={{ fontSize: 11, color: isExpired ? "#7a3030" : "#a1a1aa", margin: "3px 0 0" }}>
                       {fmtTime(r.tijd)} · {r.eenmalig ? (isExpired ? "Verlopen" : fmtReminderDate(r.datum)) : "Dagelijks"}
                     </p>
                   </div>
@@ -2377,18 +2362,18 @@ return (
   )}
 
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
-  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: C.bg, borderTop: `1px solid ${C.borderSub}`, display: "flex", zIndex: 50 }}>
+  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, height: TAB_H, background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50 }}>
 
     {/* Vandaag */}
     <button onClick={() => setActiveTab("vandaag")}
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
         <circle cx={11} cy={11} r={9}
-          stroke={activeTab === "vandaag" ? GREEN : "#666"} strokeWidth={1.5}
+          stroke={activeTab === "vandaag" ? GREEN : "#555"} strokeWidth={1.5}
           fill={activeTab === "vandaag" ? "#0a1a0f" : "none"} />
-        <path d="M7 11l3 3 5-5" stroke={activeTab === "vandaag" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M7 11l3 3 5-5" stroke={activeTab === "vandaag" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span style={{ fontSize: 11, color: activeTab === "vandaag" ? GREEN : C.textMuted, fontWeight: activeTab === "vandaag" ? "bold" : "normal" }}>Vandaag</span>
+      {activeTab === "vandaag" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Vandaag</span>}
     </button>
 
     {/* Voortgang */}
@@ -2396,10 +2381,10 @@ return (
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
         <polyline points="3,16 8,10 12,13 19,5"
-          stroke={activeTab === "voortgang" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d="M17 5h2v2" stroke={activeTab === "voortgang" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          stroke={activeTab === "voortgang" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M17 5h2v2" stroke={activeTab === "voortgang" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span style={{ fontSize: 11, color: activeTab === "voortgang" ? GREEN : C.textMuted, fontWeight: activeTab === "voortgang" ? "bold" : "normal" }}>Voortgang</span>
+      {activeTab === "voortgang" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Voortgang</span>}
     </button>
 
     {/* Workout */}
@@ -2407,11 +2392,11 @@ return (
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
         <path d="M3 11h2M17 11h2M5 11l2-3h8l2 3M5 11l2 3h8l2-3"
-          stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={3} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} />
-        <circle cx={19} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#666"} strokeWidth={1.5} />
+          stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={3} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} />
+        <circle cx={19} cy={11} r={1.5} stroke={activeTab === "workout" ? GREEN : "#555"} strokeWidth={1.5} />
       </svg>
-      <span style={{ fontSize: 11, color: activeTab === "workout" ? GREEN : C.textMuted, fontWeight: activeTab === "workout" ? "bold" : "normal" }}>Workout</span>
+      {activeTab === "workout" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Workout</span>}
     </button>
 
     {/* Coach */}
@@ -2419,11 +2404,11 @@ return (
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer" }}>
       <svg width={22} height={22} viewBox="0 0 22 22" fill="none">
         <path d="M4 4h14a1 1 0 011 1v9a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"
-          stroke={activeTab === "coach" ? GREEN : "#666"} strokeWidth={1.5}
+          stroke={activeTab === "coach" ? GREEN : "#555"} strokeWidth={1.5}
           strokeLinecap="round" strokeLinejoin="round"
           fill={activeTab === "coach" ? "#0a1a0f" : "none"} />
       </svg>
-      <span style={{ fontSize: 11, color: activeTab === "coach" ? GREEN : C.textMuted, fontWeight: activeTab === "coach" ? "bold" : "normal" }}>Coach</span>
+      {activeTab === "coach" && <span style={{ fontSize: 11, color: GREEN, fontWeight: "bold" }}>Coach</span>}
     </button>
 
   </div>
