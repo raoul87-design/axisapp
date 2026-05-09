@@ -802,7 +802,8 @@ async function sendChat(messageText) {
   const msg = (messageText || chatInput).trim()
   if (!msg || chatLoading) return
   setChatInput("")
-  const newMessages = [...chatMessages, { role: "user", content: msg }]
+  const now = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+  const newMessages = [...chatMessages, { role: "user", content: msg, time: now }]
   setChatMessages(newMessages)
   setChatLoading(true)
   try {
@@ -812,9 +813,11 @@ async function sendChat(messageText) {
       body: JSON.stringify({ messages: newMessages, streak, missedDays, commitment: todayCommitment, trainingLocation, fitnessLevel }),
     })
     const data = await res.json()
-    setChatMessages(prev => [...prev, { role: "assistant", content: data.content }])
+    const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+    setChatMessages(prev => [...prev, { role: "assistant", content: data.content, time: replyTime }])
   } catch {
-    setChatMessages(prev => [...prev, { role: "assistant", content: "Er ging iets mis. Probeer opnieuw." }])
+    const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+    setChatMessages(prev => [...prev, { role: "assistant", content: "Er ging iets mis. Probeer opnieuw.", time: replyTime }])
   }
   setChatLoading(false)
 }
@@ -822,6 +825,12 @@ async function sendChat(messageText) {
 useEffect(() => {
   chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
 }, [chatMessages])
+
+useEffect(() => {
+  if (activeTab === "coach") {
+    chatBottomRef.current?.scrollIntoView({ behavior: "instant" })
+  }
+}, [activeTab])
 
 const suggestions = ["Hoe houd ik mijn streak vol?", "Tips voor vandaag", "Ik struggle"]
 
@@ -1790,18 +1799,30 @@ return (
 
   {/* ── TAB: COACH ───────────────────────────────────────────── */}
   {activeTab === "coach" && (
-    <div style={{ display: "flex", flexDirection: "column", height: `calc(100vh - 64px - ${TAB_H}px)`, padding: "0 20px" }}>
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: `calc(100vh - 64px - ${TAB_H}px)` }}>
+
+      {/* Coach header */}
+      <div style={{ padding: "14px 22px", borderBottom: "1px solid #1f1f1f", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#141414", border: "1px solid #262626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{ color: "#fafafa", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em" }}>AX</span>
+        </div>
+        <div>
+          <p style={{ color: "#fafafa", fontSize: 14, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>AXIS Coach</p>
+          <p style={{ color: "#5e5e5e", fontSize: 11, margin: 0 }}>Jouw persoonlijke coach</p>
+        </div>
+      </div>
+
+      {/* Scroll area */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
-            <p style={{ color: C.textMuted, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 }}>Coach</p>
-            <p style={{ color: C.textSub, fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
+            <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
               Hoi — ik ben je AXIS coach. Stel me een vraag of kies een onderwerp.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {suggestions.map(s => (
                 <button key={s} onClick={() => sendChat(s)}
-                  style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${C.border}`, background: C.card, color: C.textSub, fontSize: 13, cursor: "pointer" }}>
+                  style={{ padding: "8px 14px", borderRadius: 20, border: "1px solid #262626", background: "transparent", color: "#9a9a9a", fontSize: 13, cursor: "pointer" }}>
                   {s}
                 </button>
               ))}
@@ -1810,23 +1831,26 @@ return (
         ) : (
           <div style={{ paddingTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
             {chatMessages.map((msg, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
                 <div
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                   style={{
                     maxWidth: "80%", padding: "12px 16px",
-                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                    background: msg.role === "user" ? GREEN : C.card,
-                    color: msg.role === "user" ? "#000" : C.text,
+                    borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                    background: msg.role === "user" ? "#1a2e1a" : "#141414",
+                    color: "#fafafa",
                     fontSize: 14, lineHeight: 1.5,
-                    border: msg.role === "assistant" ? `1px solid ${C.borderSub}` : "none",
+                    border: msg.role === "user" ? "1px solid rgba(34,197,94,0.13)" : "1px solid #1f1f1f",
                   }}
                 />
+                {msg.time && (
+                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, color: "#5e5e5e", margin: "4px 4px 0" }}>{msg.time}</p>
+                )}
               </div>
             ))}
             {chatLoading && (
               <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <div style={{ padding: "12px 16px", borderRadius: "18px 18px 18px 4px", background: C.card, border: `1px solid ${C.borderSub}`, color: C.textMuted, fontSize: 14 }}>
+                <div style={{ padding: "12px 16px", borderRadius: "14px 14px 14px 4px", background: "#141414", border: "1px solid #1f1f1f", color: "#5e5e5e", fontSize: 14 }}>
                   ...
                 </div>
               </div>
@@ -1840,14 +1864,14 @@ return (
 
   {/* ── FLOATING INPUT: CHAT ─────────────────────────────────── */}
   {activeTab === "coach" && (
-    <div style={{ position: "fixed", bottom: TAB_H, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, padding: "12px 16px", background: C.bg, borderTop: `1px solid ${C.borderSub}`, display: "flex", gap: 10, alignItems: "center" }}>
+    <div style={{ position: "fixed", bottom: TAB_H, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, padding: "12px 16px", background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", gap: 10, alignItems: "center" }}>
       <input value={chatInput} onChange={e => setChatInput(e.target.value)}
         onKeyDown={e => e.key === "Enter" && sendChat()}
         placeholder="Stel een vraag..."
-        style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none" }}
+        style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: "1px solid #262626", background: "#141414", color: "#fafafa", fontSize: 14, outline: "none" }}
       />
       <button onClick={() => sendChat()} disabled={chatLoading}
-        style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: chatInput ? GREEN : C.card, cursor: chatInput ? "pointer" : "default", fontSize: 18, color: chatInput ? "#000" : C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+        style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: chatInput ? GREEN : "#2c2c2c", cursor: chatInput ? "pointer" : "default", fontSize: 18, color: chatInput ? "#000" : "#5e5e5e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
         ↑
       </button>
     </div>
