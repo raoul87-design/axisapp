@@ -477,7 +477,7 @@ async function loadWorkoutData() {
 
     const { data: profile } = await supabase.from("users").select("id, coach_email").eq("auth_user_id", user.id).maybeSingle()
 
-    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData }, { data: coachData }] = await Promise.all([
+    const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData, error: personalErr }, { data: coachData, error: coachErr }] = await Promise.all([
       supabase.from("workout_planning")
         .select(PLANNING_SELECT)
         .eq("user_id", user.id).eq("datum", today).maybeSingle(),
@@ -502,9 +502,12 @@ async function loadWorkoutData() {
         : Promise.resolve({ data: [] }),
     ])
 
-    console.log("[loadWorkoutData] user.id:", user?.id)
+    console.log("[loadWorkoutData] user.id:", user?.id, "user.email:", user?.email)
+    console.log("[loadWorkoutData] profile:", profile)
     console.log("[loadWorkoutData] planning:", planning, "err:", planErr)
-    console.log("[loadWorkoutData] libraryData count:", libraryData?.length, "err:", libErr)
+    console.log("[loadWorkoutData] library count:", libraryData?.length, "err:", libErr)
+    console.log("[loadWorkoutData] personal count:", personalData?.length, "err:", personalErr)
+    console.log("[loadWorkoutData] coach count:", coachData?.length, "err:", coachErr)
 
     setTodayWorkout(planning || null)
     setWeekWorkouts(weekPlan || [])
