@@ -118,6 +118,18 @@ export async function GET(request) {
         ? [...workout.workout_oefeningen].sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
         : null
       const from = `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`
+
+      // Deduplication: skip if morning message already sent today
+      const { data: alreadySent } = await supabase
+        .from("check_ins").select("id")
+        .eq("user_id", user.id).eq("type", "morning").eq("sent_at", today)
+        .maybeSingle()
+      if (alreadySent) {
+        console.log(`[${user.whatsapp_number}] Al verstuurd vandaag — overgeslagen`)
+        results.push({ whatsapp: user.whatsapp_number, status: "skipped" })
+        continue
+      }
+
       console.log(`[${user.whatsapp_number}] Sturen van ${from}...`)
       try {
         const message = await client.messages.create({

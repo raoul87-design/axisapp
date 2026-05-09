@@ -90,6 +90,17 @@ async function processMorning(users, today, client) {
   // Send WhatsApp + insert check_in record
   const results = []
   for (const user of users) {
+    // Deduplication: skip if morning message already sent today
+    const { data: alreadySent } = await supabase
+      .from("check_ins").select("id")
+      .eq("user_id", user.id).eq("type", "morning").eq("sent_at", today)
+      .maybeSingle()
+    if (alreadySent) {
+      console.log(`[morning] ${user.whatsapp_number}: al verstuurd — overgeslagen`)
+      results.push({ whatsapp: user.whatsapp_number, status: "skipped" })
+      continue
+    }
+
     try {
       const msg = await client.messages.create({
         from: WA_FROM(),

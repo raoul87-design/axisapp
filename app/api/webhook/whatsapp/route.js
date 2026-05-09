@@ -591,7 +591,7 @@ async function handleVraag(from, body, userData, history, clientContext, faqItem
     system: systemPrompt,
     messages,
   })
-  const reply = aiResponse.content[0].text
+  const reply = aiResponse.content[0].text.replace(/\[(vandaag|gisteren|\d{2}\/\d{2})\]\s*/gi, "").trim()
 
   // Geheugen opslaan
   await Promise.all([
@@ -621,7 +621,7 @@ Als het buiten het domein valt (reminders, agenda, taken buiten fitness): leg vr
 Als het onduidelijk is maar binnen het domein zou kunnen vallen: reageer menselijk en nieuwsgierig. Stel één korte doorvraag. Geen opsommingen, geen uitleg over wat je kunt doen.`,
     messages,
   })
-  const reply = aiResponse.content[0].text
+  const reply = aiResponse.content[0].text.replace(/\[(vandaag|gisteren|\d{2}\/\d{2})\]\s*/gi, "").trim()
   await Promise.all([
     saveConversation(userData?.id, "user", body),
     saveConversation(userData?.id, "assistant", reply),

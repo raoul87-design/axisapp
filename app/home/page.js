@@ -487,7 +487,7 @@ async function loadWorkoutData() {
         .order("datum", { ascending: true }),
       supabase.from("workouts")
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
-        .eq("is_template", true)
+        .eq("visibility", "template")
         .order("naam", { ascending: true }),
       supabase.from("workouts")
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
@@ -1526,6 +1526,89 @@ return (
               )}
             </div>
             <span style={{ color: "#444", fontSize: 16, flexShrink: 0 }}>›</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── REMINDERS ── */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <p style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 2, color: "#6b7280", textTransform: "uppercase", margin: 0 }}>Reminders</p>
+          <button onClick={() => { setShowAddReminder(v => !v); setReminderForm({ tekst: "", tijd: "", eenmalig: false, datum: "" }) }}
+            style={{ padding: "4px 10px", borderRadius: 8, border: `1px solid ${showAddReminder ? "#333" : GREEN + "44"}`, background: showAddReminder ? "transparent" : "#0a1a0f", color: showAddReminder ? "#6b7280" : GREEN, fontSize: 12, cursor: "pointer" }}>
+            {showAddReminder ? "Annuleren" : "+ Toevoegen"}
+          </button>
+        </div>
+          {showAddReminder && (
+            <div style={{ background: "#161616", borderRadius: 12, padding: 16, marginBottom: 10, border: "1px solid #333" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <input value={reminderForm.tekst} onChange={e => setReminderForm(f => ({ ...f, tekst: e.target.value }))}
+                  placeholder="Bijv. creatine innemen"
+                  style={{ padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", fontSize: 14, outline: "none" }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[{ val: false, label: "Dagelijks" }, { val: true, label: "Eenmalig" }].map(({ val, label }) => (
+                    <button key={label} onClick={() => setReminderForm(f => ({ ...f, eenmalig: val, datum: "" }))}
+                      style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1px solid ${reminderForm.eenmalig === val ? GREEN : "#333"}`, background: reminderForm.eenmalig === val ? "#0a1a0f" : "#0a0a0a", color: reminderForm.eenmalig === val ? GREEN : "#a1a1aa", fontSize: 13, fontWeight: reminderForm.eenmalig === val ? "bold" : "normal", cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(() => {
+                    const sel = { flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", fontSize: 14, outline: "none", appearance: "none", WebkitAppearance: "none" }
+                    const [uurVal, minVal] = reminderForm.tijd ? reminderForm.tijd.split(":") : ["", ""]
+                    return (
+                      <>
+                        <select value={uurVal} onChange={e => setReminderForm(f => ({ ...f, tijd: `${e.target.value}:${minVal || "00"}` }))} style={sel}>
+                          <option value="" disabled>uur</option>
+                          {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                        <select value={minVal} onChange={e => setReminderForm(f => ({ ...f, tijd: `${uurVal || "00"}:${e.target.value}` }))} style={sel}>
+                          <option value="" disabled>min</option>
+                          {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </>
+                    )
+                  })()}
+                  {reminderForm.eenmalig && (
+                    <input type="date" value={reminderForm.datum} min={getNLDate()} onChange={e => setReminderForm(f => ({ ...f, datum: e.target.value }))}
+                      style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", colorScheme: "dark", fontSize: 14, outline: "none" }} />
+                  )}
+                </div>
+                {(() => {
+                  const ok = reminderForm.tekst.trim() && reminderForm.tijd && (!reminderForm.eenmalig || reminderForm.datum)
+                  return (
+                    <button onClick={addReminder} disabled={!ok || savingReminder}
+                      style={{ padding: "11px", borderRadius: 8, border: "none", background: ok ? GREEN : "#1a1a1a", color: ok ? "#000" : "#6b7280", fontWeight: "bold", fontSize: 14, cursor: ok ? "pointer" : "default" }}>
+                      {savingReminder ? "Opslaan..." : "Opslaan"}
+                    </button>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {reminders.map(r => {
+              const isExpired = r.eenmalig && r.datum && r.datum < getNLDate()
+              return (
+                <div key={r.id} style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, color: r.actief && !isExpired ? "#fff" : "#6b7280", margin: 0, textDecoration: !r.actief || isExpired ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r.tekst}
+                    </p>
+                    <p style={{ fontSize: 11, color: isExpired ? "#7a3030" : "#6b7280", margin: "3px 0 0" }}>
+                      {fmtTime(r.tijd)} · {r.eenmalig ? (isExpired ? "Verlopen" : fmtReminderDate(r.datum)) : "Dagelijks"}
+                    </p>
+                  </div>
+                  <button onClick={() => toggleReminder(r.id, r.actief)} disabled={isExpired}
+                    style={{ width: 38, height: 22, borderRadius: 11, border: "none", background: r.actief && !isExpired ? GREEN : "#1a1a1a", cursor: isExpired ? "default" : "pointer", position: "relative", flexShrink: 0, transition: "background 0.2s" }}>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: r.actief && !isExpired ? 18 : 4, transition: "left 0.2s" }} />
+                  </button>
+                  <button onClick={() => deleteReminder(r.id)}
+                    style={{ background: "none", border: "none", color: "#444", cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
