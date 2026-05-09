@@ -1635,7 +1635,7 @@ return (
 
       {/* Sectie 1 — Streak stats */}
       <div style={{ marginTop: 24, marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Statistieken</p>
+        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 16 }}>Statistieken</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { label: "Huidige streak",   value: `🔥 ${streak}`,          sub: streak === 1 ? "dag" : "dagen" },
@@ -1644,9 +1644,9 @@ return (
             { label: "Succesratio",      value: `${successRatio}%`,       sub: "van alle dagen" },
           ].map(({ label, value, sub }) => (
             <div key={label} style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "16px 18px" }}>
-              <p style={{ fontSize: 10, letterSpacing: 1.5, color: C.textMuted, textTransform: "uppercase", margin: "0 0 10px" }}>{label}</p>
-              <p style={{ fontSize: 26, fontWeight: "bold", color: C.text, margin: 0 }}>{value}</p>
-              <p style={{ fontSize: 11, color: C.textDim, margin: "4px 0 0" }}>{sub}</p>
+              <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10, letterSpacing: "0.22em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 10px" }}>{label}</p>
+              <p style={{ fontSize: 26, fontWeight: 800, color: "#fafafa", margin: 0 }}>{value}</p>
+              <p style={{ fontSize: 11, color: "#9a9a9a", margin: "4px 0 0" }}>{sub}</p>
             </div>
           ))}
         </div>
@@ -1655,15 +1655,15 @@ return (
       {/* Sectie 2 — Gewicht trend */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Gewicht</p>
+          <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: 0 }}>Gewicht</p>
           <PeriodSelector options={["7d", "30d", "90d"]} value={weightPeriod} onChange={setWeightPeriod} />
         </div>
         {weightChartData.length >= 2 ? (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
             {latestWeight && (
               <div style={{ marginBottom: 16 }}>
-                <span style={{ fontSize: 28, fontWeight: "bold", color: C.text }}>{parseMetricValue(latestWeight.waarde)} kg</span>
-                <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 10 }}>{fmtShortDate(latestWeight.datum)}</span>
+                <span style={{ fontSize: 28, fontWeight: 800, color: "#fafafa" }}>{parseMetricValue(latestWeight.waarde)} kg</span>
+                <span style={{ fontSize: 12, color: "#9a9a9a", marginLeft: 10 }}>{fmtShortDate(latestWeight.datum)}</span>
               </div>
             )}
             <ResponsiveContainer width="100%" height={160}>
@@ -1680,7 +1680,7 @@ return (
               </LineChart>
             </ResponsiveContainer>
             {weightTrendDelta !== null && (
-              <p style={{ fontSize: 11, color: C.textDim, marginTop: 12, textAlign: "right" }}>
+              <p style={{ fontSize: 11, color: "#9a9a9a", marginTop: 12, textAlign: "right" }}>
                 Trend:{" "}
                 <span style={{ color: weightTrendDelta < 0 ? GREEN : weightTrendDelta > 0 ? "#ef4444" : C.textMuted, fontWeight: "bold" }}>
                   {weightTrendDelta > 0 ? "↑" : weightTrendDelta < 0 ? "↓" : "→"} {Math.abs(weightTrendDelta)}kg
@@ -1691,10 +1691,10 @@ return (
           </div>
         ) : (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
-            <p style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.6 }}>
+            <p style={{ color: "#9a9a9a", fontSize: 14, lineHeight: 1.6 }}>
               Stuur je gewicht via WhatsApp<br/>om je trend bij te houden
             </p>
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>bijv. "76kg"</p>
+            <p style={{ color: "#5e5e5e", fontSize: 12, marginTop: 8 }}>bijv. "76kg"</p>
           </div>
         )}
       </div>
@@ -1702,14 +1702,14 @@ return (
       {/* Sectie 3 — Voeding trend */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", margin: 0 }}>Voeding</p>
+          <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: 0 }}>Voeding</p>
           <PeriodSelector options={["7d", "30d"]} value={kcalPeriod} onChange={setKcalPeriod} />
         </div>
         {kcalChartData.length >= 1 ? (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "20px 16px 12px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 28, fontWeight: "bold", color: C.text }}>{avgKcal}</span>
-              <span style={{ fontSize: 12, color: C.textMuted }}>gem. kcal / dag</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#fafafa" }}>{avgKcal}</span>
+              <span style={{ fontSize: 12, color: "#9a9a9a" }}>gem. kcal / dag</span>
               {kcalDoel && (
                 <span style={{ fontSize: 12, color: C.textDim, marginLeft: 8 }}>
                   doel <span style={{ color: avgKcal >= parseInt(kcalDoel) * 0.9 ? GREEN : "#ef4444" }}>{kcalDoel}</span>
@@ -1737,17 +1737,17 @@ return (
           </div>
         ) : (
           <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
-            <p style={{ color: C.textMuted, fontSize: 14, lineHeight: 1.6 }}>
+            <p style={{ color: "#9a9a9a", fontSize: 14, lineHeight: 1.6 }}>
               Stuur je dagelijkse kcal via WhatsApp<br/>om bij te houden
             </p>
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>bijv. "2000 kcal"</p>
+            <p style={{ color: "#5e5e5e", fontSize: 12, marginTop: 8 }}>bijv. "2000 kcal"</p>
           </div>
         )}
       </div>
 
       {/* Sectie 4 — Commitments 8-weken grid */}
       <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 10, letterSpacing: 2, color: C.textMuted, textTransform: "uppercase", marginBottom: 16 }}>Afgelopen 8 weken</p>
+        <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 16 }}>Afgelopen 8 weken</p>
         <div style={{ background: C.card, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "16px 14px" }}>
           {(() => {
             const scoreMap = {}
@@ -1778,7 +1778,7 @@ return (
                 <div style={{ display: "grid", gridTemplateColumns: "40px repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
                   <div />
                   {dagNamen.map(d => (
-                    <div key={d} style={{ textAlign: "center", fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>{d}</div>
+                    <div key={d} style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", textAlign: "center", fontSize: 9, color: "#5e5e5e", textTransform: "uppercase" }}>{d}</div>
                   ))}
                 </div>
                 {/* Week rows */}
@@ -1934,10 +1934,10 @@ return (
                 <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 14 }}>
                     <div>
-                      <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Vandaag</p>
-                      <h3 style={{ color: C.text, fontSize: 18, fontWeight: "bold", margin: 0 }}>{todayWorkout.workout?.naam}</h3>
+                      <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 4 }}>Vandaag</p>
+                      <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>{todayWorkout.workout?.naam}</h3>
                       {todayWorkout.workout?.dag_type && (
-                        <p style={{ color: C.textMuted, fontSize: 13, marginTop: 2 }}>{todayWorkout.workout.dag_type}</p>
+                        <p style={{ color: "#9a9a9a", fontSize: 13, marginTop: 2 }}>{todayWorkout.workout.dag_type}</p>
                       )}
                     </div>
                     {todayWorkout.gedaan && (
@@ -1949,8 +1949,8 @@ return (
                       .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
                       .map(wo => (
                         <div key={wo.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ color: C.textSub, fontSize: 14 }}>{wo.oefening?.naam}</span>
-                          <span style={{ color: C.textMuted, fontSize: 12 }}>{wo.sets}×{wo.reps}</span>
+                          <span style={{ color: "#9a9a9a", fontSize: 14 }}>{wo.oefening?.naam}</span>
+                          <span style={{ color: "#5e5e5e", fontSize: 12 }}>{wo.sets}×{wo.reps}</span>
                         </div>
                       ))
                     }
@@ -1960,7 +1960,7 @@ return (
                       <button onClick={startWorkout} style={{ width: "100%", padding: 14, background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
                         Start workout →
                       </button>
-                      <button onClick={cancelWorkout} style={{ width: "100%", marginTop: 8, padding: 10, background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 12 }}>
+                      <button onClick={cancelWorkout} style={{ width: "100%", marginTop: 8, padding: 10, background: "transparent", border: "none", color: "#5e5e5e", cursor: "pointer", fontSize: 12 }}>
                         ✕ Workout annuleren
                       </button>
                     </>
@@ -1982,8 +1982,8 @@ return (
                 </div>
               ) : (
                 <div style={{ textAlign: "center", padding: "32px 0 24px" }}>
-                  <p style={{ color: C.textMuted, fontSize: 15, marginBottom: 6 }}>Geen workout gepland vandaag</p>
-                  <p style={{ color: C.textDim, fontSize: 13, marginBottom: 20 }}>Kies zelf een workout om te beginnen</p>
+                  <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 6 }}>Geen workout gepland vandaag</p>
+                  <p style={{ color: "#5e5e5e", fontSize: 13, marginBottom: 20 }}>Kies zelf een workout om te beginnen</p>
                   <button onClick={() => setWorkoutScreen("picker")}
                     style={{ padding: "13px 28px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }}>
                     Kies workout →
@@ -1993,7 +1993,7 @@ return (
 
               {weekWorkouts.length > 0 && (
                 <div>
-                  <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>Deze week</p>
+                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 10 }}>Deze week</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {weekWorkouts.map(wp => {
                       const isToday = wp.datum === getNLDate()
@@ -2001,8 +2001,8 @@ return (
                       const dn = dayNames[new Date(wp.datum + "T12:00:00").getDay()]
                       return (
                         <div key={wp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: isToday ? "#0a1a0f" : C.card, border: `1px solid ${isToday ? "#1a4d2a" : C.border}`, borderRadius: 8, padding: "10px 14px" }}>
-                          <span style={{ color: isToday ? GREEN : C.textSub, fontSize: 13, fontWeight: isToday ? "bold" : "normal", minWidth: 60 }}>{dn} {fmtShortDate(wp.datum)}</span>
-                          <span style={{ color: isToday ? GREEN : C.textMuted, fontSize: 13, flex: 1, textAlign: "right", marginRight: wp.gedaan ? 8 : 0 }}>{wp.workout?.naam || "—"}</span>
+                          <span style={{ color: isToday ? GREEN : "#9a9a9a", fontSize: 13, fontWeight: isToday ? 700 : 400, minWidth: 60 }}>{dn} {fmtShortDate(wp.datum)}</span>
+                          <span style={{ color: isToday ? GREEN : "#9a9a9a", fontSize: 13, flex: 1, textAlign: "right", marginRight: wp.gedaan ? 8 : 0 }}>{wp.workout?.naam || "—"}</span>
                           {wp.gedaan && <span style={{ color: GREEN, fontSize: 13 }}>✓</span>}
                         </div>
                       )
@@ -2019,10 +2019,10 @@ return (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <button onClick={() => { setWorkoutScreen("overview"); setPickerSelected(null) }}
-                    style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                    style={{ background: "none", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 13, padding: 0 }}>
                     ← Terug
                   </button>
-                  <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Kies een workout</h3>
+                  <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>Kies een workout</h3>
                 </div>
                 {pickerSelected && (
                   <button onClick={() => chooseSelfWorkout(pickerSelected)}
@@ -2035,7 +2035,7 @@ return (
               {/* ── Mijn schema's ── */}
               {myWorkouts.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
-                  <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold", marginBottom: 10 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 10 }}>
                     Mijn schema's
                   </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2045,8 +2045,8 @@ return (
                         <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
                           style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : GREEN + "55"}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
                           <div>
-                            <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
-                            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
+                            <p style={{ color: isSelected ? GREEN : "#fafafa", fontSize: 14, fontWeight: 600, margin: 0 }}>{w.naam}</p>
+                            <p style={{ color: "#9a9a9a", fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
                           </div>
                           {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: GREEN, fontSize: 16 }}>★</span>}
                         </button>
@@ -2061,7 +2061,7 @@ return (
                 <div style={{ marginBottom: 20 }}>
                   <button onClick={toggleCoachSection}
                     style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", padding: "8px 0", marginBottom: getCoachSectionOpen() ? 10 : 0 }}>
-                    <span style={{ color: C.textMuted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", fontWeight: "bold" }}>
+                    <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase" }}>
                       Van mijn coach
                     </span>
                     <span style={{ color: C.textDim, fontSize: 12 }}>{getCoachSectionOpen() ? "▲" : "▼"}</span>
@@ -2074,8 +2074,8 @@ return (
                           <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
                             style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : C.border}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
                             <div>
-                              <p style={{ color: isSelected ? GREEN : C.text, fontSize: 14, fontWeight: "bold", margin: 0 }}>{w.naam}</p>
-                              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
+                              <p style={{ color: isSelected ? GREEN : "#fafafa", fontSize: 14, fontWeight: 600, margin: 0 }}>{w.naam}</p>
+                              <p style={{ color: "#9a9a9a", fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
                             </div>
                             {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: C.textDim, fontSize: 18 }}>○</span>}
                           </button>
@@ -2088,8 +2088,8 @@ return (
 
               {workoutLibrary.length === 0 && myWorkouts.length === 0 && coachWorkouts.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
-                  <p style={{ color: C.textMuted, fontSize: 14 }}>Geen workouts beschikbaar</p>
-                  <p style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>Herlaad de pagina als dit onverwacht is</p>
+                  <p style={{ color: "#9a9a9a", fontSize: 14 }}>Geen workouts beschikbaar</p>
+                  <p style={{ color: "#5e5e5e", fontSize: 12, marginTop: 6 }}>Herlaad de pagina als dit onverwacht is</p>
                 </div>
               ) : workoutLibrary.length === 0 ? null : (() => {
                 console.log("[WorkoutPicker] library:", workoutLibrary.length, "openSections:", openSections, "trainingLocation:", trainingLocation)
@@ -2181,15 +2181,15 @@ return (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                 <button onClick={() => setWorkoutScreen("picker")}
-                  style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>
+                  style={{ background: "none", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 13, padding: 0 }}>
                   ← Terug
                 </button>
-                <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>Maak eigen schema</h3>
+                <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>Maak eigen schema</h3>
               </div>
 
               {/* Naam */}
               <div style={{ marginBottom: 20 }}>
-                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Naam van je schema</p>
+                <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", marginBottom: 8 }}>Naam van je schema</p>
                 <input value={builderNaam} onChange={e => setBuilderNaam(e.target.value)}
                   placeholder="Bijv. Push dag A"
                   style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, boxSizing: "border-box", outline: "none" }} />
@@ -2259,10 +2259,10 @@ return (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <div>
                   <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
-                    <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 13, padding: 0 }}>← Terug</button>
+                    <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 13, padding: 0 }}>← Terug</button>
                     <button onClick={cancelWorkout} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, padding: 0 }}>✕ Annuleer</button>
                   </div>
-                  <h3 style={{ color: C.text, fontSize: 18, margin: 0 }}>{todayWorkout?.workout?.naam}</h3>
+                  <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>{todayWorkout?.workout?.naam}</h3>
                 </div>
                 <button onClick={finishWorkout} style={{ background: GREEN, border: "none", borderRadius: 8, padding: "8px 16px", color: "#000", fontWeight: "bold", fontSize: 13, cursor: "pointer" }}>
                   Klaar
@@ -2280,8 +2280,8 @@ return (
                     <div key={wo.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
                         <div>
-                          <h4 style={{ color: C.text, fontSize: 15, fontWeight: "bold", margin: 0 }}>{oe.naam}</h4>
-                          <p style={{ color: C.textMuted, fontSize: 12, marginTop: 2, marginBottom: 0 }}>{oe.spiergroep}</p>
+                          <h4 style={{ color: "#fafafa", fontSize: 15, fontWeight: 600, margin: 0 }}>{oe.naam}</h4>
+                          <p style={{ color: "#9a9a9a", fontSize: 12, marginTop: 2, marginBottom: 0 }}>{oe.spiergroep}</p>
                         </div>
                         {oe.youtube_url && (!fitnessLevel || fitnessLevel.toLowerCase() === "beginner") && (
                           <a href={oe.youtube_url} target="_blank" rel="noopener noreferrer"
