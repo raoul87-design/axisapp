@@ -1272,11 +1272,6 @@ return (
             <span style={{ color: GREEN, fontSize: 12, fontWeight: "500" }}>{streak} {streak === 1 ? "dag" : "dagen"}</span>
           </div>
         )}
-        {userRole === "coach" && (
-          <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#0a1a0f", border: "1px solid #22c55e33", color: GREEN, fontSize: 12, fontWeight: "bold", textDecoration: "none" }}>
-            📊 Dashboard
-          </a>
-        )}
       <div style={{ position: "relative" }}>
         <button onClick={() => setShowSettings(!showSettings)}
           style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: "4px 8px" }}>
