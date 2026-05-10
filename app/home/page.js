@@ -203,16 +203,15 @@ function renderMarkdown(text) {
 
 // ── Reflectie opslaan ─────────────────────────────────────────
 const handleReflection = async (gehaald) => {
-  const { error } = await supabase.from("reflections").insert([{
-    user_id: user.id,
-    datum:   getNLDate(),
-    gehaald,
-    tekst:   reflectionTekst || null,
-  }])
+  const today = getNLDate()
+  const payload = { user_id: user.id, datum: today, gehaald, tekst: reflectionTekst || null }
+  console.log("[handleReflection] insert payload:", payload)
+  const { data, error } = await supabase.from("reflections").insert([payload]).select()
+  console.log("[handleReflection] insert data:", data, "| error:", error?.message ?? "geen")
   if (error) console.error("Reflectie opslaan mislukt:", error.message)
   setReflectionSubmitted(true)
-  setReflectionDate(getNLDate())
-  localStorage.setItem("axis_reflection_" + getNLDate(), "true")
+  setReflectionDate(today)
+  localStorage.setItem("axis_reflection_" + today, "true")
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -236,12 +235,30 @@ useEffect(() => {
 useEffect(() => {
   if (!user) return
   const init = async () => {
-    if (reflectionDate && reflectionDate !== getNLDate()) {
+    const today = getNLDate()
+    if (reflectionDate && reflectionDate !== today) {
       setReflectionSubmitted(false)
       setReflectionDate("")
       setReflectionTekst("")
     }
-    if (localStorage.getItem("axis_reflection_" + getNLDate()) === "true") setReflectionSubmitted(true)
+    // Check localStorage first (fast path)
+    if (localStorage.getItem("axis_reflection_" + today) === "true") {
+      setReflectionSubmitted(true)
+    } else {
+      // Fallback: check database (covers fresh installs, cleared storage, other devices)
+      const { data: existingReflection, error: reflErr } = await supabase
+        .from("reflections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("datum", today)
+        .maybeSingle()
+      console.log("[loadReflection] today:", today, "| user.id:", user.id, "| gevonden:", existingReflection, "| error:", reflErr?.message ?? "geen")
+      if (existingReflection) {
+        setReflectionSubmitted(true)
+        setReflectionDate(today)
+        localStorage.setItem("axis_reflection_" + today, "true")
+      }
+    }
     await checkFirstUse()
     await loadCommitments()
     await loadHistory()
