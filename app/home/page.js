@@ -1855,7 +1855,7 @@ return (
       </div>
 
       {/* Scroll area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
+      <div className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px 24px" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1898,9 +1898,9 @@ return (
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   )}
