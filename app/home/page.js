@@ -1891,7 +1891,7 @@ return (
       </div>
 
       {/* Scroll area — flex: 1 fills remaining height, paddingBottom clears fixed input bar */}
-      <div ref={scrollRef} className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px", paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px) + 16px)" }}>
+      <div ref={scrollRef} className="chat-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 20px", paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px) + 16px)" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
