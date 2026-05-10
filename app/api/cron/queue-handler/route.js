@@ -187,9 +187,11 @@ export async function GET(request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const batch  = searchParams.get("batch")   // morning | evening | midnight
+  const batch  = searchParams.get("batch")
   const offset = parseInt(searchParams.get("offset") ?? "0")
   const total  = parseInt(searchParams.get("total")  ?? "1")
+
+  console.log("[queue-handler] batch:", batch, "| offset:", offset, "| total:", total)
 
   if (!["morning", "evening", "midnight"].includes(batch)) {
     return new Response(JSON.stringify({ error: "batch must be morning | evening | midnight" }), { status: 400 })
