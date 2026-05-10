@@ -455,11 +455,12 @@ async function loadChatHistory(publicUserId) {
     .from("conversations")
     .select("role, content, created_at")
     .eq("user_id", publicUserId)
-    .order("created_at", { ascending: true })
-    .limit(20)
+    .order("created_at", { ascending: false })
+    .limit(30)
   if (error) { console.error("Chat history ophalen mislukt:", error.message); return }
   if (!data?.length) return
-  setChatMessages(prev => prev.length > 0 ? prev : data.map(row => ({
+  const rows = [...data].reverse()
+  setChatMessages(prev => prev.length > 0 ? prev : rows.map(row => ({
     role: row.role,
     content: row.content,
     time: row.created_at
