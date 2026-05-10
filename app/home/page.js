@@ -204,14 +204,20 @@ function renderMarkdown(text) {
 // ── Reflectie opslaan ─────────────────────────────────────────
 const handleReflection = async (gehaald) => {
   const today = getNLDate()
-  const payload = { user_id: user.id, datum: today, gehaald, tekst: reflectionTekst || null }
+  const payload = {
+    user_id:   user.id,
+    datum:     today,
+    gehaald,
+    completed: true,
+    answer:    gehaald ? "ja" : "nee",
+    tekst:     reflectionTekst || null,
+  }
   console.log("[handleReflection] insert payload:", payload)
   const { data, error } = await supabase.from("reflections").insert([payload]).select()
   console.log("[handleReflection] insert data:", data, "| error:", error?.message ?? "geen")
-  if (error) console.error("Reflectie opslaan mislukt:", error.message)
+  if (error) { console.error("Reflectie opslaan mislukt:", error.message); return }
   setReflectionSubmitted(true)
   setReflectionDate(today)
-  localStorage.setItem("axis_reflection_" + today, "true")
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -241,23 +247,16 @@ useEffect(() => {
       setReflectionDate("")
       setReflectionTekst("")
     }
-    // Check localStorage first (fast path)
-    if (localStorage.getItem("axis_reflection_" + today) === "true") {
+    const { data: existingReflection, error: reflErr } = await supabase
+      .from("reflections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("datum", today)
+      .maybeSingle()
+    console.log("[loadReflection] today:", today, "| user.id:", user.id, "| gevonden:", existingReflection, "| error:", reflErr?.message ?? "geen")
+    if (existingReflection) {
       setReflectionSubmitted(true)
-    } else {
-      // Fallback: check database (covers fresh installs, cleared storage, other devices)
-      const { data: existingReflection, error: reflErr } = await supabase
-        .from("reflections")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("datum", today)
-        .maybeSingle()
-      console.log("[loadReflection] today:", today, "| user.id:", user.id, "| gevonden:", existingReflection, "| error:", reflErr?.message ?? "geen")
-      if (existingReflection) {
-        setReflectionSubmitted(true)
-        setReflectionDate(today)
-        localStorage.setItem("axis_reflection_" + today, "true")
-      }
+      setReflectionDate(today)
     }
     await checkFirstUse()
     await loadCommitments()
