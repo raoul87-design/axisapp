@@ -100,6 +100,7 @@ const [builderResults,   setBuilderResults]   = useState([])
 const [builderSaving,    setBuilderSaving]    = useState(false)
 
 const chatBottomRef = useRef(null)
+const chatScrollRef = useRef(null)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 
@@ -864,12 +865,14 @@ async function sendChat(messageText) {
 }
 
 useEffect(() => {
-  chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  if (chatScrollRef.current) {
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+  }
 }, [chatMessages])
 
 useEffect(() => {
-  if (activeTab === "coach") {
-    chatBottomRef.current?.scrollIntoView({ behavior: "instant" })
+  if (activeTab === "coach" && chatScrollRef.current) {
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
   }
 }, [activeTab])
 
@@ -1854,7 +1857,7 @@ return (
       </div>
 
       {/* Scroll area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
+      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1910,6 +1913,7 @@ return (
       <input value={chatInput} onChange={e => setChatInput(e.target.value)}
         onKeyDown={e => e.key === "Enter" && sendChat()}
         placeholder="Stel een vraag..."
+        autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
         style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: "1px solid #262626", background: "#141414", color: "#fafafa", fontSize: 14, outline: "none" }}
       />
       <button onClick={() => sendChat()} disabled={chatLoading}
