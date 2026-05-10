@@ -177,6 +177,76 @@ async function processMidnight(users, client) {
   return results
 }
 
+// ── Reminders ─────────────────────────────────────────────────────────────────
+
+function getNLHHMM() {
+  const parts = new Intl.DateTimeFormat("nl-NL", {
+    timeZone: "Europe/Amsterdam",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date())
+  const h = parts.find(p => p.type === "hour")?.value?.padStart(2, "0") ?? "00"
+  const m = parts.find(p => p.type === "minute")?.value?.padStart(2, "0") ?? "00"
+  return `${h}:${m}`
+}
+
+async function processReminders(client) {
+  const currentHHMM = getNLHHMM()
+  const today = getNLDate()
+  console.log(`[reminders] currentHHMM: ${currentHHMM} | today: ${today}`)
+
+  // Fetch all active reminders matching the current minute
+  const { data: reminders, error } = await supabase
+    .from("reminders")
+    .select("id, user_id, tekst, tijd, eenmalig, datum")
+    .eq("actief", true)
+    .eq("tijd", currentHHMM)
+
+  if (error) {
+    console.error("[reminders] fetch error:", error.message)
+    return []
+  }
+
+  // Daily reminders fire every day; one-time only on their datum
+  const due = (reminders ?? []).filter(r => !r.eenmalig || r.datum === today)
+  console.log(`[reminders] gevonden: ${reminders?.length ?? 0} | te verzenden: ${due.length}`)
+  if (!due.length) return []
+
+  // Batch-fetch user whatsapp + name via users.id (PK)
+  const userIds = [...new Set(due.map(r => r.user_id))]
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, name, whatsapp_number")
+    .in("id", userIds)
+  const userById = Object.fromEntries((users ?? []).map(u => [u.id, u]))
+
+  const results = []
+  for (const reminder of due) {
+    const user = userById[reminder.user_id]
+    if (!user?.whatsapp_number) {
+      results.push({ id: reminder.id, status: "skipped", reason: "no whatsapp" })
+      continue
+    }
+    try {
+      const fn = firstName(user.name)
+      const body = `${fn ? `Hey ${fn}` : "Hey"} — herinnering: ${reminder.tekst} 🔔`
+      const msg = await client.messages.create({ from: WA_FROM(), to: user.whatsapp_number, body })
+
+      // Deactivate one-time reminders after sending
+      if (reminder.eenmalig) {
+        await supabase.from("reminders").update({ actief: false }).eq("id", reminder.id)
+      }
+
+      results.push({ id: reminder.id, whatsapp: user.whatsapp_number, status: "ok", sid: msg.sid })
+    } catch (err) {
+      console.error(`[reminders] ${reminder.id}:`, err.message)
+      results.push({ id: reminder.id, whatsapp: user.whatsapp_number, status: "error", error: err.message })
+    }
+  }
+  return results
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET(request) {
@@ -193,8 +263,8 @@ export async function GET(request) {
 
   console.log("[queue-handler] batch:", batch, "| offset:", offset, "| total:", total)
 
-  if (!["morning", "evening", "midnight"].includes(batch)) {
-    return new Response(JSON.stringify({ error: "batch must be morning | evening | midnight" }), { status: 400 })
+  if (!["morning", "evening", "midnight", "reminders"].includes(batch)) {
+    return new Response(JSON.stringify({ error: "batch must be morning | evening | midnight | reminders" }), { status: 400 })
   }
 
   console.log(`=== [QUEUE-HANDLER] batch=${batch} offset=${offset} total=${total} ===`)
@@ -204,6 +274,16 @@ export async function GET(request) {
 
   try {
     let allUsers, batchUsers, results
+
+    if (batch === "reminders") {
+      // Reminders: fire all due reminders for the current NL minute
+      results = await processReminders(client)
+      console.log(`=== [QUEUE-HANDLER] KLAAR — ${results.length} reminders verwerkt ===`)
+      return new Response(
+        JSON.stringify({ batch, processed: results.length, results }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    }
 
     if (batch === "midnight") {
       // Midnight only cares about users who haven't responded
