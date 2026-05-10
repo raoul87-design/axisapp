@@ -100,7 +100,7 @@ const [builderResults,   setBuilderResults]   = useState([])
 const [builderSaving,    setBuilderSaving]    = useState(false)
 
 const chatBottomRef = useRef(null)
-const chatScrollRef = useRef(null)
+const messagesEndRef = useRef(null)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 
@@ -442,7 +442,7 @@ async function loadChatHistory(publicUserId) {
     .limit(20)
   if (error) { console.error("Chat history ophalen mislukt:", error.message); return }
   if (!data?.length) return
-  setChatMessages(data.map(row => ({
+  setChatMessages(prev => prev.length > 0 ? prev : data.map(row => ({
     role: row.role,
     content: row.content,
     time: row.created_at
@@ -865,14 +865,12 @@ async function sendChat(messageText) {
 }
 
 useEffect(() => {
-  if (chatScrollRef.current) {
-    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
-  }
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
 }, [chatMessages])
 
 useEffect(() => {
-  if (activeTab === "coach" && chatScrollRef.current) {
-    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+  if (activeTab === "coach") {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 }, [activeTab])
 
@@ -1857,7 +1855,7 @@ return (
       </div>
 
       {/* Scroll area */}
-      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 16px" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1900,7 +1898,7 @@ return (
                 </div>
               </div>
             )}
-            <div ref={chatBottomRef} />
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
@@ -1913,7 +1911,7 @@ return (
       <input value={chatInput} onChange={e => setChatInput(e.target.value)}
         onKeyDown={e => e.key === "Enter" && sendChat()}
         placeholder="Stel een vraag..."
-        autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+        autoComplete="new-password" autoCorrect="off" autoCapitalize="off" spellCheck="false"
         style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: "1px solid #262626", background: "#141414", color: "#fafafa", fontSize: 14, outline: "none" }}
       />
       <button onClick={() => sendChat()} disabled={chatLoading}
