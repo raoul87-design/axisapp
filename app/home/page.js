@@ -1883,7 +1883,7 @@ return (
       </div>
 
       {/* Scroll area — flex: 1 fills remaining height, paddingBottom clears fixed input bar */}
-      <div className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px", paddingBottom: 120 }}>
+      <div className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px", paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px) + 16px)" }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1931,7 +1931,7 @@ return (
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input bar — fixed above tab bar, env() handles iPhone notch */}
+      {/* Input bar — fixed above tab bar, exact height 64px */}
       <div style={{
         position: "fixed",
         bottom: TAB_H,
@@ -1939,8 +1939,8 @@ return (
         transform: "translateX(-50%)",
         width: "100%",
         maxWidth: 420,
-        padding: "12px 16px",
-        paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+        height: 64,
+        padding: "0 16px",
         background: "#0a0a0a",
         borderTop: "1px solid #1f1f1f",
         display: "flex",
