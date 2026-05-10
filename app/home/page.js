@@ -1857,7 +1857,19 @@ return (
 
   {/* ── TAB: COACH ───────────────────────────────────────────── */}
   {activeTab === "coach" && (
-    <div style={{ display: "flex", flexDirection: "column", height: `calc(100vh - 64px - ${TAB_H}px)` }}>
+    <div style={{
+      position: "fixed",
+      top: 0,
+      bottom: TAB_H,
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "100%",
+      maxWidth: 420,
+      display: "flex",
+      flexDirection: "column",
+      background: C.bg,
+      zIndex: 40,
+    }}>
 
       {/* Coach header */}
       <div style={{ padding: "14px 22px", borderBottom: "1px solid #1f1f1f", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
@@ -1870,8 +1882,8 @@ return (
         </div>
       </div>
 
-      {/* Scroll area */}
-      <div className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px 24px" }}>
+      {/* Scroll area — flex: 1 fills remaining height, paddingBottom clears fixed input bar */}
+      <div className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "0 20px", paddingBottom: 80 }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1918,22 +1930,35 @@ return (
         )}
         <div ref={messagesEndRef} />
       </div>
-    </div>
-  )}
 
-  {/* ── FLOATING INPUT: CHAT ─────────────────────────────────── */}
-  {activeTab === "coach" && (
-    <div style={{ position: "fixed", bottom: TAB_H, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, padding: "12px 16px", background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", gap: 10, alignItems: "center" }}>
-      <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-        onKeyDown={e => e.key === "Enter" && sendChat()}
-        placeholder="Stel een vraag..."
-        autoComplete="new-password" autoCorrect="off" autoCapitalize="off" spellCheck="false"
-        style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: "1px solid #262626", background: "#141414", color: "#fafafa", fontSize: 14, outline: "none" }}
-      />
-      <button onClick={() => sendChat()} disabled={chatLoading}
-        style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: chatInput ? GREEN : "#2c2c2c", cursor: chatInput ? "pointer" : "default", fontSize: 18, color: chatInput ? "#000" : "#5e5e5e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
-        ↑
-      </button>
+      {/* Input bar — fixed above tab bar, env() handles iPhone notch */}
+      <div style={{
+        position: "fixed",
+        bottom: TAB_H,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: 420,
+        padding: "12px 16px",
+        paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+        background: "#0a0a0a",
+        borderTop: "1px solid #1f1f1f",
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        zIndex: 45,
+      }}>
+        <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendChat()}
+          placeholder="Stel een vraag..."
+          autoComplete="new-password" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+          style={{ flex: 1, padding: "12px 16px", borderRadius: 24, border: "1px solid #262626", background: "#141414", color: "#fafafa", fontSize: 14, outline: "none" }}
+        />
+        <button onClick={() => sendChat()} disabled={chatLoading}
+          style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: chatInput ? GREEN : "#2c2c2c", cursor: chatInput ? "pointer" : "default", fontSize: 18, color: chatInput ? "#000" : "#5e5e5e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+          ↑
+        </button>
+      </div>
     </div>
   )}
 
