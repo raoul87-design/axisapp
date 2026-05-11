@@ -1869,10 +1869,10 @@ return (
       position: "fixed",
       top: 0,
       bottom: TAB_H,
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "100%",
+      left: 0,
+      right: 0,
       maxWidth: 420,
+      margin: "0 auto",
       display: "flex",
       flexDirection: "column",
       background: C.bg,
@@ -1891,7 +1891,7 @@ return (
       </div>
 
       {/* Scroll area — flex: 1 fills remaining height, paddingBottom clears fixed input bar */}
-      <div ref={scrollRef} className="chat-scroll" style={{ flex: 1, minHeight: 0, overflowY: "scroll", WebkitOverflowScrolling: "touch", padding: "0 20px", paddingBottom: 24 }}>
+      <div ref={scrollRef} className="chat-scroll" style={{ flex: 1, minHeight: 0, overflowY: "scroll", WebkitOverflowScrolling: "touch", padding: "0 20px", paddingBottom: 72 }}>
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
@@ -1939,14 +1939,12 @@ return (
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input bar — fixed above tab bar, exact height 64px */}
+      {/* Input bar — absolute to wrapper bottom (avoids transform containing-block bug) */}
       <div style={{
-        position: "fixed",
-        bottom: TAB_H,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "100%",
-        maxWidth: 420,
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
         height: 64,
         padding: "0 16px",
         background: "#0a0a0a",
