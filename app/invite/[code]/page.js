@@ -56,14 +56,13 @@ export default function InvitePage() {
 
   useEffect(() => {
     async function validate() {
-      const { data, error } = await supabase
-        .from("invite_links")
-        .select("coach_email, gebruikt, client_email, pre_data")
-        .eq("code", code)
-        .single()
-
-      if (error || !data) { setStatus("invalid"); return }
-      if (data.gebruikt)  { setStatus("used");    return }
+      const res = await fetch(`/api/invite/validate?code=${encodeURIComponent(code)}`)
+      if (!res.ok) {
+        setStatus(res.status === 404 ? "invalid" : "invalid")
+        return
+      }
+      const data = await res.json()
+      if (data.gebruikt)  { setStatus("used");  return }
       setCoachEmail(data.coach_email)
       setPreData(data.pre_data || null)
       if (data.client_email) setSignupEmail(data.client_email)
