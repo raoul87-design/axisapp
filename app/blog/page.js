@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { blogPosts } from "../../lib/blog"
 
@@ -6,14 +8,6 @@ const BG     = "#0f0f0f"
 const CARD   = "#111"
 const BORDER = "#1e1e1e"
 const SUB    = "#888"
-
-export const metadata = {
-  title: "Blog — AXIS | Tips voor personal trainers",
-  description: "Praktische tips voor personal trainers over accountability, client opvolging en consistentie tussen sessies.",
-  alternates: {
-    canonical: "https://axisapp.nl/blog",
-  },
-}
 
 export default function BlogPage() {
   return (
