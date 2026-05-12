@@ -275,7 +275,7 @@ export default function Website() {
               Let AXIS do it.
             </p>
             <p style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>
-              A daily accountability system for personal trainers.<br />Built on WhatsApp and AI.
+              De accountability app voor personal trainers — dagelijkse WhatsApp check-ins en AI coaching voor meer consistente klanten.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
               <Link href="/" className="btn-green">Start gratis</Link>
@@ -545,6 +545,13 @@ export default function Website() {
             <ContactForm />
           </div>
         </Section>
+      </div>
+
+      {/* ── SEO TEXT ─────────────────────────────────────────── */}
+      <div style={{ padding: "0 24px 8px" }}>
+        <p style={{ fontSize: 12, color: "#555", textAlign: "center", maxWidth: 640, margin: "0 auto", lineHeight: 1.8 }}>
+          AXIS is een accountability app voor personal trainers en coaches in Nederland. Automatische WhatsApp check-ins, metrics tracking en AI coaching helpen coaches hun klanten consistent houden tussen sessies door. Geschikt voor zelfstandige personal trainers, sportscholen en online coaches.
+        </p>
       </div>
 
       {/* ── FOOTER ──────────────────────────────────────────── */}
