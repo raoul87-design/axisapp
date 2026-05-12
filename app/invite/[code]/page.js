@@ -134,9 +134,10 @@ export default function InvitePage() {
         current_weight:     preData.current_weight     || null,
         target_weight:      preData.target_weight      || null,
         sport_frequentie:   preData.sport_frequentie   || null,
-        coach_email:        coachEmail,
-        role:               "client",
-        has_coach:          true,
+        coach_email:          coachEmail,
+        role:                 "client",
+        has_coach:            true,
+        onboarding_completed: false,
         ...(formatted ? { whatsapp_number: formatted } : {}),
       }
       // Check by auth_user_id first, then by WhatsApp number to avoid duplicates
@@ -179,7 +180,7 @@ export default function InvitePage() {
         }
       }
       await supabase.from("users")
-        .update({ coach_email: coachEmail, role: "client", has_coach: true })
+        .update({ coach_email: coachEmail, role: "client", has_coach: true, onboarding_completed: false })
         .eq("auth_user_id", user.id)
       await supabase.from("invite_links")
         .update({ gebruikt: true })
