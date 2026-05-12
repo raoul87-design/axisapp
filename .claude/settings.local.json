@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(xargs ls:*)",
+      "Bash(ls -la public/screenshot*)",
+      "Bash(npm ls *)",
+      "Bash(npm run *)",
+      "Bash(git rm *)",
+      "Bash(node *)",
+      "Bash(python3 -c \" import sys, json lines = sys.stdin.read\\(\\).strip\\(\\).split\\('\\\\n'\\) for line in lines[-20:]: try: obj = json.loads\\(line\\) role = obj.get\\('role', ''\\) content = obj.get\\('content', ''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\('type'\\) == 'text': print\\(f'[{role}] {c[\\\\\"text\\\\\"][:300]}'\\) elif isinstance\\(content, str\\): print\\(f'[{role}] {content[:300]}'\\) except: pass \")",
+      "Bash(git *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Copy-Item *)",
+      "Bash(dir \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\\\\app\\\\api\\\\chat\")"
+    ]
+  }
+}
