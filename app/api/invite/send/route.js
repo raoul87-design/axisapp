@@ -1,13 +1,39 @@
 import { NextResponse } from "next/server"
+import nodemailer from "nodemailer"
+
+function buildTransporter() {
+  const user = process.env.BREVO_SMTP_USER
+  const pass = process.env.BREVO_SMTP_PASS
+
+  if (!user || !pass) {
+    return null
+  }
+
+  return nodemailer.createTransport({
+    host: "smtp-relay.brevo.com",
+    port: 587,
+    secure: false,
+    auth: { user, pass },
+  })
+}
 
 export async function POST(request) {
   const { to, name, inviteUrl, coachName } = await request.json()
 
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn("[invite/send] Geen RESEND_API_KEY — mail niet verstuurd")
+  console.log("[invite/send] Route aangeroepen", {
+    to,
+    hasUser: !!process.env.BREVO_SMTP_USER,
+    hasPass: !!process.env.BREVO_SMTP_PASS,
+    hasFrom: !!process.env.BREVO_FROM,
+  })
+
+  const transporter = buildTransporter()
+  if (!transporter) {
+    console.warn("[invite/send] Geen BREVO_SMTP_USER of BREVO_SMTP_PASS — mail niet verstuurd")
     return NextResponse.json({ ok: true, fallback: true })
   }
+
+  const from = process.env.BREVO_FROM || "AXIS <noreply@axisapp.nl>"
 
   const html = `
 <!DOCTYPE html>
@@ -50,22 +76,33 @@ export async function POST(request) {
 </body>
 </html>`
 
+  console.log("[invite/send] Nodemailer transporter aangemaakt, verbinding maken met Brevo...")
+
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "AXIS <noreply@axisapp.nl>",
-        to: [to],
-        subject: `Je coach heeft je aangemeld voor AXIS 💪`,
-        html,
-      }),
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject: "Je coach heeft je aangemeld voor AXIS 💪",
+      html,
     })
-    const data = await res.json()
-    if (!res.ok) return NextResponse.json({ ok: false, error: data }, { status: 500 })
+    console.log("[invite/send] Verstuurd naar", to)
+    console.log("[invite/send] SMTP response:", {
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      envelope: info.envelope,
+    })
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error("[invite/send] error:", err)
+    console.error(`[invite/send] SMTP fout bij versturen naar ${to}:`, err.message)
+    console.error("[invite/send] SMTP fout details:", {
+      code: err.code,
+      command: err.command,
+      responseCode: err.responseCode,
+      response: err.response,
+    })
+    console.error("[invite/send] Stack:", err.stack)
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
   }
 }
