@@ -384,6 +384,7 @@ export default function Dashboard() {
       target_weight:      clientForm.doelGewicht   ? parseFloat(clientForm.doelGewicht)   : null,
       sport_frequentie:   clientForm.frequentie    || null,
     }
+    console.log('[invite] coach_email:', authProfile?.email, 'authProfile:', authProfile)
     console.log("[invite] inserting invite_links — coach:", authProfile.email, "| code:", code, "| client_email:", clientForm.email.trim() || null)
     const { error } = await supabase.from("invite_links").insert({
       coach_email:  authProfile.email,
