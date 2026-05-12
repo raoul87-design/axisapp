@@ -149,6 +149,7 @@ export default function Dashboard() {
   const [clientStep,      setClientStep]      = useState(1)
   const [clientForm,      setClientForm]      = useState({ naam: "", email: "", doelen: [], huidigGewicht: "", doelGewicht: "", locaties: [], frequentie: 0, niveau: "" })
   const [sendingInvite,   setSendingInvite]   = useState(false)
+  const [inviteError,     setInviteError]     = useState("")
   const [inviteSentUrl,   setInviteSentUrl]   = useState("")
 
   const [faqItems,    setFaqItems]    = useState([])
@@ -370,6 +371,7 @@ export default function Dashboard() {
   async function generateInviteWithData() {
     if (!authProfile?.email || sendingInvite) return
     setSendingInvite(true)
+    setInviteError("")
     const code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
       .map(b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
       .join("")
@@ -382,6 +384,7 @@ export default function Dashboard() {
       target_weight:      clientForm.doelGewicht   ? parseFloat(clientForm.doelGewicht)   : null,
       sport_frequentie:   clientForm.frequentie    || null,
     }
+    console.log("[invite] inserting invite_links — coach:", authProfile.email, "| code:", code, "| client_email:", clientForm.email.trim() || null)
     const { error } = await supabase.from("invite_links").insert({
       coach_email:  authProfile.email,
       code,
@@ -389,7 +392,13 @@ export default function Dashboard() {
       client_email: clientForm.email.trim() || null,
       pre_data,
     })
-    if (error) { setSendingInvite(false); return }
+    if (error) {
+      console.error("[invite] insert failed:", error.message, "| code:", error.code, "| details:", error.details)
+      setInviteError(`Fout bij aanmaken invite: ${error.message}`)
+      setSendingInvite(false)
+      return
+    }
+    console.log("[invite] insert ok — code:", code)
 
     const inviteUrl = `${window.location.origin}/invite/${code}`
 
@@ -1514,8 +1523,11 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
+                {inviteError && (
+                  <p style={{ color: "#ef4444", fontSize: 13, margin: "0 0 12px" }}>{inviteError}</p>
+                )}
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setClientStep(6)} style={btnG}>← Terug</button>
+                  <button onClick={() => { setClientStep(6); setInviteError("") }} style={btnG}>← Terug</button>
                   <button onClick={generateInviteWithData} disabled={sendingInvite}
                     style={{ ...btnP, flex: 2, opacity: sendingInvite ? 0.6 : 1, cursor: sendingInvite ? "default" : "pointer" }}>
                     {sendingInvite ? "Bezig..." : clientForm.email ? "Verstuur uitnodiging →" : "Genereer invite link →"}
