@@ -12,8 +12,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "AXIS",
-  description: "Commit. Execute. Reflect. Recover.",
+  title: "AXIS — Accountability app voor personal trainers",
+  description: "AXIS helpt personal trainers hun klanten dagelijks accountable houden via WhatsApp en AI. Automatische check-ins, metrics tracking en coaching tussen sessies door.",
+  keywords: ["accountability app personal trainer", "client opvolging personal trainer", "WhatsApp check-in coach", "fitness accountability app", "personal trainer software Nederland"],
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
@@ -26,6 +27,21 @@ export const metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+  },
+  openGraph: {
+    title: "AXIS — Accountability app voor personal trainers",
+    description: "Dagelijkse accountability voor jouw klanten via WhatsApp en AI. Geen extra app nodig.",
+    url: "https://axisapp.nl",
+    siteName: "AXIS",
+    locale: "nl_NL",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://axisapp.nl",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
