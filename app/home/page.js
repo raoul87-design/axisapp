@@ -99,6 +99,29 @@ const [builderSearch,    setBuilderSearch]    = useState("")
 const [builderResults,   setBuilderResults]   = useState([])
 const [builderSaving,    setBuilderSaving]    = useState(false)
 
+// ── Onboarding wizard (5 stappen) ────────────────────────────
+const [showWizard,         setShowWizard]         = useState(false)
+const [wizardStep,         setWizardStep]         = useState(1)
+const [wizardGoalType,     setWizardGoalType]     = useState("")
+const [wizardGoalTitle,    setWizardGoalTitle]    = useState("")
+const [wizardGoalDeadline, setWizardGoalDeadline] = useState("")
+const [wizardLikes,        setWizardLikes]        = useState([])
+const [wizardFrequency,    setWizardFrequency]    = useState(3)
+const [wizardAiOptions,    setWizardAiOptions]    = useState([])
+const [wizardLoadingAi,    setWizardLoadingAi]    = useState(false)
+const [wizardAiError,      setWizardAiError]      = useState(false)
+const [wizardSaving,       setWizardSaving]       = useState(false)
+
+// ── Doel balk state ───────────────────────────────────────────
+const [hasCoach,           setHasCoach]           = useState(false)
+const [goalTitle,          setGoalTitle]          = useState("")
+const [goalDeadline,       setGoalDeadline]       = useState(null)
+const [onboardingCompleted,setOnboardingCompleted]= useState(true)
+const [showGoalModal,      setShowGoalModal]      = useState(false)
+const [editGoalTitle,      setEditGoalTitle]      = useState("")
+const [editGoalDeadline,   setEditGoalDeadline]   = useState("")
+const [savingGoalEdit,     setSavingGoalEdit]     = useState(false)
+
 const chatBottomRef = useRef(null)
 const messagesEndRef = useRef(null)
 const scrollRef = useRef(null)
@@ -284,8 +307,8 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name").eq("auth_user_id", user.id).maybeSingle()
-  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL")
+  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
+  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL", "| onboarding_completed:", data?.onboarding_completed)
   if (data?.name)              setUserName(data.name.trim().split(/\s+/)[0])
   if (data?.role)              setUserRole(data.role)
   if (data?.training_location) setTrainingLocation(data.training_location)
@@ -297,6 +320,10 @@ async function checkFirstUse() {
   if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
   if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
   if (data?.target_weight)     setDoelGewicht(data.target_weight)
+  if (data?.goal_title)        setGoalTitle(data.goal_title)
+  if (data?.goal_deadline)     setGoalDeadline(data.goal_deadline)
+  setOnboardingCompleted(data?.onboarding_completed === true)
+  setHasCoach(!!data?.has_coach)
   setTdeeForm(prev => ({
     ...prev,
     height_cm:      data?.height_cm      ? String(data.height_cm)      : prev.height_cm,
@@ -304,7 +331,13 @@ async function checkFirstUse() {
     gender:         data?.gender         ?? prev.gender,
     activity_level: data?.activity_level ?? prev.activity_level,
   }))
-  if (data?.role === "coach" || data?.role === "b2c") return  // coaches en b2c-gebruikers slaan home onboarding over
+  if (data?.role === "coach" || data?.role === "b2c") return
+  // Nieuwe 5-stap wizard voor onboarding_completed === false
+  if (data?.onboarding_completed === false) {
+    setHasCoach(!!data?.has_coach)
+    setShowWizard(true)
+    return
+  }
   if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
 }
 
@@ -948,6 +981,242 @@ const successRatio = progressHistory.length === 0 ? 0
 
 const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.length - 1] : null
 
+// ── Onboarding wizard (nieuwe 5-stap flow) ───────────────────
+if (showWizard) {
+  const GOAL_TYPES  = ["Afvallen", "Sterker worden", "Fitter worden", "Leefstijl verbeteren"]
+  const LIKES_OPTS  = ["Kracht", "Hardlopen", "Fietsen", "Zwemmen", "Wandelen", "Anders"]
+  const totalWSteps = 5
+  const wInput      = { width: "100%", padding: "13px 14px", borderRadius: 8, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none" }
+  const wBtnPrimary = { width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }
+  const wBtnGhost   = { width: "100%", padding: "12px", background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 13 }
+  const wOptBtn     = (active) => ({
+    padding: "14px", borderRadius: 8,
+    border: `2px solid ${active ? GREEN : "#333"}`,
+    background: active ? "#0a1a0f" : "#111",
+    color: active ? GREEN : "#fff",
+    fontSize: 15, cursor: "pointer", textAlign: "left",
+    fontWeight: active ? "bold" : "normal",
+  })
+
+  async function fetchAiCommitments() {
+    setWizardLoadingAi(true)
+    setWizardAiError(false)
+    try {
+      const res = await fetch("/api/onboarding/commitments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalTitle: wizardGoalTitle || wizardGoalType, goalType: wizardGoalType, likes: wizardLikes }),
+      })
+      const data = await res.json()
+      if (data.commitments?.length) setWizardAiOptions(data.commitments)
+      else setWizardAiError(true)
+    } catch {
+      setWizardAiError(true)
+    }
+    setWizardLoadingAi(false)
+  }
+
+  async function advanceToStep4() {
+    setWizardStep(4)
+    if (wizardAiOptions.length === 0) fetchAiCommitments()
+  }
+
+  const [wizardChosenCommitment, setWizardChosenCommitment] = useState("")
+
+  async function finishWizard() {
+    if (wizardSaving) return
+    setWizardSaving(true)
+    const today = getNLDate()
+    await supabase.from("users").update({
+      onboarding_completed: true,
+      goal_title:           wizardGoalTitle.trim() || wizardGoalType || null,
+      goal_deadline:        wizardGoalDeadline || null,
+      goal_preferences:     { likes: wizardLikes, frequency: wizardFrequency },
+      goal:                 wizardGoalType || null,
+    }).eq("auth_user_id", user.id)
+    if (wizardChosenCommitment) {
+      await supabase.from("commitments").insert({
+        text: wizardChosenCommitment, user_id: user.id, date: today, done: false,
+        category: classifyCommitment(wizardChosenCommitment),
+      })
+    }
+    if (wizardGoalTitle.trim()) setGoalTitle(wizardGoalTitle.trim())
+    if (wizardGoalDeadline)     setGoalDeadline(wizardGoalDeadline)
+    setOnboardingCompleted(true)
+    setWizardSaving(false)
+    setShowWizard(false)
+    await loadCommitments()
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f0f", padding: "20px" }}>
+      <div style={{ width: "100%", maxWidth: 420, background: "#1a1a1a", padding: 40, borderRadius: 12 }}>
+
+        <p style={{ color: "#555", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32 }}>
+          Stap {wizardStep} van {totalWSteps}
+        </p>
+
+        {/* Stap 1 — Welkom */}
+        {wizardStep === 1 && (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 12px" }}>AXIS</p>
+              <h2 style={{ fontSize: 24, color: "#fff", margin: "0 0 16px", lineHeight: 1.3 }}>
+                {hasCoach ? "Welkom bij AXIS" : "Welkom bij AXIS"}
+              </h2>
+              <p style={{ color: "#888", fontSize: 15, lineHeight: 1.6, margin: "0 0 32px" }}>
+                {hasCoach
+                  ? "Je coach heeft je toegang gegeven tot AXIS. Wij zijn er op de dagen dat je niet traint."
+                  : "Jij bepaalt je doel — wij helpen je het te halen."}
+              </p>
+            </div>
+            <button onClick={() => setWizardStep(2)} style={wBtnPrimary}>Aan de slag →</button>
+          </>
+        )}
+
+        {/* Stap 2 — Hoofddoel */}
+        {wizardStep === 2 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat is je hoofddoel?</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 20 }}>Kies een richting en omschrijf het concreet.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+              {GOAL_TYPES.map(g => (
+                <button key={g} onClick={() => setWizardGoalType(g)} style={wOptBtn(wizardGoalType === g)}>{g}</button>
+              ))}
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Omschrijf je doel</p>
+              <input
+                value={wizardGoalTitle}
+                onChange={e => setWizardGoalTitle(e.target.value)}
+                placeholder='bijv. "10 kg afvallen voor de zomer"'
+                style={wInput}
+              />
+            </div>
+            <div style={{ marginBottom: 28 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Wanneer wil je dit bereikt hebben?</p>
+              <input
+                type="date"
+                value={wizardGoalDeadline}
+                onChange={e => setWizardGoalDeadline(e.target.value)}
+                style={{ ...wInput, colorScheme: "dark" }}
+              />
+            </div>
+            <button
+              onClick={() => setWizardStep(3)}
+              style={{ ...wBtnPrimary, opacity: (wizardGoalType || wizardGoalTitle) ? 1 : 0.4, cursor: (wizardGoalType || wizardGoalTitle) ? "pointer" : "default" }}>
+              Volgende →
+            </button>
+            <button onClick={() => setWizardStep(1)} style={wBtnGhost}>Terug</button>
+          </>
+        )}
+
+        {/* Stap 3 — Voorkeuren */}
+        {wizardStep === 3 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat vind je leuk?</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 20 }}>Kies alles wat van toepassing is.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
+              {LIKES_OPTS.map(like => {
+                const active = wizardLikes.includes(like)
+                return (
+                  <button
+                    key={like}
+                    onClick={() => setWizardLikes(prev => prev.includes(like) ? prev.filter(x => x !== like) : [...prev, like])}
+                    style={{
+                      padding: "10px 16px", borderRadius: 20,
+                      border: `2px solid ${active ? GREEN : "#333"}`,
+                      background: active ? "#0a1a0f" : "#111",
+                      color: active ? GREEN : "#fff",
+                      fontSize: 14, cursor: "pointer", fontWeight: active ? "bold" : "normal",
+                    }}>
+                    {active ? "✓ " : ""}{like}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Hoe vaak train je per week?</p>
+                <span style={{ color: GREEN, fontWeight: "bold", fontSize: 18 }}>{wizardFrequency}×</span>
+              </div>
+              <input
+                type="range" min={1} max={7} value={wizardFrequency}
+                onChange={e => setWizardFrequency(Number(e.target.value))}
+                style={{ width: "100%", accentColor: GREEN }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#555", fontSize: 11, marginTop: 4 }}>
+                <span>1×</span><span>7×</span>
+              </div>
+            </div>
+            <button onClick={advanceToStep4} style={wBtnPrimary}>Volgende →</button>
+            <button onClick={() => setWizardStep(2)} style={wBtnGhost}>Terug</button>
+          </>
+        )}
+
+        {/* Stap 4 — Eerste commitment (AI) */}
+        {wizardStep === 4 && (
+          <>
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Kies je eerste commitment</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS heeft drie voorstellen gemaakt op basis van jouw doel.</p>
+            {wizardLoadingAi ? (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <p style={{ color: "#555", fontSize: 14 }}>Commitments genereren...</p>
+              </div>
+            ) : wizardAiError ? (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: "#ef4444", fontSize: 14, marginBottom: 16 }}>Kon geen suggesties laden.</p>
+                <button onClick={fetchAiCommitments} style={{ ...wBtnPrimary, background: "#1a1a1a", border: "1px solid #333", color: "#fff" }}>Opnieuw proberen</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                {wizardAiOptions.map(opt => (
+                  <button key={opt} onClick={() => { setWizardChosenCommitment(opt); setWizardStep(5) }} style={{
+                    padding: "14px 16px", borderRadius: 8,
+                    border: `1px solid ${wizardChosenCommitment === opt ? GREEN : "#333"}`,
+                    background: wizardChosenCommitment === opt ? "#0a1a0f" : "#111",
+                    color: "#fff", fontSize: 14, cursor: "pointer",
+                    textAlign: "left", display: "flex", alignItems: "center", gap: 12,
+                  }}>
+                    <span style={{ color: GREEN, fontSize: 16, flexShrink: 0 }}>→</span>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!wizardLoadingAi && !wizardAiError && (
+              <button onClick={() => { setWizardChosenCommitment(""); setWizardStep(5) }} style={wBtnGhost}>Sla over, ik kies later</button>
+            )}
+            <button onClick={() => setWizardStep(3)} style={{ ...wBtnGhost, marginTop: 4 }}>Terug</button>
+          </>
+        )}
+
+        {/* Stap 5 — WhatsApp uitleg */}
+        {wizardStep === 5 && (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
+              <h2 style={{ marginBottom: 12, fontSize: 22, color: "#fff" }}>Zo werkt AXIS</h2>
+              <p style={{ color: "#888", fontSize: 15, lineHeight: 1.7, margin: 0 }}>
+                Elke ochtend sturen wij je een check-in via WhatsApp.<br />
+                Elke avond reflecteer je hoe het ging.<br />
+                <strong style={{ color: "#ccc" }}>Dat is alles.</strong>
+              </p>
+            </div>
+            <button
+              onClick={finishWizard}
+              disabled={wizardSaving}
+              style={{ ...wBtnPrimary, opacity: wizardSaving ? 0.6 : 1 }}>
+              {wizardSaving ? "Opslaan..." : "Start met AXIS →"}
+            </button>
+          </>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
 // ── Onboarding ────────────────────────────────────────────────
 if (showOnboarding) {
   const totalSteps = 8
@@ -1413,9 +1682,92 @@ return (
     )
   })()}
 
+  {/* ── DOEL EDIT MODAL (overlay) ──────────────────────────── */}
+  {showGoalModal && (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      onClick={e => { if (e.target === e.currentTarget) setShowGoalModal(false) }}>
+      <div style={{ width: "100%", maxWidth: 400, background: "#1a1a1a", borderRadius: 12, padding: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontSize: 18, color: "#fff", margin: 0 }}>Doel bewerken</h2>
+          <button onClick={() => setShowGoalModal(false)} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 22, lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
+          <div>
+            <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Omschrijving doel</p>
+            <input
+              value={editGoalTitle}
+              onChange={e => setEditGoalTitle(e.target.value)}
+              placeholder='bijv. "10 kg afvallen"'
+              style={{ width: "100%", padding: "13px 14px", borderRadius: 8, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none" }}
+            />
+          </div>
+          <div>
+            <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Deadline</p>
+            <input
+              type="date"
+              value={editGoalDeadline}
+              onChange={e => setEditGoalDeadline(e.target.value)}
+              style={{ width: "100%", padding: "13px 14px", borderRadius: 8, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none", colorScheme: "dark" }}
+            />
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            if (savingGoalEdit) return
+            setSavingGoalEdit(true)
+            await supabase.from("users").update({ goal_title: editGoalTitle.trim() || null, goal_deadline: editGoalDeadline || null }).eq("auth_user_id", user.id)
+            setGoalTitle(editGoalTitle.trim())
+            setGoalDeadline(editGoalDeadline || null)
+            setSavingGoalEdit(false)
+            setShowGoalModal(false)
+          }}
+          disabled={savingGoalEdit}
+          style={{ width: "100%", padding: "13px", background: savingGoalEdit ? "#111" : GREEN, border: "none", borderRadius: 8, color: savingGoalEdit ? "#555" : "#000", fontWeight: "bold", fontSize: 15, cursor: savingGoalEdit ? "default" : "pointer" }}>
+          {savingGoalEdit ? "Opslaan..." : "Opslaan"}
+        </button>
+      </div>
+    </div>
+  )}
+
   {/* ── TAB: VANDAAG ─────────────────────────────────────────── */}
   {activeTab === "vandaag" && (
     <div style={{ padding: "22px 22px 0", paddingBottom: TAB_H + 80 }}>
+
+      {/* ── DOEL BALK ── */}
+      {onboardingCompleted && goalTitle && (() => {
+        const today     = new Date()
+        const signup    = new Date(user?.created_at ?? today)
+        const deadline  = goalDeadline ? new Date(goalDeadline + "T12:00:00") : null
+        const totalDays = deadline ? Math.max(1, Math.round((deadline - signup) / 86400000)) : null
+        const daysActive = Math.round((today - signup) / 86400000)
+        const daysLeft   = deadline ? Math.max(0, Math.round((deadline - today) / 86400000)) : null
+        const pct        = (totalDays && deadline) ? Math.min(100, Math.round((daysActive / totalDays) * 100)) : null
+        return (
+          <button
+            onClick={() => { setEditGoalTitle(goalTitle); setEditGoalDeadline(goalDeadline ?? ""); setShowGoalModal(true) }}
+            style={{ width: "100%", background: "#0a1a0f", border: "1px solid #1a4d2a", borderRadius: 12, padding: "14px 16px", marginBottom: 20, cursor: "pointer", textAlign: "left" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: pct !== null ? 10 : 0 }}>
+              <p style={{ color: "#fff", fontSize: 14, fontWeight: "bold", margin: 0, flex: 1, marginRight: 8 }}>{goalTitle}</p>
+              {daysLeft !== null && (
+                <span style={{ color: GREEN, fontSize: 12, fontWeight: "bold", flexShrink: 0 }}>{daysLeft}d</span>
+              )}
+            </div>
+            {pct !== null && (
+              <>
+                <div style={{ background: "#1a2e1a", borderRadius: 4, height: 4, marginBottom: 8, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: GREEN, borderRadius: 4, transition: "width 0.4s ease" }} />
+                </div>
+                <p style={{ color: "#4a7a4a", fontSize: 11, margin: 0 }}>
+                  {daysActive} dag{daysActive !== 1 ? "en" : ""} actief — {daysLeft} dag{daysLeft !== 1 ? "en" : ""} te gaan
+                </p>
+              </>
+            )}
+            {pct === null && (
+              <p style={{ color: "#4a7a4a", fontSize: 11, margin: 0 }}>{daysActive} dag{daysActive !== 1 ? "en" : ""} actief</p>
+            )}
+          </button>
+        )
+      })()}
 
       {/* ── COMMITMENT ── */}
       <div style={{ marginTop: 0 }}>
