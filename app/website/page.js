@@ -86,7 +86,7 @@ function Nav() {
         </div>
 
         {/* Desktop CTA */}
-        <Link href="/" className="btn-green nav-cta" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
+        <Link href="/signup" className="btn-green nav-cta" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
 
         {/* Mobile hamburger */}
         <button
@@ -120,7 +120,7 @@ function Nav() {
             </a>
           ))}
           <div style={{ padding: "14px 24px 0" }}>
-            <Link href="/" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+            <Link href="/signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
               Start gratis
             </Link>
           </div>
@@ -278,8 +278,8 @@ export default function Website() {
               De accountability app voor personal trainers — dagelijkse WhatsApp check-ins en AI coaching voor meer consistente klanten.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
-              <Link href="/" className="btn-green">Start gratis</Link>
-              <a href="#oplossing" className="btn-ghost">Bekijk hoe het werkt →</a>
+              <Link href="/signup" className="btn-green">Start gratis →</Link>
+              <Link href="/login" className="btn-ghost">Ik ben coach →</Link>
             </div>
           </div>
 
@@ -526,7 +526,7 @@ export default function Website() {
           <p style={{ color: SUB, fontSize: 17, marginBottom: 36 }}>
             Axis helps personal trainers build more consistent clients.
           </p>
-          <Link href="/" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>Start gratis</Link>
+          <Link href="/signup" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>Start gratis →</Link>
         </Section>
       </div>
 
