@@ -313,41 +313,56 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, training_locations, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
-  console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL", "| onboarding_completed:", data?.onboarding_completed)
-  if (data?.name)              setUserName(data.name.trim().split(/\s+/)[0])
-  if (data?.role)              setUserRole(data.role)
-  if (data?.training_location) setTrainingLocation(data.training_location)
-  if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
-  if (data?.sport_frequentie)  setSportFrequentie(data.sport_frequentie)
-  if (data?.fitness_level)           setWizardNiveau(data.fitness_level)
-  if (data?.sport_frequentie)        setWizardFrequency(data.sport_frequentie)
-  if (data?.training_locations?.length) setWizardLocaties(data.training_locations)
-  if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
-  if (data?.eiwitten_doel)     setEiwittenDoel(String(data.eiwitten_doel))
-  if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
-  if (data?.vetten_doel)       setVettenDoel(String(data.vetten_doel))
-  if (data?.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
-  if (data?.target_weight)     setDoelGewicht(data.target_weight)
-  if (data?.goal_title)        setGoalTitle(data.goal_title)
-  if (data?.goal_deadline)     setGoalDeadline(data.goal_deadline)
-  setOnboardingCompleted(data?.onboarding_completed === true)
-  setHasCoach(!!data?.has_coach)
-  setTdeeForm(prev => ({
-    ...prev,
-    height_cm:      data?.height_cm      ? String(data.height_cm)      : prev.height_cm,
-    age:            data?.age            ? String(data.age)            : prev.age,
-    gender:         data?.gender         ?? prev.gender,
-    activity_level: data?.activity_level ?? prev.activity_level,
-  }))
-  if (data?.role === "coach") return
-  // 5-stap wizard voor onboarding_completed === false (B2B en B2C)
-  if (data?.onboarding_completed === false) {
-    setHasCoach(!!data?.has_coach)
+  let { data } = await supabase.from("users").select("goal, training_location, training_locations, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
+
+  if (!data) {
+    console.log("[checkFirstUse] geen rij — aanmaken voor", user.id)
+    await supabase.from("users").insert({
+      auth_user_id:         user.id,
+      has_coach:            false,
+      onboarding_completed: false,
+      role:                 "b2c",
+    })
+    setHasCoach(false)
+    setOnboardingCompleted(false)
     setShowWizard(true)
     return
   }
-  if (FORCE_ONBOARDING || !data || !data.goal) {
+
+  console.log("[checkFirstUse] goal:", data.goal ?? "NULL", "| role:", data.role ?? "NULL", "| onboarding_completed:", data.onboarding_completed)
+  if (data.name)              setUserName(data.name.trim().split(/\s+/)[0])
+  if (data.role)              setUserRole(data.role)
+  if (data.training_location) setTrainingLocation(data.training_location)
+  if (data.fitness_level)     setFitnessLevel(data.fitness_level)
+  if (data.sport_frequentie)  setSportFrequentie(data.sport_frequentie)
+  if (data.fitness_level)            setWizardNiveau(data.fitness_level)
+  if (data.sport_frequentie)         setWizardFrequency(data.sport_frequentie)
+  if (data.training_locations?.length) setWizardLocaties(data.training_locations)
+  if (data.kcal_doel)         setKcalDoel(String(data.kcal_doel))
+  if (data.eiwitten_doel)     setEiwittenDoel(String(data.eiwitten_doel))
+  if (data.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
+  if (data.vetten_doel)       setVettenDoel(String(data.vetten_doel))
+  if (data.doelen_door_coach) setDoelenDoorCoach(!!data.doelen_door_coach)
+  if (data.target_weight)     setDoelGewicht(data.target_weight)
+  if (data.goal_title)        setGoalTitle(data.goal_title)
+  if (data.goal_deadline)     setGoalDeadline(data.goal_deadline)
+  setOnboardingCompleted(data.onboarding_completed === true)
+  setHasCoach(!!data.has_coach)
+  setTdeeForm(prev => ({
+    ...prev,
+    height_cm:      data.height_cm      ? String(data.height_cm)      : prev.height_cm,
+    age:            data.age            ? String(data.age)            : prev.age,
+    gender:         data.gender         ?? prev.gender,
+    activity_level: data.activity_level ?? prev.activity_level,
+  }))
+  if (data.role === "coach") return
+  // 5-stap wizard voor onboarding_completed === false (B2B en B2C)
+  if (data.onboarding_completed === false) {
+    setHasCoach(!!data.has_coach)
+    setShowWizard(true)
+    return
+  }
+  if (FORCE_ONBOARDING || !data.goal) {
     setHasCoach(false)
     setShowWizard(true)
   }
