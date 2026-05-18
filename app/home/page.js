@@ -1075,15 +1075,20 @@ if (showWizard) {
     }
     const { data: existingRow } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
     if (existingRow) {
-      await supabase.from("users").update(wPayload).eq("auth_user_id", user.id)
+      const { error: updateErr } = await supabase.from("users").update(wPayload).eq("auth_user_id", user.id)
+      if (updateErr) console.error("[finishWizard] users update failed:", updateErr.message)
+      else console.log("[finishWizard] users updated, onboarding_completed: true")
     } else {
-      await supabase.from("users").insert({ ...wPayload, auth_user_id: user.id, role: "client", has_coach: hasCoach })
+      const { error: insertErr } = await supabase.from("users").insert({ ...wPayload, auth_user_id: user.id, role: "client", has_coach: hasCoach })
+      if (insertErr) console.error("[finishWizard] users insert failed:", insertErr.message)
     }
     if (wizardChosenCommitment) {
-      await supabase.from("commitments").insert({
-        text: wizardChosenCommitment, user_id: user.id, date: today, done: false,
+      const commitUserId = publicUserId ?? user.id
+      const { error: commitErr } = await supabase.from("commitments").insert({
+        text: wizardChosenCommitment, user_id: commitUserId, date: today, done: false,
         category: classifyCommitment(wizardChosenCommitment),
       })
+      if (commitErr) console.error("[finishWizard] commitments insert failed:", commitErr.message, "| user_id used:", commitUserId)
     }
     if (wizardGoalTitle.trim()) setGoalTitle(wizardGoalTitle.trim())
     if (wizardGoalDeadline)     setGoalDeadline(wizardGoalDeadline)
