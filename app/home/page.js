@@ -111,6 +111,8 @@ const [wizardAiOptions,    setWizardAiOptions]    = useState([])
 const [wizardLoadingAi,    setWizardLoadingAi]    = useState(false)
 const [wizardAiError,      setWizardAiError]      = useState(false)
 const [wizardSaving,       setWizardSaving]       = useState(false)
+const [wizardNiveau,       setWizardNiveau]       = useState("")
+const [wizardLocaties,     setWizardLocaties]     = useState([])
 
 // ── Doel balk state ───────────────────────────────────────────
 const [hasCoach,           setHasCoach]           = useState(false)
@@ -307,13 +309,16 @@ async function loadCommitments() {
 
 async function checkFirstUse() {
   console.log("[checkFirstUse] auth user.id:", user.id)
-  const { data } = await supabase.from("users").select("goal, training_location, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
+  const { data } = await supabase.from("users").select("goal, training_location, training_locations, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
   console.log("[checkFirstUse] goal:", data?.goal ?? "NULL", "| role:", data?.role ?? "NULL", "| onboarding_completed:", data?.onboarding_completed)
   if (data?.name)              setUserName(data.name.trim().split(/\s+/)[0])
   if (data?.role)              setUserRole(data.role)
   if (data?.training_location) setTrainingLocation(data.training_location)
   if (data?.fitness_level)     setFitnessLevel(data.fitness_level)
   if (data?.sport_frequentie)  setSportFrequentie(data.sport_frequentie)
+  if (data?.fitness_level)           setWizardNiveau(data.fitness_level)
+  if (data?.sport_frequentie)        setWizardFrequency(data.sport_frequentie)
+  if (data?.training_locations?.length) setWizardLocaties(data.training_locations)
   if (data?.kcal_doel)         setKcalDoel(String(data.kcal_doel))
   if (data?.eiwitten_doel)     setEiwittenDoel(String(data.eiwitten_doel))
   if (data?.koolhydraten_doel) setKoolhydratenDoel(String(data.koolhydraten_doel))
@@ -331,14 +336,17 @@ async function checkFirstUse() {
     gender:         data?.gender         ?? prev.gender,
     activity_level: data?.activity_level ?? prev.activity_level,
   }))
-  if (data?.role === "coach" || data?.role === "b2c") return
-  // Nieuwe 5-stap wizard voor onboarding_completed === false
+  if (data?.role === "coach") return
+  // 5-stap wizard voor onboarding_completed === false (B2B en B2C)
   if (data?.onboarding_completed === false) {
     setHasCoach(!!data?.has_coach)
     setShowWizard(true)
     return
   }
-  if (FORCE_ONBOARDING || !data || !data.goal) setShowOnboarding(true)
+  if (FORCE_ONBOARDING || !data || !data.goal) {
+    setHasCoach(false)
+    setShowWizard(true)
+  }
 }
 
 async function saveNutritionGoals() {
@@ -1031,8 +1039,11 @@ if (showWizard) {
       onboarding_completed: true,
       goal_title:           wizardGoalTitle.trim() || wizardGoalType || null,
       goal_deadline:        wizardGoalDeadline || null,
-      goal_preferences:     { likes: wizardLikes, frequency: wizardFrequency },
+      goal_preferences:     { likes: wizardLikes, niveau: wizardNiveau, locaties: wizardLocaties, frequency: wizardFrequency },
       goal:                 wizardGoalType || null,
+      fitness_level:        wizardNiveau || null,
+      training_locations:   wizardLocaties.length > 0 ? wizardLocaties : null,
+      sport_frequentie:     wizardFrequency || null,
     }).eq("auth_user_id", user.id)
     if (wizardChosenCommitment) {
       await supabase.from("commitments").insert({
@@ -1114,27 +1125,69 @@ if (showWizard) {
         {/* Stap 3 — Voorkeuren */}
         {wizardStep === 3 && (
           <>
-            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Wat vind je leuk?</h2>
-            <p style={{ color: "#888", fontSize: 14, marginBottom: 20 }}>Kies alles wat van toepassing is.</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
-              {LIKES_OPTS.map(like => {
-                const active = wizardLikes.includes(like)
-                return (
-                  <button
-                    key={like}
-                    onClick={() => setWizardLikes(prev => prev.includes(like) ? prev.filter(x => x !== like) : [...prev, like])}
-                    style={{
+            <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Jouw voorkeuren</h2>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 20 }}>Pas aan wat bij jou past.</p>
+
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Wat vind je leuk?</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {LIKES_OPTS.map(like => {
+                  const active = wizardLikes.includes(like)
+                  return (
+                    <button
+                      key={like}
+                      onClick={() => setWizardLikes(prev => prev.includes(like) ? prev.filter(x => x !== like) : [...prev, like])}
+                      style={{
+                        padding: "10px 16px", borderRadius: 20,
+                        border: `2px solid ${active ? GREEN : "#333"}`,
+                        background: active ? "#0a1a0f" : "#111",
+                        color: active ? GREEN : "#fff",
+                        fontSize: 14, cursor: "pointer", fontWeight: active ? "bold" : "normal",
+                      }}>
+                      {active ? "✓ " : ""}{like}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Fitnessniveau</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["Beginner", "Gemiddeld", "Gevorderd"].map(lvl => (
+                  <button key={lvl} onClick={() => setWizardNiveau(lvl)} style={{
+                    flex: 1, padding: "10px 8px", borderRadius: 8,
+                    border: `2px solid ${wizardNiveau === lvl ? GREEN : "#333"}`,
+                    background: wizardNiveau === lvl ? "#0a1a0f" : "#111",
+                    color: wizardNiveau === lvl ? GREEN : "#fff",
+                    fontSize: 13, cursor: "pointer", fontWeight: wizardNiveau === lvl ? "bold" : "normal",
+                  }}>
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Trainingslocaties</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["Gym", "Thuis", "Buiten", "Op reis"].map(loc => {
+                  const active = wizardLocaties.includes(loc)
+                  return (
+                    <button key={loc} onClick={() => setWizardLocaties(prev => prev.includes(loc) ? prev.filter(x => x !== loc) : [...prev, loc])} style={{
                       padding: "10px 16px", borderRadius: 20,
                       border: `2px solid ${active ? GREEN : "#333"}`,
                       background: active ? "#0a1a0f" : "#111",
                       color: active ? GREEN : "#fff",
                       fontSize: 14, cursor: "pointer", fontWeight: active ? "bold" : "normal",
                     }}>
-                    {active ? "✓ " : ""}{like}
-                  </button>
-                )
-              })}
+                      {active ? "✓ " : ""}{loc}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
             <div style={{ marginBottom: 28 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Hoe vaak train je per week?</p>

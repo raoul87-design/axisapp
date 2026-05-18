@@ -147,7 +147,7 @@ export default function Dashboard() {
 
   const [showClientModal, setShowClientModal] = useState(false)
   const [clientStep,      setClientStep]      = useState(1)
-  const [clientForm,      setClientForm]      = useState({ naam: "", email: "", doelen: [], huidigGewicht: "", doelGewicht: "", locaties: [], frequentie: 0, niveau: "" })
+  const [clientForm,      setClientForm]      = useState({ naam: "", email: "", doelGewicht: "", locaties: [], frequentie: 3, niveau: "" })
   const [sendingInvite,   setSendingInvite]   = useState(false)
   const [inviteError,     setInviteError]     = useState("")
   const [inviteSentUrl,   setInviteSentUrl]   = useState("")
@@ -377,10 +377,8 @@ export default function Dashboard() {
       .join("")
     const pre_data = {
       naam:               clientForm.naam.trim() || null,
-      doelen:             clientForm.doelen,
       training_locations: clientForm.locaties,
       fitness_level:      clientForm.niveau     || null,
-      current_weight:     clientForm.huidigGewicht ? parseFloat(clientForm.huidigGewicht) : null,
       target_weight:      clientForm.doelGewicht   ? parseFloat(clientForm.doelGewicht)   : null,
       sport_frequentie:   clientForm.frequentie    || null,
     }
@@ -419,7 +417,7 @@ export default function Dashboard() {
     await loadInviteLinks(authProfile.email)
     setInviteSentUrl(inviteUrl)
     setSendingInvite(false)
-    setClientStep(8)
+    setClientStep(7)
   }
 
   function copyInviteLink(code) {
@@ -1237,7 +1235,7 @@ export default function Dashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Invite Links</p>
                 <button
-                  onClick={() => { setClientForm({ naam: "", email: "", doelen: [], huidigGewicht: "", doelGewicht: "", locaties: [], frequentie: 0, niveau: "" }); setClientStep(1); setInviteSentUrl(""); setShowClientModal(true) }}
+                  onClick={() => { setClientForm({ naam: "", email: "", doelGewicht: "", locaties: [], frequentie: 3, niveau: "" }); setClientStep(1); setInviteSentUrl(""); setShowClientModal(true) }}
                   style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 12, cursor: "pointer" }}
                 >
                   + Voeg client toe
@@ -1348,9 +1346,9 @@ export default function Dashboard() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div style={{ background: "#111", border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: "100%", maxWidth: 460 }}>
 
-            {clientStep < 8 && (
+            {clientStep < 7 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-                <p style={{ color: "#555", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", margin: 0 }}>Stap {clientStep} van 7</p>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", margin: 0 }}>Stap {clientStep} van 6</p>
                 <button onClick={() => setShowClientModal(false)} style={{ background: "none", border: "none", color: "#555", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
               </div>
             )}
@@ -1384,54 +1382,28 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Step 2 — Doelen */}
+            {/* Step 2 — Fitnessniveau */}
             {clientStep === 2 && (
               <>
-                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Doelen</h2>
-                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Wat wil {firstName} bereiken? Meerdere mogelijk.</p>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Fitnessniveau</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Wat is het niveau van {firstName}?</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-                  {["Afvallen", "Spiermassa opbouwen", "Fitter worden", "Onderhouden"].map(d => (
-                    <button key={d} onClick={() => setClientForm(f => ({ ...f, doelen: f.doelen.includes(d) ? f.doelen.filter(x => x !== d) : [...f.doelen, d] }))} style={chkBtn(clientForm.doelen.includes(d))}>
-                      <span style={{ fontSize: 14, flexShrink: 0 }}>{clientForm.doelen.includes(d) ? "☑" : "☐"}</span>{d}
-                    </button>
+                  {["Beginner", "Gemiddeld", "Gevorderd"].map(lvl => (
+                    <button key={lvl} onClick={() => setClientForm(f => ({ ...f, niveau: lvl }))} style={optBtn(clientForm.niveau === lvl)}>{lvl}</button>
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setClientStep(1)} style={btnG}>← Terug</button>
-                  <button onClick={() => clientForm.doelen.length > 0 && setClientStep(3)}
-                    style={{ ...btnP, flex: 2, opacity: clientForm.doelen.length > 0 ? 1 : 0.4, cursor: clientForm.doelen.length > 0 ? "pointer" : "default" }}>
+                  <button onClick={() => clientForm.niveau && setClientStep(3)}
+                    style={{ ...btnP, flex: 2, opacity: clientForm.niveau ? 1 : 0.4, cursor: clientForm.niveau ? "pointer" : "default" }}>
                     Volgende →
                   </button>
                 </div>
               </>
             )}
 
-            {/* Step 3 — Gewicht */}
+            {/* Step 3 — Trainingslocaties */}
             {clientStep === 3 && (
-              <>
-                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Gewicht</h2>
-                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Optioneel — voor voortgang tracking.</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-                  <div>
-                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Huidig gewicht (kg)</p>
-                    <input type="number" value={clientForm.huidigGewicht} onChange={e => setClientForm(f => ({ ...f, huidigGewicht: e.target.value }))}
-                      placeholder="bijv. 78" style={iStyle} />
-                  </div>
-                  <div>
-                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Doelgewicht (kg)</p>
-                    <input type="number" value={clientForm.doelGewicht} onChange={e => setClientForm(f => ({ ...f, doelGewicht: e.target.value }))}
-                      placeholder="bijv. 72" style={iStyle} />
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setClientStep(2)} style={btnG}>← Terug</button>
-                  <button onClick={() => setClientStep(4)} style={{ ...btnP, flex: 2 }}>Volgende →</button>
-                </div>
-              </>
-            )}
-
-            {/* Step 4 — Locaties */}
-            {clientStep === 4 && (
               <>
                 <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Trainingslocaties</h2>
                 <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Waar traint {firstName}? Meerdere mogelijk.</p>
@@ -1443,8 +1415,8 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setClientStep(3)} style={btnG}>← Terug</button>
-                  <button onClick={() => clientForm.locaties.length > 0 && setClientStep(5)}
+                  <button onClick={() => setClientStep(2)} style={btnG}>← Terug</button>
+                  <button onClick={() => clientForm.locaties.length > 0 && setClientStep(4)}
                     style={{ ...btnP, flex: 2, opacity: clientForm.locaties.length > 0 ? 1 : 0.4, cursor: clientForm.locaties.length > 0 ? "pointer" : "default" }}>
                     Volgende →
                   </button>
@@ -1452,71 +1424,62 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Step 5 — Frequentie */}
-            {clientStep === 5 && (
+            {/* Step 4 — Sportfrequentie (slider 1–7) */}
+            {clientStep === 4 && (
               <>
                 <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Sportfrequentie</h2>
                 <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Hoe vaak per week sport {firstName}?</p>
-                <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <button key={n} onClick={() => setClientForm(f => ({ ...f, frequentie: n }))} style={{
-                      flex: 1, minWidth: 52, padding: "14px 6px", borderRadius: 8,
-                      border: `2px solid ${clientForm.frequentie === n ? GREEN : "#2a2a2a"}`,
-                      background: clientForm.frequentie === n ? "#0a1a0f" : "#0a0a0a",
-                      color: clientForm.frequentie === n ? GREEN : "#ccc",
-                      fontSize: 16, fontWeight: "bold", cursor: "pointer",
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                    }}>
-                      {n}{n === 5 ? "+" : ""}x
-                      <span style={{ fontSize: 9, color: clientForm.frequentie === n ? GREEN : "#444", fontWeight: "normal" }}>p.w.</span>
-                    </button>
-                  ))}
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: 0 }}>Frequentie per week</p>
+                    <span style={{ color: GREEN, fontWeight: "bold", fontSize: 20 }}>{clientForm.frequentie}×</span>
+                  </div>
+                  <input
+                    type="range" min={1} max={7} value={clientForm.frequentie}
+                    onChange={e => setClientForm(f => ({ ...f, frequentie: Number(e.target.value) }))}
+                    style={{ width: "100%", accentColor: GREEN }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#555", fontSize: 11, marginTop: 4 }}>
+                    <span>1×</span><span>7×</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setClientStep(3)} style={btnG}>← Terug</button>
+                  <button onClick={() => setClientStep(5)} style={{ ...btnP, flex: 2 }}>Volgende →</button>
+                </div>
+              </>
+            )}
+
+            {/* Step 5 — Doelgewicht (optioneel) */}
+            {clientStep === 5 && (
+              <>
+                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Doelgewicht</h2>
+                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Optioneel — voor voortgang tracking.</p>
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Doelgewicht (kg)</p>
+                  <input type="number" value={clientForm.doelGewicht} onChange={e => setClientForm(f => ({ ...f, doelGewicht: e.target.value }))}
+                    placeholder="bijv. 72" style={iStyle} />
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setClientStep(4)} style={btnG}>← Terug</button>
-                  <button onClick={() => clientForm.frequentie > 0 && setClientStep(6)}
-                    style={{ ...btnP, flex: 2, opacity: clientForm.frequentie > 0 ? 1 : 0.4, cursor: clientForm.frequentie > 0 ? "pointer" : "default" }}>
-                    Volgende →
-                  </button>
+                  <button onClick={() => setClientStep(6)} style={{ ...btnP, flex: 2 }}>Volgende →</button>
                 </div>
               </>
             )}
 
-            {/* Step 6 — Niveau */}
+            {/* Step 6 — Overzicht */}
             {clientStep === 6 && (
-              <>
-                <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Fitnessniveau</h2>
-                <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Wat is het niveau van {firstName}?</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-                  {["Beginner", "Gemiddeld", "Gevorderd"].map(lvl => (
-                    <button key={lvl} onClick={() => setClientForm(f => ({ ...f, niveau: lvl }))} style={optBtn(clientForm.niveau === lvl)}>{lvl}</button>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setClientStep(5)} style={btnG}>← Terug</button>
-                  <button onClick={() => clientForm.niveau && setClientStep(7)}
-                    style={{ ...btnP, flex: 2, opacity: clientForm.niveau ? 1 : 0.4, cursor: clientForm.niveau ? "pointer" : "default" }}>
-                    Volgende →
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Step 7 — Review */}
-            {clientStep === 7 && (
               <>
                 <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 6 }}>Overzicht</h2>
                 <p style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>Controleer de gegevens en verstuur de uitnodiging.</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 24 }}>
                   {[
-                    { label: "Naam",           value: clientForm.naam },
-                    clientForm.email           && { label: "E-mail",         value: clientForm.email },
-                    { label: "Doelen",         value: clientForm.doelen.join(", ") },
-                    { label: "Niveau",         value: clientForm.niveau },
-                    { label: "Locaties",       value: clientForm.locaties.join(", ") },
-                    { label: "Frequentie",     value: `${clientForm.frequentie}× per week` },
-                    clientForm.huidigGewicht   && { label: "Huidig gewicht", value: `${clientForm.huidigGewicht} kg` },
-                    clientForm.doelGewicht     && { label: "Doelgewicht",    value: `${clientForm.doelGewicht} kg` },
+                    { label: "Naam",       value: clientForm.naam },
+                    clientForm.email       && { label: "E-mail",     value: clientForm.email },
+                    { label: "Niveau",     value: clientForm.niveau },
+                    { label: "Locaties",   value: clientForm.locaties.join(", ") },
+                    { label: "Frequentie", value: `${clientForm.frequentie}× per week` },
+                    clientForm.doelGewicht && { label: "Doelgewicht", value: `${clientForm.doelGewicht} kg` },
                   ].filter(Boolean).map(({ label, value }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 14px", borderRadius: 8, background: "#0a0a0a", border: "1px solid #1e1e1e" }}>
                       <span style={{ color: "#555", fontSize: 12 }}>{label}</span>
@@ -1528,7 +1491,7 @@ export default function Dashboard() {
                   <p style={{ color: "#ef4444", fontSize: 13, margin: "0 0 12px" }}>{inviteError}</p>
                 )}
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => { setClientStep(6); setInviteError("") }} style={btnG}>← Terug</button>
+                  <button onClick={() => { setClientStep(5); setInviteError("") }} style={btnG}>← Terug</button>
                   <button onClick={generateInviteWithData} disabled={sendingInvite}
                     style={{ ...btnP, flex: 2, opacity: sendingInvite ? 0.6 : 1, cursor: sendingInvite ? "default" : "pointer" }}>
                     {sendingInvite ? "Bezig..." : clientForm.email ? "Verstuur uitnodiging →" : "Genereer invite link →"}
@@ -1537,8 +1500,8 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Step 8 — Success */}
-            {clientStep === 8 && (
+            {/* Step 7 — Success */}
+            {clientStep === 7 && (
               <div style={{ textAlign: "center" }}>
                 <p style={{ color: GREEN, fontSize: 36, marginBottom: 12 }}>✓</p>
                 <h2 style={{ fontSize: 20, color: "#fff", marginBottom: 8 }}>
