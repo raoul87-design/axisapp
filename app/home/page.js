@@ -284,13 +284,16 @@ useEffect(() => {
       setReflectionSubmitted(true)
       setReflectionDate(today)
     }
-    await checkFirstUse()
-    await loadCommitments()
-    await loadHistory()
-    await loadWeekData()
-    await loadProgressData()
-    await loadWorkoutData()
-  }
+    try {
+      await checkFirstUse()
+      await loadCommitments()
+      await loadHistory()
+      await loadWeekData()
+      await loadProgressData()
+      await loadWorkoutData()
+    } catch (err) {
+      console.error("[init] uncaught error:", err)
+    }
   init()
 }, [user])
 
@@ -470,7 +473,7 @@ async function loadWeekData() {
   const monday = getMondayNL()
   const today  = getNLDate()
   const { data: userData } = await supabase
-    .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).single()
+    .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).maybeSingle()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
   if (userData?.streak != null) setStreak(userData.streak)
   const pid = userData?.id
@@ -555,6 +558,8 @@ async function loadWorkoutData() {
     const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
 
     const { data: profile } = await supabase.from("users").select("id, coach_email").eq("auth_user_id", user.id).maybeSingle()
+
+    if (!profile) return  // no users row yet — wizard handles onboarding, skip workout loading
 
     const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData, error: personalErr }, { data: coachData, error: coachErr }] = await Promise.all([
       supabase.from("workout_planning")
@@ -1035,7 +1040,7 @@ if (showWizard) {
     if (wizardSaving) return
     setWizardSaving(true)
     const today = getNLDate()
-    await supabase.from("users").update({
+    const wPayload = {
       onboarding_completed: true,
       goal_title:           wizardGoalTitle.trim() || wizardGoalType || null,
       goal_deadline:        wizardGoalDeadline || null,
@@ -1044,7 +1049,13 @@ if (showWizard) {
       fitness_level:        wizardNiveau || null,
       training_locations:   wizardLocaties.length > 0 ? wizardLocaties : null,
       sport_frequentie:     wizardFrequency || null,
-    }).eq("auth_user_id", user.id)
+    }
+    const { data: existingRow } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+    if (existingRow) {
+      await supabase.from("users").update(wPayload).eq("auth_user_id", user.id)
+    } else {
+      await supabase.from("users").insert({ ...wPayload, auth_user_id: user.id, role: "client", has_coach: hasCoach })
+    }
     if (wizardChosenCommitment) {
       await supabase.from("commitments").insert({
         text: wizardChosenCommitment, user_id: user.id, date: today, done: false,
