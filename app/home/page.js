@@ -294,6 +294,7 @@ useEffect(() => {
     } catch (err) {
       console.error("[init] uncaught error:", err)
     }
+  }
   init()
 }, [user])
 
