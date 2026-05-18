@@ -110,9 +110,10 @@ const [wizardFrequency,    setWizardFrequency]    = useState(3)
 const [wizardAiOptions,    setWizardAiOptions]    = useState([])
 const [wizardLoadingAi,    setWizardLoadingAi]    = useState(false)
 const [wizardAiError,      setWizardAiError]      = useState(false)
-const [wizardSaving,       setWizardSaving]       = useState(false)
-const [wizardNiveau,       setWizardNiveau]       = useState("")
-const [wizardLocaties,     setWizardLocaties]     = useState([])
+const [wizardSaving,            setWizardSaving]            = useState(false)
+const [wizardNiveau,            setWizardNiveau]            = useState("")
+const [wizardLocaties,          setWizardLocaties]          = useState([])
+const [wizardChosenCommitment,  setWizardChosenCommitment]  = useState("")
 
 // ── Doel balk state ───────────────────────────────────────────
 const [hasCoach,           setHasCoach]           = useState(false)
@@ -124,9 +125,10 @@ const [editGoalTitle,      setEditGoalTitle]      = useState("")
 const [editGoalDeadline,   setEditGoalDeadline]   = useState("")
 const [savingGoalEdit,     setSavingGoalEdit]     = useState(false)
 
-const chatBottomRef = useRef(null)
-const messagesEndRef = useRef(null)
-const scrollRef = useRef(null)
+const chatBottomRef        = useRef(null)
+const messagesEndRef       = useRef(null)
+const scrollRef            = useRef(null)
+const checkFirstUseDoneRef = useRef(false)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 
@@ -312,6 +314,8 @@ async function loadCommitments() {
 }
 
 async function checkFirstUse() {
+  if (checkFirstUseDoneRef.current) return
+  checkFirstUseDoneRef.current = true
   console.log("[checkFirstUse] auth user.id:", user.id)
   let { data } = await supabase.from("users").select("goal, training_location, training_locations, fitness_level, sport_frequentie, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, doelen_door_coach, target_weight, role, height_cm, gender, age, activity_level, name, onboarding_completed, has_coach, goal_title, goal_deadline").eq("auth_user_id", user.id).maybeSingle()
 
@@ -1054,8 +1058,6 @@ if (showWizard) {
     setWizardStep(4)
     if (wizardAiOptions.length === 0) fetchAiCommitments()
   }
-
-  const [wizardChosenCommitment, setWizardChosenCommitment] = useState("")
 
   async function finishWizard() {
     if (wizardSaving) return
