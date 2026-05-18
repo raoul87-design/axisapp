@@ -317,14 +317,19 @@ async function checkFirstUse() {
 
   if (!data) {
     console.log("[checkFirstUse] geen rij — aanmaken voor", user.id)
-    await supabase.from("users").insert({
-      auth_user_id:         user.id,
-      has_coach:            false,
-      onboarding_completed: false,
-      role:                 "b2c",
-    })
-    setHasCoach(false)
-    setOnboardingCompleted(false)
+    const { data: newRow, error: insertErr } = await supabase
+      .from("users")
+      .insert({
+        auth_user_id:         user.id,
+        has_coach:            false,
+        onboarding_completed: false,
+        role:                 "b2c",
+      })
+      .select()
+      .maybeSingle()
+    console.log("[checkFirstUse] insert result:", JSON.stringify(newRow), "| error:", insertErr?.message ?? "geen")
+    setHasCoach(newRow?.has_coach === true)
+    setOnboardingCompleted(newRow?.onboarding_completed === true)
     setShowWizard(true)
     return
   }
@@ -492,7 +497,7 @@ async function loadWeekData() {
     .from("users").select("id, missed_days, streak").eq("auth_user_id", user.id).maybeSingle()
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
   if (userData?.streak != null) setStreak(userData.streak)
-  const pid = userData?.id
+  const pid = userData?.id ?? null
   setPublicUserId(pid)
   if (pid) { loadReminders(pid); loadChatHistory(pid) }
   const publicUserId = pid
