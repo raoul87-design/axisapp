@@ -356,15 +356,12 @@ export default function Dashboard() {
   async function generateInviteLink() {
     if (!authProfile?.email || generatingInvite) return
     setGeneratingInvite(true)
-    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
-      .map(b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
-      .join("")
-    const { error } = await supabase.from("invite_links").insert({
-      coach_email: authProfile.email,
-      code,
-      gebruikt: false,
+    const res = await fetch("/api/invite/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coach_email: authProfile.email }),
     })
-    if (!error) await loadInviteLinks(authProfile.email)
+    if (res.ok) await loadInviteLinks(authProfile.email)
     setGeneratingInvite(false)
   }
 
@@ -372,9 +369,11 @@ export default function Dashboard() {
     if (!authProfile?.email || sendingInvite) return
     setSendingInvite(true)
     setInviteError("")
-    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
-      .map(b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36])
-      .join("")
+
+    // Debug: log session to verify auth state before insert
+    const { data: { session } } = await supabase.auth.getSession()
+    console.log("[invite] session email:", session?.user?.email ?? "null — geen actieve sessie")
+
     const pre_data = {
       naam:               clientForm.naam.trim() || null,
       training_locations: clientForm.locaties,
@@ -382,21 +381,27 @@ export default function Dashboard() {
       target_weight:      clientForm.doelGewicht   ? parseFloat(clientForm.doelGewicht)   : null,
       sport_frequentie:   clientForm.frequentie    || null,
     }
-    console.log('[invite] coach_email:', authProfile?.email, 'authProfile:', authProfile)
-    console.log("[invite] inserting invite_links — coach:", authProfile.email, "| code:", code, "| client_email:", clientForm.email.trim() || null)
-    const { error } = await supabase.from("invite_links").insert({
-      coach_email:  authProfile.email,
-      code,
-      gebruikt:     false,
-      client_email: clientForm.email.trim() || null,
-      pre_data,
+
+    const res = await fetch("/api/invite/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        coach_email:  authProfile.email,
+        client_email: clientForm.email.trim() || null,
+        pre_data,
+      }),
     })
-    if (error) {
-      console.error("[invite] insert failed:", error.message, "| code:", error.code, "| details:", error.details)
-      setInviteError(`Fout bij aanmaken invite: ${error.message}`)
+
+    const result = await res.json()
+
+    if (!res.ok) {
+      console.error("[invite] create failed:", result.error)
+      setInviteError(`Fout bij aanmaken invite: ${result.error}`)
       setSendingInvite(false)
       return
     }
+
+    const { code } = result
     console.log("[invite] insert ok — code:", code)
 
     const inviteUrl = `${window.location.origin}/invite/${code}`
