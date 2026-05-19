@@ -24,8 +24,8 @@ const T = {
     hero: {
       badge: "Jouw dagelijkse discipline app",
       h1a: "Bereik je doel.",
-      h1b: "Elke dag een stap dichter.",
-      sub: "Dagelijkse check-ins via WhatsApp, een AI coach die je kent, en workouts die passen bij jouw doel.",
+      h1b: "Elke dag een stap dichterbij.",
+      sub: "Dagelijkse check-ins via WhatsApp, een AI coach die jou kent, en workouts die passen bij jouw doel.",
       cta: "Start 14 dagen gratis →",
     },
     how: {
@@ -42,7 +42,7 @@ const T = {
       badge: "Wat je krijgt",
       h2: "Alles wat je nodig hebt om consistent te blijven.",
       items: [
-        { num: "01", title: "AI coach die je kent",         desc: "Onthoudt jouw geschiedenis, doelen en patronen. Past de toon aan op basis van hoe het gaat." },
+        { num: "01", title: "AI coach die jou kent",         desc: "Onthoudt jouw geschiedenis, doelen en patronen. Past de toon aan op hoe het met je gaat." },
         { num: "02", title: "Dagelijkse WhatsApp check-in", desc: "Geen aparte app nodig. Elke ochtend een check-in, elke avond een check-out." },
         { num: "03", title: "Workouts op maat",             desc: "Workouts afgestemd op jouw doel en niveau. Registreer gewichten en sets in de app." },
         { num: "04", title: "Voortgang & statistieken",     desc: "Dagelijkse scores, streaks en trends. Zie precies hoe je het doet." },
@@ -84,7 +84,7 @@ const T = {
       badge: "Your daily discipline app",
       h1a: "Reach your goal.",
       h1b: "One step closer every day.",
-      sub: "Daily check-ins via WhatsApp, an AI coach that knows you, and workouts that fit your goal.",
+      sub: "Daily check-ins via WhatsApp, an AI coach that knows you, and workouts built around your goal.",
       cta: "Start 14 days free →",
     },
     how: {
