@@ -1743,6 +1743,7 @@ return (
 
             {/* Acties */}
             {[
+              { icon: "🎯", label: "Mijn doel aanpassen",  onClick: () => { setShowSettings(false); setEditGoalTitle(goalTitle); setEditGoalDeadline(goalDeadline ?? ""); setShowGoalModal(true) } },
               { icon: "🔑", label: "Wachtwoord instellen", onClick: async () => { setShowSettings(false); const pw = prompt("Nieuw wachtwoord (min. 6 tekens):"); if (!pw || pw.length < 6) return; const { error } = await supabase.auth.updateUser({ password: pw }); if (error) alert("Fout: " + error.message); else alert("Wachtwoord opgeslagen!") } },
               { icon: "💬", label: "Koppel WhatsApp",      onClick: async () => { setShowSettings(false); const number = prompt("Jouw WhatsApp nummer (+31...):"); if (!number) return; const ok = await linkWhatsapp(number); if (ok) alert("WhatsApp gekoppeld!") } },
               { icon: "🥗", label: "Voedingsdoelen",       onClick: () => { setShowSettings(false); setShowNutritionModal(true) } },
