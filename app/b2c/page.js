@@ -150,18 +150,24 @@ function Badge({ children }) {
   )
 }
 
-function PhoneFrame({ src, alt }) {
+function PhoneFrame({ src }) {
+  const NW = 390, NH = 844, SCALE = 0.56
+  const W = Math.round(NW * SCALE), H = Math.round(NH * SCALE)
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
       <div style={{
-        width: 220, border: "6px solid #2a2a2a", borderRadius: 32,
+        display: "inline-block", border: "6px solid #2a2a2a", borderRadius: 32,
         overflow: "hidden", background: "#1a1a1a",
         boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px #333",
       }}>
         <div style={{ height: 20, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ width: 48, height: 4, background: "#333", borderRadius: 4 }} />
         </div>
-        <img src={src} alt={alt} style={{ width: "100%", display: "block" }} />
+        <div style={{ width: W, height: H, overflow: "hidden", background: "#000" }}>
+          <iframe src={src} scrolling="no" title="mockup"
+            style={{ width: NW, height: NH, border: "none", display: "block", transform: `scale(${SCALE})`, transformOrigin: "top left", pointerEvents: "none" }}
+          />
+        </div>
       </div>
       <div style={{ position: "absolute", top: -16, right: -16, width: 32, height: 32, borderRadius: "50%", background: G, opacity: 0.15, filter: "blur(12px)" }} />
     </div>
@@ -308,7 +314,7 @@ export default function B2CPage() {
             <a href="https://app.axisapp.nl/signup" className="btn-green" style={{ fontSize: 16, padding: "14px 32px" }}>{t.hero.cta}</a>
           </div>
           <div className="hero-phone" style={{ flexShrink: 0 }}>
-            <PhoneFrame src="/screenshot-app.png" alt="AXIS app" />
+            <PhoneFrame src="/mockups/today.html" />
           </div>
         </div>
       </div>
@@ -341,7 +347,7 @@ export default function B2CPage() {
       <div style={{ borderTop: `1px solid ${BORDER}` }}>
         <Section>
           <div style={{ display: "flex", alignItems: "center", gap: 64, flexWrap: "wrap" }}>
-            <PhoneFrame src="/screenshot-whatsapp.png" alt="WhatsApp AI coach" />
+            <PhoneFrame src="/mockups/whatsapp.html" />
             <div style={{ flex: 1, minWidth: 260 }}>
               <Badge>WhatsApp</Badge>
               <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
