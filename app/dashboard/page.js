@@ -71,16 +71,17 @@ function WeeklyChart({ data }) {
   )
 }
 
-function Badge({ status }) {
+function Badge({ status, title }) {
   const map = {
-    Done:           { bg: "#14532d", color: GREEN },
-    "In Progress":  { bg: "#1a1a00", color: "#facc15" },
-    Missed:         { bg: "#2a0a0a", color: "#ef4444" },
-    Inactive:       { bg: "#1a1a1a", color: "#444" },
+    Done:                    { bg: "#14532d", color: GREEN },
+    "In Progress":           { bg: "#1a1a00", color: "#facc15" },
+    Missed:                  { bg: "#2a0a0a", color: "#ef4444" },
+    "Bewust overgeslagen":   { bg: "#2a2000", color: "#facc15" },
+    Inactive:                { bg: "#1a1a1a", color: "#444" },
   }
   const s = map[status] || map["Inactive"]
   return (
-    <span style={{ background: s.bg, color: s.color, fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>
+    <span title={title} style={{ background: s.bg, color: s.color, fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: "bold" }}>
       {status}
     </span>
   )
@@ -214,8 +215,8 @@ export default function Dashboard() {
       { data: metricsRaw },
       { data: conversationsRaw },
     ] = await Promise.all([
-      supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
-      supabase.from("commitments").select("user_id, text, done, date").gte("date", thirtyAgoStr).order("date", { ascending: false }).limit(500),
+      supabase.from("commitments").select("user_id, text, done, date, is_skipped, skipped_reason").eq("date", today),
+      supabase.from("commitments").select("user_id, text, done, date, is_skipped, skipped_reason").gte("date", thirtyAgoStr).order("date", { ascending: false }).limit(500),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       supabase.from("reflections").select("user_id, completed, created_at").gte("created_at", `${today}T00:00:00`),
       supabase.from("metrics").select("user_id, type, waarde, datum").order("datum", { ascending: false }).limit(300),
@@ -461,6 +462,8 @@ export default function Dashboard() {
 
   function getClientStatus(user) {
     if (reflectedToday.has(user.auth_user_id)) return "Done"
+    const userCommits = todayCommits.filter(c => c.user_id === user.auth_user_id)
+    if (userCommits.length > 0 && userCommits.every(c => c.is_skipped)) return "Bewust overgeslagen"
     if (committedToday.has(user.auth_user_id)) return "In Progress"
     if (committedToday.size > 0) return "Missed"
     return "Inactive"
@@ -470,6 +473,8 @@ export default function Dashboard() {
     const commits = todayCommits.filter(c => c.user_id === user.auth_user_id)
     if (commits.length === 0) return "—"
     const done = commits.filter(c => c.done).length
+    const skipped = commits.filter(c => c.is_skipped).length
+    if (skipped > 0 && done === 0) return `${skipped}/${commits.length} overgeslagen`
     return `${done}/${commits.length} checked`
   }
 
@@ -783,7 +788,7 @@ export default function Dashboard() {
                           </button>
                         </td>
                         <td style={{ ...TD, fontSize: 13, color: "#ccc" }}>{c.text}</td>
-                        <td style={TD}><Badge status={c.done ? "Done" : c.date === todayStr ? "In Progress" : "Missed"} /></td>
+                        <td style={TD}><Badge status={c.is_skipped ? "Bewust overgeslagen" : c.done ? "Done" : c.date === todayStr ? "In Progress" : "Missed"} title={c.skipped_reason} /></td>
                       </tr>
                     )
                   })}
@@ -829,7 +834,7 @@ export default function Dashboard() {
                             </button>
                           </td>
                           <td style={{ ...TD, fontSize: 13, color: "#ccc" }}>{c.text}</td>
-                          <td style={TD}><Badge status={c.done ? "Done" : c.date === todayStr ? "In Progress" : "Missed"} /></td>
+                          <td style={TD}><Badge status={c.is_skipped ? "Bewust overgeslagen" : c.done ? "Done" : c.date === todayStr ? "In Progress" : "Missed"} title={c.skipped_reason} /></td>
                         </tr>
                       )
                     })}

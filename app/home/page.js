@@ -99,6 +99,13 @@ const [builderSearch,    setBuilderSearch]    = useState("")
 const [builderResults,   setBuilderResults]   = useState([])
 const [builderSaving,    setBuilderSaving]    = useState(false)
 
+// ── Skip modal ────────────────────────────────────────────────
+const [showSkipModal,   setShowSkipModal]   = useState(false)
+const [skipModalItem,   setSkipModalItem]   = useState(null)
+const [skipReason,      setSkipReason]      = useState("")
+const [skipNote,        setSkipNote]        = useState("")
+const [skipInlineMsgs,  setSkipInlineMsgs]  = useState({})
+
 // ── Onboarding wizard (5 stappen) ────────────────────────────
 const [showWizard,         setShowWizard]         = useState(false)
 const [wizardStep,         setWizardStep]         = useState(1)
@@ -912,7 +919,8 @@ async function finishWorkout() {
 
 function calculateProgress(list) {
   if (list.length === 0) { setProgress(0); return }
-  const pct = Math.round(list.filter(c => c.done).length / list.length * 100)
+  const effective = list.filter(c => c.done || c.is_skipped).length
+  const pct = Math.round(effective / list.length * 100)
   setProgress(pct)
   saveDailyScore(pct)
 }
@@ -934,6 +942,27 @@ async function addCommitment(customText) {
 
 async function toggleDone(id, current) {
   await supabase.from("commitments").update({ done: !current }).eq("id", id)
+  loadCommitments()
+}
+
+const SKIP_AI = {
+  "Ziek / niet lekker": "Rust goed uit, je lichaam heeft het nodig. Morgen weer. 💙",
+  "Te druk vandaag":    "Soms is het leven drukker dan gepland. Morgen pak je de draad weer op.",
+  "Rustdag":            "Herstel is net zo belangrijk als training. Goed bezig. 🙌",
+  "Anders":             "Geen probleem. Morgen is een nieuwe kans.",
+}
+
+async function skipCommitment() {
+  if (!skipModalItem || !skipReason) return
+  const full = skipNote.trim() ? `${skipReason} — ${skipNote.trim()}` : skipReason
+  await supabase.from("commitments")
+    .update({ is_skipped: true, skipped_reason: full })
+    .eq("id", skipModalItem.id)
+  setSkipInlineMsgs(prev => ({ ...prev, [skipModalItem.id]: SKIP_AI[skipReason] }))
+  setShowSkipModal(false)
+  setSkipModalItem(null)
+  setSkipReason("")
+  setSkipNote("")
   loadCommitments()
 }
 
@@ -1708,9 +1737,10 @@ if (showNutritionModal) {
 
 // ── Hoofdapp ──────────────────────────────────────────────────
 const done = commitments.filter(c => c.done).length
+const skipped = commitments.filter(c => c.is_skipped).length
 const total = commitments.length
 const circumference = 2 * Math.PI * 36
-const todayState = total === 0 ? 1 : done === 0 ? 2 : done < total ? 3 : 4
+const todayState = total === 0 ? 1 : (done + skipped) === 0 ? 2 : (done + skipped) < total ? 3 : 4
 
 // Period selector
 const PeriodSelector = ({ options, value, onChange }) => (
@@ -1742,6 +1772,35 @@ const ChartTooltip = ({ active, payload, label }) => {
 
 return (
 <div style={{ maxWidth: 420, margin: "auto", fontFamily: "sans-serif", background: C.bg, minHeight: "100vh", color: C.text, position: "relative" }}>
+
+  {/* SKIP MODAL */}
+  {showSkipModal && (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) { setShowSkipModal(false); setSkipModalItem(null) } }}>
+      <div style={{ width: "100%", maxWidth: 420, background: "#141414", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", border: "1px solid #2a2a2a" }}>
+        <div style={{ width: 36, height: 4, background: "#333", borderRadius: 2, margin: "0 auto 20px" }} />
+        <h3 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 6px" }}>Waarom lukt het vandaag niet?</h3>
+        <p style={{ color: "#666", fontSize: 12, margin: "0 0 18px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{skipModalItem?.text}</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {["Ziek / niet lekker", "Te druk vandaag", "Rustdag", "Anders"].map(r => (
+            <button key={r} onClick={() => setSkipReason(r)}
+              style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${skipReason === r ? "#facc15" : "#2a2a2a"}`, background: skipReason === r ? "#2a2000" : "transparent", color: skipReason === r ? "#facc15" : "#888", fontSize: 13, cursor: "pointer", fontWeight: skipReason === r ? 600 : 400 }}>
+              {r}
+            </button>
+          ))}
+        </div>
+        <textarea value={skipNote} onChange={e => setSkipNote(e.target.value.slice(0, 100))}
+          placeholder="Wil je iets toevoegen? (optioneel)"
+          rows={2}
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, resize: "none", boxSizing: "border-box", outline: "none", marginBottom: 14 }} />
+        <p style={{ color: "#444", fontSize: 11, textAlign: "right", margin: "-10px 0 14px" }}>{skipNote.length}/100</p>
+        <button onClick={skipCommitment} disabled={!skipReason}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: skipReason ? "#facc15" : "#2a2a2a", color: skipReason ? "#000" : "#555", fontSize: 14, fontWeight: 700, cursor: skipReason ? "pointer" : "default" }}>
+          Bevestig →
+        </button>
+      </div>
+    </div>
+  )}
 
   {/* HEADER */}
   {(() => {
@@ -1924,21 +1983,41 @@ return (
         <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Commitment</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {commitments.map(c => (
-            <div key={c.id} style={{ background: "#141414", border: "1px solid #1f1f1f", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div onClick={() => toggleDone(c.id, c.done)}
-                style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : "2px solid #3a3a3a", background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                {c.done && <span style={{ color: "#000", fontSize: 12, fontWeight: "bold" }}>✓</span>}
+            <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              <div style={{ background: "#141414", border: `1px solid ${c.is_skipped ? "#3a3000" : "#1f1f1f"}`, borderRadius: skipInlineMsgs[c.id] ? "14px 14px 0 0" : 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+                {c.is_skipped ? (
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "#3a3000", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    title={c.skipped_reason || "Overgeslagen"}>
+                    <span style={{ color: "#facc15", fontSize: 13 }}>~</span>
+                  </div>
+                ) : (
+                  <div onClick={() => toggleDone(c.id, c.done)}
+                    style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, border: c.done ? "none" : "2px solid #3a3a3a", background: c.done ? GREEN : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    {c.done && <span style={{ color: "#000", fontSize: 12, fontWeight: "bold" }}>✓</span>}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span onClick={() => !c.is_skipped && toggleDone(c.id, c.done)}
+                    style={{ fontSize: 14, color: c.done ? "#5e5e5e" : c.is_skipped ? "#6b6020" : "#fafafa", textDecoration: (c.done || c.is_skipped) ? "line-through" : "none", cursor: c.is_skipped ? "default" : "pointer", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.text}
+                  </span>
+                  {c.done && <p style={{ color: "#5e5e5e", fontSize: 11, margin: "3px 0 0" }}>Voltooid</p>}
+                  {c.is_skipped && <p style={{ color: "#a08020", fontSize: 11, margin: "3px 0 0" }}>Overgeslagen — {c.skipped_reason}</p>}
+                </div>
+                {!c.done && !c.is_skipped && (
+                  <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                    <button onClick={() => { setSkipModalItem(c); setSkipReason(""); setSkipNote(""); setShowSkipModal(true) }}
+                      title="Goede reden om over te slaan"
+                      style={{ background: "none", border: "none", color: "#5e5e5e", fontSize: 14, cursor: "pointer", padding: "0 5px", lineHeight: 1 }}>~</button>
+                    <button onClick={async () => { await supabase.from("commitments").delete().eq("id", c.id); setCommitments(prev => prev.filter(x => x.id !== c.id)) }}
+                      style={{ background: "none", border: "none", color: "#5e5e5e", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+                  </div>
+                )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span onClick={() => toggleDone(c.id, c.done)}
-                  style={{ fontSize: 14, color: c.done ? "#5e5e5e" : "#fafafa", textDecoration: c.done ? "line-through" : "none", cursor: "pointer", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {c.text}
-                </span>
-                {c.done && <p style={{ color: "#5e5e5e", fontSize: 11, margin: "3px 0 0" }}>Voltooid</p>}
-              </div>
-              {!c.done && (
-                <button onClick={async () => { await supabase.from("commitments").delete().eq("id", c.id); setCommitments(prev => prev.filter(x => x.id !== c.id)) }}
-                  style={{ background: "none", border: "none", color: "#5e5e5e", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1, flexShrink: 0 }}>×</button>
+              {skipInlineMsgs[c.id] && (
+                <div style={{ background: "#1a1500", border: "1px solid #3a3000", borderTop: "none", borderRadius: "0 0 14px 14px", padding: "10px 16px" }}>
+                  <p style={{ color: "#facc15", fontSize: 12, margin: 0 }}>💛 {skipInlineMsgs[c.id]}</p>
+                </div>
               )}
             </div>
           ))}

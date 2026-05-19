@@ -16,6 +16,12 @@ function messageWithCommitments(name) {
   return `${greeting} 💪 Heb je je commitments gehaald?\n\nAntwoord met *Ja* of *Nee*.`
 }
 
+function messageAllSkipped(name) {
+  const fn = firstName(name)
+  const greeting = fn ? `Hey ${fn}` : `Hey`
+  return `${greeting} 💛 Je hebt vandaag bewust een stap teruggedaan. Hoe ging het vandaag ondanks de omstandigheden?\n\nAntwoord met *Ja* of *Nee*.`
+}
+
 function messageWithoutCommitments(name) {
   const fn = firstName(name)
   const greeting = fn ? `Hey ${fn}` : `Hey`
@@ -54,20 +60,24 @@ export async function GET(request) {
       try {
         // Check of user vandaag commitments heeft
         let hasCommitments = false
+        let allSkipped = false
         if (user.auth_user_id) {
-          const { count } = await supabase
+          const { data: todayCommits } = await supabase
             .from("commitments")
-            .select("id", { count: "exact", head: true })
+            .select("id, is_skipped")
             .eq("user_id", user.auth_user_id)
             .eq("date", today)
-          hasCommitments = (count ?? 0) > 0
+          hasCommitments = (todayCommits?.length ?? 0) > 0
+          allSkipped = hasCommitments && todayCommits.every(c => c.is_skipped)
         }
 
-        console.log(`[${user.whatsapp_number}] Commitments vandaag: ${hasCommitments}`)
+        console.log(`[${user.whatsapp_number}] Commitments vandaag: ${hasCommitments}, allSkipped: ${allSkipped}`)
 
-        const body = hasCommitments
-          ? messageWithCommitments(user.name)
-          : messageWithoutCommitments(user.name)
+        const body = !hasCommitments
+          ? messageWithoutCommitments(user.name)
+          : allSkipped
+            ? messageAllSkipped(user.name)
+            : messageWithCommitments(user.name)
 
         const message = await client.messages.create({
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
