@@ -248,7 +248,7 @@ function renderMarkdown(text) {
 const handleReflection = async (gehaald) => {
   const today = getNLDate()
   const payload = {
-    user_id:   user.id,
+    user_id:   publicUserId ?? user.id,
     datum:     today,
     gehaald,
     completed: true,
