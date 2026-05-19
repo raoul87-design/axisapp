@@ -935,6 +935,12 @@ async function sendChat(messageText) {
   const newMessages = [...chatMessages, { role: "user", content: msg, time: now }]
   setChatMessages(newMessages)
   setChatLoading(true)
+
+  if (publicUserId) {
+    supabase.from("conversations").insert({ user_id: publicUserId, role: "user", content: msg })
+      .then(({ error }) => { if (error) console.error("[sendChat] save user msg:", error.message) })
+  }
+
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -945,6 +951,10 @@ async function sendChat(messageText) {
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
     if (!res.ok || !data.content) throw new Error(data.error || "Geen antwoord ontvangen")
     setChatMessages(prev => [...prev, { role: "assistant", content: data.content, time: replyTime }])
+    if (publicUserId) {
+      supabase.from("conversations").insert({ user_id: publicUserId, role: "assistant", content: data.content })
+        .then(({ error }) => { if (error) console.error("[sendChat] save assistant msg:", error.message) })
+    }
   } catch (err) {
     console.error("[sendChat] fout:", err?.message, err)
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
@@ -954,18 +964,12 @@ async function sendChat(messageText) {
 }
 
 useEffect(() => {
-  setTimeout(() => {
-    const container = scrollRef.current
-    if (container) container.scrollTop = container.scrollHeight + 1000
-  }, 100)
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
 }, [chatMessages])
 
 useEffect(() => {
   if (activeTab === "coach") {
-    setTimeout(() => {
-      const container = scrollRef.current
-      if (container) container.scrollTop = container.scrollHeight + 1000
-    }, 100)
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
   }
 }, [activeTab])
 
