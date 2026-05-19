@@ -159,7 +159,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
                 <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Geen resultaten. Probeer handmatige invoer.</p>
               )}
               {results.map((p, i) => (
-                <div key={i} onClick={() => onAdd(p, meal.id)}
+                <div key={i} onClick={() => { console.log("[AddFood] click:", p.name, "meal:", meal.id); onAdd(p, meal.id) }}
                   style={{ padding: "12px 0", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13.5, fontWeight: 500, margin: "0 0 3px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
@@ -255,23 +255,25 @@ function AiGenModal({ onClose, onGenerate, loading, error, prefs, setPrefs }) {
         <p style={{ color: DIM, fontSize: 12, margin: "0 0 20px" }}>Gebaseerd op jouw macro doelen en voorkeuren.</p>
 
         {loading ? (
-          <div style={{ padding: "20px 0", textAlign: "center" }}>
-            <div style={{ padding: "12px 14px", background: "rgba(34,197,94,0.06)", border: `1px solid rgba(34,197,94,0.4)`, borderRadius: 9 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: G, boxShadow: `0 0 8px ${G}`, animation: "pulse 1.4s infinite" }} />
-                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: G, textTransform: "uppercase" }}>Weekmenu genereren...</span>
+          <>
+            <div style={{ padding: "20px 0", textAlign: "center" }}>
+              <div style={{ padding: "12px 14px", background: "rgba(34,197,94,0.06)", border: `1px solid rgba(34,197,94,0.4)`, borderRadius: 9 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: G, boxShadow: `0 0 8px ${G}`, animation: "pulse 1.4s infinite" }} />
+                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.2em", color: G, textTransform: "uppercase" }}>Weekmenu genereren...</span>
+                </div>
+                <div style={{ height: 4, background: "rgba(34,197,94,0.18)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "60%", background: G, borderRadius: 2, animation: "slideRight 1.5s infinite" }} />
+                </div>
+                <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Dit duurt ~25 seconden</p>
               </div>
-              <div style={{ height: 4, background: "rgba(34,197,94,0.18)", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: "60%", background: G, borderRadius: 2, animation: "slideRight 1.5s infinite" }} />
+            </div>
+            {error && (
+              <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 9 }}>
+                <p style={{ color: "#fca5a5", fontSize: 12, margin: 0 }}>{error}</p>
               </div>
-              <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Dit duurt ~25 seconden</p>
-            </div>
-          </div>
-          {error && (
-            <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 9 }}>
-              <p style={{ color: "#fca5a5", fontSize: 12, margin: 0 }}>{error}</p>
-            </div>
-          )}
+            )}
+          </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
@@ -383,8 +385,9 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   async function addFoodLog(product, mealId) {
-    if (!uid) return
-    await supabase.from("food_logs").insert({
+    if (!uid) { console.warn("[addFoodLog] no uid"); return }
+    console.log("[addFoodLog] inserting:", product.name, "meal:", mealId, "uid:", uid)
+    const { data, error } = await supabase.from("food_logs").insert({
       user_id:      uid,
       date:         getNLDate(),
       meal_type:    mealId,
@@ -397,6 +400,11 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
       source:       product.source || "EIGEN",
       done:         false,
     })
+    if (error) {
+      console.error("[addFoodLog] insert error:", error.message, error.code)
+      return
+    }
+    console.log("[addFoodLog] inserted ok:", data)
     setAddFoodMeal(null)
     loadFoodLogs()
   }

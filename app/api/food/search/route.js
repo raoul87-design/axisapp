@@ -4,12 +4,17 @@ export async function GET(request) {
   if (!q || q.length < 2) return Response.json({ products: [] })
 
   try {
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&lc=nl&fields=product_name,nutriments,serving_size,brands&page_size=15`
-    const res = await fetch(url, { headers: { "User-Agent": "AXIS-App/1.0" } })
-    const data = await res.json()
+    const fetchOFF = async (extraParams) => {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&fields=product_name,nutriments,serving_size,brands&page_size=10${extraParams}`
+      const res = await fetch(url, { headers: { "User-Agent": "AXIS-App/1.0" } })
+      const d = await res.json()
+      return (d.products || []).filter(p => p.product_name && p.nutriments)
+    }
 
-    const products = (data.products || [])
-      .filter(p => p.product_name && p.nutriments)
+    let raw = await fetchOFF("&lc=nl&cc=nl")
+    if (raw.length === 0) raw = await fetchOFF("")
+
+    const products = raw
       .slice(0, 10)
       .map(p => {
         const n = p.nutriments
