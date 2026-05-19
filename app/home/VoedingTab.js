@@ -242,7 +242,7 @@ function RecipeView({ recipe, mealLabel, onClose }) {
 }
 
 // ── AI Generator Modal ─────────────────────────────────────────
-function AiGenModal({ onClose, onGenerate, loading, prefs, setPrefs }) {
+function AiGenModal({ onClose, onGenerate, loading, error, prefs, setPrefs }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
       onClick={e => { if (e.target === e.currentTarget && !loading) onClose() }}>
@@ -264,9 +264,14 @@ function AiGenModal({ onClose, onGenerate, loading, prefs, setPrefs }) {
               <div style={{ height: 4, background: "rgba(34,197,94,0.18)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: "60%", background: G, borderRadius: 2, animation: "slideRight 1.5s infinite" }} />
               </div>
-              <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Dit duurt ~10 seconden</p>
+              <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Dit duurt ~25 seconden</p>
             </div>
           </div>
+          {error && (
+            <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 9 }}>
+              <p style={{ color: "#fca5a5", fontSize: 12, margin: 0 }}>{error}</p>
+            </div>
+          )}
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
@@ -297,6 +302,11 @@ function AiGenModal({ onClose, onGenerate, loading, prefs, setPrefs }) {
                 placeholder="Bijv. geen gluten, houd van pasta..."
                 style={{ width: "100%", padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
             </div>
+            {error && (
+              <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 9 }}>
+                <p style={{ color: "#fca5a5", fontSize: 12, margin: 0 }}>{error}</p>
+              </div>
+            )}
             <button onClick={onGenerate}
               style={{ marginTop: 4, padding: "13px 0", borderRadius: 12, border: "none", background: G, color: "#061a0c", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
               ✦ Genereer weekmenu
@@ -321,6 +331,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   const [recipeMeal,    setRecipeMeal]    = useState("")
   const [aiGenModal,    setAiGenModal]    = useState(false)
   const [aiGenLoading,  setAiGenLoading]  = useState(false)
+  const [aiGenError,    setAiGenError]    = useState("")
   const [aiPrefs,       setAiPrefs]       = useState({ doel: "Onderhouden", likes: "", tijd: "30" })
   const [checkedItems,  setCheckedItems]  = useState({})
 
@@ -403,18 +414,35 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   async function generateMealPlan() {
     if (!uid) return
     setAiGenLoading(true)
+    setAiGenError("")
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 25000)
+    )
     try {
       const monday = getMondayNL()
-      const res = await fetch("/api/nutrition/generate-week", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: uid, weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
-      })
+      const res = await Promise.race([
+        fetch("/api/nutrition/generate-week", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: uid, weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
+        }),
+        timeout,
+      ])
       const data = await res.json()
-      if (data.plan) setMealPlan(data.plan)
-    } catch {}
+      if (data.plan) {
+        setMealPlan(data.plan)
+        setAiGenModal(false)
+      } else {
+        setAiGenError(data.error || "Onbekende fout. Probeer het opnieuw.")
+      }
+    } catch (err) {
+      if (err.message === "timeout") {
+        setAiGenError("Menu genereren duurt langer dan verwacht. Probeer het opnieuw.")
+      } else {
+        setAiGenError("Er ging iets mis. Probeer het opnieuw.")
+      }
+    }
     setAiGenLoading(false)
-    setAiGenModal(false)
   }
 
   function buildShoppingList(plan) {
@@ -746,7 +774,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
       {/* Modals */}
       {addFoodMeal && <AddFoodModal meal={addFoodMeal} onClose={() => setAddFoodMeal(null)} onAdd={addFoodLog} />}
       {recipeView  && <RecipeView  recipe={recipeView}  mealLabel={recipeMeal} onClose={() => setRecipeView(null)} />}
-      {aiGenModal  && <AiGenModal  onClose={() => !aiGenLoading && setAiGenModal(false)} onGenerate={generateMealPlan} loading={aiGenLoading} prefs={aiPrefs} setPrefs={setAiPrefs} />}
+      {aiGenModal  && <AiGenModal  onClose={() => !aiGenLoading && setAiGenModal(false)} onGenerate={generateMealPlan} loading={aiGenLoading} error={aiGenError} prefs={aiPrefs} setPrefs={setAiPrefs} />}
 
       {/* Sub-nav */}
       <div style={{ padding: "4px 22px 14px", display: "flex", gap: 4 }}>

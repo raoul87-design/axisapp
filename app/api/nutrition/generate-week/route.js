@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { supabaseAdmin } from "../../../../lib/supabase"
 
+export const maxDuration = 60
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const DAYS = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
@@ -9,38 +11,22 @@ export async function POST(request) {
   try {
     const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
 
-    const prompt = `Je bent een Nederlandse voedingsdeskundige. Maak een volledig weekmenu voor 7 dagen.
+    const prompt = `Maak een 7-daags weekmenu in JSON. Alleen JSON, geen uitleg.
 
-Doelen per dag:
-- Calorieën: ${kcalDoel} kcal
-- Eiwitten: ${eiwittenDoel}g
-- Koolhydraten: ${koolhydratenDoel}g
-- Vetten: ${vettenDoel}g
+Macro doelen/dag: ${kcalDoel}kcal, ${eiwittenDoel}g eiwit, ${koolhydratenDoel}g koolh, ${vettenDoel}g vet.
+Doel: ${prefs?.doel || "onderhouden"}. Tijd: max ${prefs?.tijd || "30"}min. ${prefs?.likes ? `Extra: ${prefs.likes}.` : ""}
 
-Voorkeuren: ${prefs?.doel || "gezond eten"}, ${prefs?.likes || "geen specifieke wensen"}, bereidingstijd: max ${prefs?.tijd || "30"} minuten.
+Schema per dag (4 velden: ontbijt/lunch/diner/snacks, elk een array met 1 recept):
+{"naam":"string","kcal":number,"eiwitten":number,"koolhydraten":number,"vetten":number,"bereidingstijd":number,"ingredienten":[{"naam":"string","hoeveelheid":"string","eenheid":"string","categorie":"string"}]}
 
-Geef een JSON object terug met deze exacte structuur (geen uitleg, alleen JSON):
-{
-  "maandag": {
-    "ontbijt": [{"naam": "string", "kcal": number, "eiwitten": number, "koolhydraten": number, "vetten": number, "bereidingstijd": number, "beschrijving": "string", "ingredienten": [{"naam": "string", "hoeveelheid": "string", "eenheid": "string", "categorie": "string"}]}],
-    "lunch": [...],
-    "diner": [...],
-    "snacks": [{"naam": "string", "kcal": number, "eiwitten": number, "koolhydraten": number, "vetten": number, "bereidingstijd": 0, "beschrijving": "string", "ingredienten": [...]}]
-  },
-  "dinsdag": {...},
-  "woensdag": {...},
-  "donderdag": {...},
-  "vrijdag": {...},
-  "zaterdag": {...},
-  "zondag": {...}
-}
+Categorieën: Groente, Fruit, Vlees, Vis, Zuivel, Granen, Noten & Zaden, Sauzen & Kruiden, Overig.
 
-Categorieën voor ingrediënten: Groente, Fruit, Vlees, Vis, Zuivel, Granen, Noten & Zaden, Sauzen & Kruiden, Overig.
-Zorg dat de macro's per dag dicht bij de doelen blijven. Gebruik Nederlandse gerechtnamen. Varieer dagelijks.`
+Geef exact dit JSON object:
+{"maandag":{"ontbijt":[...],"lunch":[...],"diner":[...],"snacks":[...]},"dinsdag":{...},"woensdag":{...},"donderdag":{...},"vrijdag":{...},"zaterdag":{...},"zondag":{...}}`
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 8000,
+      max_tokens: 6000,
       messages: [{ role: "user", content: prompt }],
     })
 
