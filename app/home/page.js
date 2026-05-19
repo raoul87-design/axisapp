@@ -480,9 +480,10 @@ async function addReminder() {
 }
 
 async function loadHistory() {
+  const uid = publicUserId ?? user.id
   const { data } = await supabase
     .from("daily_results").select("date,score")
-    .eq("user_id", user.id).order("date", { ascending: false })
+    .eq("user_id", uid).order("date", { ascending: false })
   if (!data) return
   const uniqueDays = Object.values(
     data.reduce((acc, item) => {
@@ -558,7 +559,7 @@ async function loadProgressData() {
       .eq("user_id", user.id).in("type", ["voeding", "calorie", "kcal"])
       .order("datum", { ascending: true }).limit(200),
     supabase.from("daily_results").select("date, score")
-      .eq("user_id", user.id).order("date", { ascending: false }),
+      .eq("user_id", publicUserId ?? user.id).order("date", { ascending: false }),
   ])
 
   setMetricsWeight(weightData || [])
@@ -891,7 +892,8 @@ function calculateProgress(list) {
 
 async function saveDailyScore(score) {
   if (!user) return
-  await supabase.from("daily_results").upsert({ user_id: user.id, date: getNLDate(), score })
+  const uid = publicUserId ?? user.id
+  await supabase.from("daily_results").upsert({ user_id: uid, date: getNLDate(), score })
 }
 
 async function addCommitment(customText) {
