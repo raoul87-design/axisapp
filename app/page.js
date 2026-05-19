@@ -263,13 +263,14 @@ function ScreenFrame({ src, alt }) {
 function LangToggle({ lang, setLang }) {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
-      {[["NL","🇳🇱"],["EN","🇬🇧"]].map(([code, flag], i) => (
+      {[["NL","🇳🇱"],["EN","English"]].map(([code, flag], i) => (
         <span key={code} style={{ display: "flex", alignItems: "center" }}>
           {i > 0 && <span style={{ color: "#333", fontSize: 11, padding: "0 1px" }}>|</span>}
           <button onClick={() => setLang(code)} style={{
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 15, padding: "4px 5px", lineHeight: 1,
+            fontSize: code === "NL" ? 15 : 13, padding: "4px 6px", lineHeight: 1,
             opacity: lang === code ? 1 : 0.4,
+            color: "#fff", fontWeight: lang === code ? 600 : 400,
           }}>
             {flag}
           </button>
@@ -444,7 +445,7 @@ function ContactForm({ t }) {
 
 // ── Main ──────────────────────────────────────────────────────
 export default function Website() {
-  const [lang, setLang] = useState("EN")
+  const [lang, setLang] = useState("NL")
   const t = T[lang]
 
   useEffect(() => {
