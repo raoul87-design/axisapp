@@ -42,6 +42,7 @@ export default function InvitePage() {
     const { data: authData, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
+      options: { emailRedirectTo: "https://app.axisapp.nl/home" },
     })
 
     if (error) {
