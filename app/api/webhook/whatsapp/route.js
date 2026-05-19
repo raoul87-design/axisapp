@@ -532,11 +532,11 @@ async function handleReflection(from, body, userData) {
   const normalized = body.trim().toLowerCase()
   const today = getNLDate()
 
-  // Ruimere matching: ja/yes/done/top/ok/👍 = afgerond
-  const completed = /^(ja|yes|done|top|ok|oké|👍|👌|✅|goed|klaar|prima|super|fijn)\.?$/i.test(normalized)
+  // Positieve intent: ja/jawel/jazeker/jep/yep/yeah/yes + varianten (incl. uitroeptekens etc.)
+  const completed = /^(jaa*\b|jawel\b|jazeker\b|jep\b|yep\b|yeah\b|yes\b|done\b|top\b|ok\b|oké\b|👍|👌|✅|goed\b|klaar\b|prima\b|super\b|fijn\b)/i.test(normalized)
 
-  // Detecteer of body naast "nee" ook een activiteit bevat
-  const isSimpleNee = /^(nee|no|nope)\.?$/i.test(normalized)
+  // Negatieve intent: exacte "nee/no/nope" — niet gevolgd door activiteitsbeschrijving
+  const isSimpleNee = /^(nee|no|nope)\b[^a-z]*$/i.test(normalized)
   const hasDoneActivity = !completed && !isSimpleNee && MOVEMENT_RE.test(body)
 
   // Reflectie als afgerond beschouwen als ze iets hebben gedaan (ook al was het niet de commitment)
