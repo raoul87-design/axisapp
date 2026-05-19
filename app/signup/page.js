@@ -23,7 +23,7 @@ export default function SignupPage() {
     e.preventDefault()
     setError("")
     setLoading(true)
-    const { data, error: authErr } = await supabase.auth.signUp({ email, password })
+    const { data, error: authErr } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "https://app.axisapp.nl" } })
     if (authErr) { setError(authErr.message); setLoading(false); return }
     await supabase.from("users").insert({
       auth_user_id:         data.user.id,
