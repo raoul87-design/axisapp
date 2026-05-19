@@ -653,7 +653,7 @@ export default function Website() {
               <div>
                 <p style={{ color: SUB, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Starter</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€149</span>
+                  <span style={{ fontSize: 40, fontWeight: 800 }}>€139</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 15 clients</p>
