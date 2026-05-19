@@ -519,23 +519,29 @@ async function loadWeekData() {
 }
 
 async function loadChatHistory(publicUserId) {
-  if (!publicUserId) return
+  console.log("[loadChatHistory] aangeroepen met publicUserId:", publicUserId)
+  if (!publicUserId) { console.warn("[loadChatHistory] geen publicUserId — aborted"); return }
   const { data, error } = await supabase
     .from("conversations")
     .select("role, content, created_at")
     .eq("user_id", publicUserId)
     .order("created_at", { ascending: false })
     .limit(30)
-  if (error) { console.error("Chat history ophalen mislukt:", error.message); return }
-  if (!data?.length) return
+  console.log("[loadChatHistory] resultaat — rijen:", data?.length ?? 0, "| error:", error?.message ?? "geen")
+  if (error) { console.error("[loadChatHistory] fout:", error.message, error.code, error.details); return }
+  if (!data?.length) { console.log("[loadChatHistory] geen berichten gevonden"); return }
   const rows = [...data].reverse()
-  setChatMessages(prev => prev.length > 0 ? prev : rows.map(row => ({
-    role: row.role,
-    content: row.content,
-    time: row.created_at
-      ? new Date(row.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
-      : undefined,
-  })))
+  setChatMessages(prev => {
+    if (prev.length > 0) { console.log("[loadChatHistory] chatMessages al gevuld — overgeslagen"); return prev }
+    console.log("[loadChatHistory] berichten ingeladen:", rows.length)
+    return rows.map(row => ({
+      role: row.role,
+      content: row.content,
+      time: row.created_at
+        ? new Date(row.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+        : undefined,
+    }))
+  })
 }
 
 async function loadProgressData() {
@@ -936,9 +942,15 @@ async function sendChat(messageText) {
   setChatMessages(newMessages)
   setChatLoading(true)
 
+  console.log("[sendChat] publicUserId bij opslaan:", publicUserId)
   if (publicUserId) {
     supabase.from("conversations").insert({ user_id: publicUserId, role: "user", content: msg })
-      .then(({ error }) => { if (error) console.error("[sendChat] save user msg:", error.message) })
+      .then(({ data: d, error }) => {
+        if (error) console.error("[sendChat] user msg insert MISLUKT:", error.message, "| code:", error.code, "| details:", error.details)
+        else console.log("[sendChat] user msg opgeslagen ✓", d)
+      })
+  } else {
+    console.warn("[sendChat] geen publicUserId — user bericht NIET opgeslagen")
   }
 
   try {
@@ -953,7 +965,12 @@ async function sendChat(messageText) {
     setChatMessages(prev => [...prev, { role: "assistant", content: data.content, time: replyTime }])
     if (publicUserId) {
       supabase.from("conversations").insert({ user_id: publicUserId, role: "assistant", content: data.content })
-        .then(({ error }) => { if (error) console.error("[sendChat] save assistant msg:", error.message) })
+        .then(({ data: d, error }) => {
+          if (error) console.error("[sendChat] assistant msg insert MISLUKT:", error.message, "| code:", error.code, "| details:", error.details)
+          else console.log("[sendChat] assistant msg opgeslagen ✓", d)
+        })
+    } else {
+      console.warn("[sendChat] geen publicUserId — assistant bericht NIET opgeslagen")
     }
   } catch (err) {
     console.error("[sendChat] fout:", err?.message, err)
@@ -969,9 +986,14 @@ useEffect(() => {
 
 useEffect(() => {
   if (activeTab === "coach") {
+    console.log("[coachTab] geopend — publicUserId:", publicUserId, "| chatMessages:", chatMessages.length)
+    if (publicUserId && chatMessages.length === 0) {
+      console.log("[coachTab] history laden via loadChatHistory")
+      loadChatHistory(publicUserId)
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
   }
-}, [activeTab])
+}, [activeTab, publicUserId])
 
 const suggestions = ["Hoe houd ik mijn streak vol?", "Tips voor vandaag", "Ik struggle"]
 
