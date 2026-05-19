@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AXIS — Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --card: rgba(255,255,255,0.025);
+    --bubble-coach: rgba(255,255,255,0.06);
+    --bubble-user: rgba(255,255,255,0.10);
+    --border: rgba(255,255,255,0.08);
+    --text: #fff;
+    --muted: rgba(255,255,255,0.5);
+    --faint: rgba(255,255,255,0.32);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.35);
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  .screen {
+    width: 100%;
+    max-width: 390px;
+    min-height: 844px;
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 80px;
+  }
+
+  /* Coach header */
+  .coach-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 800; color: #052;
+    letter-spacing: 0.04em;
+    position: relative;
+  }
+  .avatar::after {
+    content: ""; position: absolute; bottom: 0; right: 0;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green); border: 2px solid #000;
+    animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .coach-name { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+  .coach-sub { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 6px; }
+
+  /* Conversation */
+  .chat {
+    padding: 18px 18px 16px;
+    display: flex; flex-direction: column;
+    gap: 6px;
+  }
+  .msg {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: msgIn 0.4s ease-out forwards;
+  }
+  @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
+  .msg.coach {
+    background: var(--bubble-coach);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    color: rgba(255,255,255,0.92);
+  }
+  .msg.me {
+    background: var(--bubble-user);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .msg b { font-weight: 700; color: #fff; }
+  .msg .accent { color: var(--green); font-weight: 600; }
+  .stamp {
+    font-size: 10px; color: var(--faint);
+    margin: 2px 4px 8px;
+    align-self: flex-start;
+  }
+  .stamp.right { align-self: flex-end; }
+
+  /* Suggestion chips */
+  .chips {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 0 18px 12px;
+    opacity: 0;
+    animation: msgIn 0.4s ease-out 1.6s forwards;
+  }
+  .chip {
+    font-size: 12px; padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    background: rgba(255,255,255,0.02);
+    color: rgba(255,255,255,0.85);
+  }
+  .chip:hover { border-color: rgba(34,197,94,0.35); color: var(--green); }
+
+  /* Typing indicator */
+  .typing {
+    display: inline-flex; gap: 4px; align-items: center;
+    background: var(--bubble-coach);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    opacity: 0;
+    animation: msgIn 0.4s ease-out 0.8s forwards;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
+  /* Stagger msg delays */
+  .msg.m1 { animation-delay: 0.15s; }
+  .msg.m2 { animation-delay: 0.30s; }
+  .msg.m3 { animation-delay: 0.45s; }
+  .msg.m4 { animation-delay: 0.60s; }
+  .msg.m5 { animation-delay: 0.75s; }
+  .msg.m6 { animation-delay: 0.90s; }
+
+  /* Input */
+  .input-bar {
+    position: absolute; left: 0; right: 0; bottom: 70px;
+    padding: 8px 18px 12px;
+    background: linear-gradient(180deg, transparent, #000 30%);
+  }
+  .input-wrap {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 4px 4px 18px;
+  }
+  .input-wrap input {
+    flex: 1; background: transparent; border: 0; outline: 0;
+    color: var(--text); font: inherit; font-size: 14px;
+    padding: 8px 0;
+  }
+  .input-wrap input::placeholder { color: var(--faint); }
+  .send {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+    color: var(--muted);
+  }
+  .send.active { background: var(--green); color: #000; border-color: var(--green); }
+
+  /* Tab bar */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 18px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--faint); font-size: 11px; font-weight: 500; }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="coach-head">
+    <div class="avatar">AX</div>
+    <div>
+      <div class="coach-name">AXIS Coach</div>
+      <div class="coach-sub"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green)"></span>Jouw persoonlijke coach</div>
+    </div>
+  </div>
+
+  <div class="chat">
+    <div class="msg coach m1">Goedemorgen! Klaar voor vandaag?<br/>Wat wordt je commitment?</div>
+    <div class="stamp">07:14</div>
+
+    <div class="msg me m2">Vanavond 5K hardlopen<br/>na het werk</div>
+    <div class="stamp right">07:42</div>
+
+    <div class="msg coach m3"><b>Top — duidelijk doel.</b> Dat is je 3e loopdag deze week, lekker bezig. <span class="accent">🔥 streak: 3</span></div>
+    <div class="stamp">07:42</div>
+
+    <div class="msg me m4">Benchpress of fly voor borst?</div>
+    <div class="stamp right">12:08</div>
+
+    <div class="msg coach m5">
+      Beide zijn goed, maar ze doen iets anders.<br/><br/>
+      <b>Bench press</b> = compound oefening, traint je hele borst plus triceps en schouders. Meer gewicht, meer spiermassa.<br/><br/>
+      <b>Fly</b> = isolatie‑oefening, traint alleen je borst. Goed als aanvulling, maar niet als vervanger.<br/><br/>
+      <span class="accent">Advies:</span> bench press als basis, fly als extra aan het einde.
+    </div>
+    <div class="stamp">12:09</div>
+
+    <div class="typing">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip">Geef me een schema</div>
+    <div class="chip">Hoe zit het met rust?</div>
+    <div class="chip">Eiwit advies?</div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-wrap">
+      <input placeholder="Stel een vraag..." />
+      <div class="send">↑</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="8,12 11,15 16,9"/></svg>
+      Vandaag
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>
+      Voortgang
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 q4 -6 10 -6 t10 6"/><path d="M2 12 q4 6 10 6 t10 -6"/><circle cx="12" cy="12" r="2"/></svg>
+      Workout
+    </div>
+    <div class="tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5 h18 v12 h-9 l-5 4 v-4 H3 z"/></svg>
+      Coach
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AXIS — Vandaag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --card: rgba(255,255,255,0.025);
+    --card-2: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #fff;
+    --muted: rgba(255,255,255,0.5);
+    --faint: rgba(255,255,255,0.32);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.18);
+    --green-glow: rgba(34,197,94,0.35);
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 100vh;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .screen {
+    width: 100%;
+    max-width: 390px;
+    min-height: 844px;
+    padding: 14px 20px 92px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.18em; font-size: 13px; }
+  .logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 var(--green-glow);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .menu { color: var(--muted); font-size: 20px; letter-spacing: 0.1em; }
+
+  .greeting { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .greeting .wave { display: inline-block; transform-origin: 70% 70%; animation: wave 3s ease-in-out 1s infinite; }
+  @keyframes wave {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    65% { transform: rotate(14deg); }
+    72% { transform: rotate(-8deg); }
+    79% { transform: rotate(14deg); }
+    86% { transform: rotate(-4deg); }
+    93% { transform: rotate(10deg); }
+  }
+  h1 { font-size: 26px; font-weight: 800; margin: 0 0 18px; letter-spacing: -0.02em; }
+
+  .divider { height: 1px; background: var(--border); margin: 0 -20px 16px; }
+
+  /* Goal card */
+  .goal {
+    border: 1px solid rgba(34,197,94,0.35);
+    background: linear-gradient(180deg, rgba(34,197,94,0.12), rgba(34,197,94,0.04));
+    border-radius: 14px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .goal::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120% 80% at 0% 0%, rgba(34,197,94,0.18), transparent 60%);
+    pointer-events: none;
+  }
+  .goal-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .goal-title { font-weight: 700; font-size: 17px; }
+  .goal-days { color: var(--text); font-weight: 600; font-size: 14px; }
+  .goal-bar { height: 4px; background: rgba(255,255,255,0.12); border-radius: 99px; margin-top: 12px; overflow: hidden; }
+  .goal-bar-fill {
+    height: 100%; background: var(--green);
+    width: 0%;
+    border-radius: 99px;
+    box-shadow: 0 0 12px var(--green-glow);
+    animation: fillBar 1.6s cubic-bezier(.22,.61,.36,1) 0.2s forwards;
+  }
+  @keyframes fillBar { to { width: 65%; } }
+  .goal-sub { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
+
+  /* Section labels */
+  .label {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin: 22px 0 10px;
+  }
+
+  /* Commitment */
+  .commit-card {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+  }
+  .check {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--green); display: grid; place-items: center;
+    flex-shrink: 0;
+    animation: pop 0.5s cubic-bezier(.4,1.6,.6,1) 0.7s backwards;
+  }
+  @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+  .check svg { width: 12px; height: 12px; }
+  .commit-title { font-weight: 600; text-decoration: line-through; color: rgba(255,255,255,0.55); }
+  .commit-status { font-size: 12px; color: var(--green); margin-top: 2px; }
+
+  .add-btn {
+    margin-top: 8px;
+    display: block; width: 100%; padding: 12px;
+    border: 1px dashed var(--border-strong); border-radius: 12px;
+    background: transparent; color: var(--muted);
+    font: inherit; font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* Prompt card */
+  .prompt {
+    margin-top: 14px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); padding: 14px;
+  }
+  .prompt-q { font-weight: 500; margin-bottom: 10px; font-size: 14px; }
+  .prompt-input {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; color: var(--faint); font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .prompt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-yes, .btn-no {
+    border-radius: 8px; padding: 10px; text-align: center; font-weight: 700;
+    border: 1px solid;
+  }
+  .btn-yes { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.35); color: var(--green); }
+  .btn-no { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.28); color: #ef4444; }
+
+  /* Week strip */
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day {
+    aspect-ratio: 1/1.2;
+    border: 1px solid var(--border); border-radius: 8px;
+    display: grid; place-items: center;
+    color: var(--faint); font-size: 10px; letter-spacing: 0.14em;
+    font-weight: 600;
+    position: relative;
+  }
+  .day.done {
+    border-color: rgba(34,197,94,0.45);
+    background: rgba(34,197,94,0.08);
+    color: var(--green);
+  }
+  .day.done::before {
+    content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'><polyline points='2,7 6,11 12,3' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center / contain;
+  }
+  .day.today { border-color: rgba(34,197,94,0.55); color: var(--green); }
+  .day.today::before {
+    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: pulseTiny 1.8s ease-out infinite;
+  }
+  @keyframes pulseTiny {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .week-sub { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* Voeding */
+  .voeding {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); padding: 14px 16px;
+    display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: end;
+  }
+  .macro-lbl { font-size: 10px; color: var(--faint); letter-spacing: 0.14em; font-weight: 500; }
+  .macro-val { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+  .macro-val small { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 1px; }
+  .chev { color: var(--faint); align-self: center; }
+
+  /* Reminders */
+  .reminders-head { display: flex; justify-content: space-between; align-items: center; }
+  .reminders-head .label { margin: 0; }
+  .add-mini {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; font-size: 11px; color: var(--muted);
+    background: transparent;
+  }
+  .reminder {
+    margin-top: 10px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .reminder-info { flex: 1; }
+  .reminder-name { font-weight: 600; }
+  .reminder-meta { font-size: 11px; color: var(--faint); letter-spacing: 0.12em; margin-top: 2px; }
+  .toggle {
+    width: 38px; height: 22px; border-radius: 99px;
+    background: var(--green); position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 18px;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    transition: left 0.3s ease;
+  }
+  .reminder-x { color: var(--faint); padding: 4px 8px; cursor: pointer; }
+
+  /* Bottom tab nav */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 18px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--faint); font-size: 11px; font-weight: 500; }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { color: var(--green); }
+
+  /* Fade-in stagger */
+  .fade { opacity: 0; transform: translateY(8px); animation: fadeUp 0.6s ease-out forwards; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .fade:nth-child(1) { animation-delay: 0.05s; }
+  .fade:nth-child(2) { animation-delay: 0.12s; }
+  .fade:nth-child(3) { animation-delay: 0.19s; }
+  .fade:nth-child(4) { animation-delay: 0.26s; }
+  .fade:nth-child(5) { animation-delay: 0.33s; }
+  .fade:nth-child(6) { animation-delay: 0.40s; }
+  .fade:nth-child(7) { animation-delay: 0.47s; }
+  .fade:nth-child(8) { animation-delay: 0.54s; }
+  .fade:nth-child(9) { animation-delay: 0.61s; }
+  .fade:nth-child(10) { animation-delay: 0.68s; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="top fade">
+    <div class="logo"><span class="logo-dot"></span>AXIS</div>
+    <div class="menu">···</div>
+  </div>
+
+  <div class="fade">
+    <div class="greeting">Goedemiddag, Eva <span class="wave">👋</span></div>
+    <h1>Dinsdag 19 mei</h1>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="goal fade">
+    <div class="goal-row">
+      <div class="goal-title">Naar 75 kilo!</div>
+      <div class="goal-days">38d</div>
+    </div>
+    <div class="goal-bar"><div class="goal-bar-fill"></div></div>
+    <div class="goal-sub">71 dagen actief — 38 dagen te gaan</div>
+  </div>
+
+  <div class="fade">
+    <div class="label">Commitment</div>
+    <div class="commit-card">
+      <div class="check"><svg viewBox="0 0 14 14"><polyline points="2,7 6,11 12,3" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="commit-title">Half uur hardlopen</div>
+        <div class="commit-status">Voltooid</div>
+      </div>
+    </div>
+    <button class="add-btn">+ Voeg commitment toe</button>
+
+    <div class="prompt">
+      <div class="prompt-q">Heb je je commitments gehaald?</div>
+      <div class="prompt-input">Toelichting (optioneel)</div>
+      <div class="prompt-actions">
+        <div class="btn-yes">Ja</div>
+        <div class="btn-no">Nee</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fade">
+    <div class="label">Deze week</div>
+    <div class="week">
+      <div class="day done">MA</div>
+      <div class="day today">DI</div>
+      <div class="day">WO</div>
+      <div class="day">DO</div>
+      <div class="day">VR</div>
+      <div class="day">ZA</div>
+      <div class="day">ZO</div>
+    </div>
+    <div class="week-sub">1 van 7 dagen actief deze week</div>
+  </div>
+
+  <div class="fade">
+    <div class="label">Voeding</div>
+    <div class="voeding">
+      <div>
+        <div class="macro-lbl">KCAL</div>
+        <div class="macro-val">1800</div>
+      </div>
+      <div>
+        <div class="macro-lbl">EIWIT</div>
+        <div class="macro-val">180<small>g</small></div>
+      </div>
+      <div>
+        <div class="macro-lbl">KOOLH.</div>
+        <div class="macro-val">180<small>g</small></div>
+      </div>
+      <div>
+        <div class="macro-lbl">VETTEN</div>
+        <div class="macro-val">60<small>g</small></div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  </div>
+
+  <div class="fade">
+    <div class="reminders-head">
+      <div class="label">Reminders</div>
+      <button class="add-mini">+ Toevoegen</button>
+    </div>
+    <div class="reminder">
+      <div class="reminder-info">
+        <div class="reminder-name">creatine innemen</div>
+        <div class="reminder-meta">08:00 · DAGELIJKS</div>
+      </div>
+      <div class="toggle"></div>
+      <div class="reminder-x">×</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="8,12 11,15 16,9"/></svg>
+      Vandaag
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>
+      Voortgang
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 q4 -6 10 -6 t10 6"/><path d="M2 12 q4 6 10 6 t10 -6"/><circle cx="12" cy="12" r="2"/></svg>
+      Workout
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5 h18 v12 h-9 l-5 4 v-4 H3 z"/></svg>
+      Coach
+    </div>
+  </div>
+</div>
+</body>
+</html>

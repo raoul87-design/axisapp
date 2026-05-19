@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AXIS — Voortgang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --card: rgba(255,255,255,0.025);
+    --border: rgba(255,255,255,0.08);
+    --text: #fff;
+    --muted: rgba(255,255,255,0.5);
+    --faint: rgba(255,255,255,0.32);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.35);
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  .screen {
+    width: 100%;
+    max-width: 390px;
+    min-height: 844px;
+    padding: 14px 20px 92px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.18em; font-size: 13px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2.4s ease-out infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .menu { color: var(--muted); font-size: 20px; }
+  .greeting { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  h1 { font-size: 26px; font-weight: 800; margin: 0 0 18px; letter-spacing: -0.02em; }
+
+  .label { font-size: 11px; letter-spacing: 0.22em; color: var(--faint); text-transform: uppercase; font-weight: 500; margin: 6px 0 10px; }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card);
+    padding: 12px 14px;
+  }
+  .stat-lbl { font-size: 10px; letter-spacing: 0.18em; color: var(--faint); font-weight: 500; }
+  .stat-val { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; display: flex; align-items: baseline; gap: 8px; }
+  .stat-val .flame { font-size: 22px; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Weight chart */
+  .chart-card {
+    border: 1px solid var(--border); border-radius: 14px;
+    background: var(--card); padding: 16px;
+    margin-top: 4px;
+  }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .weight {
+    font-size: 32px; font-weight: 800; letter-spacing: -0.025em;
+  }
+  .weight small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .chart-tabs { display: flex; gap: 4px; }
+  .chart-tab {
+    font-size: 11px; font-weight: 600; padding: 4px 8px;
+    border-radius: 6px; color: var(--muted);
+  }
+  .chart-tab.active { background: rgba(34,197,94,0.14); color: var(--green); border: 1px solid rgba(34,197,94,0.35); }
+  .chart-svg { width: 100%; height: 160px; margin-top: 8px; display: block; }
+  .trend {
+    display: flex; justify-content: flex-end; gap: 4px;
+    font-size: 11px; color: var(--muted); margin-top: 8px;
+  }
+  .trend b { color: var(--green); }
+
+  /* Toggle row */
+  .toggle-row { display: flex; justify-content: flex-end; gap: 4px; }
+  .seg {
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 6px; color: var(--muted);
+  }
+  .seg.active { background: rgba(34,197,94,0.14); color: var(--green); border: 1px solid rgba(34,197,94,0.35); }
+
+  /* Voeding callout */
+  .callout {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); padding: 18px;
+    text-align: center;
+  }
+  .callout-msg { color: rgba(255,255,255,0.85); font-size: 14px; }
+  .callout-msg b { color: var(--green); font-weight: 600; }
+  .callout-sub { color: var(--faint); font-size: 11px; margin-top: 6px; }
+
+  /* Heatmap */
+  .heat {
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px;
+    background: var(--card);
+  }
+  .heat-grid {
+    display: grid;
+    grid-template-columns: 36px repeat(7, 1fr);
+    gap: 4px;
+  }
+  .heat-h {
+    font-size: 9px; font-weight: 600; color: var(--faint);
+    text-align: center; letter-spacing: 0.12em; padding-bottom: 4px;
+  }
+  .heat-row-lbl {
+    font-size: 9px; color: var(--faint); display: flex; flex-direction: column;
+    align-items: flex-start; justify-content: center;
+    padding-right: 4px;
+  }
+  .heat-row-lbl b { color: var(--muted); font-weight: 600; }
+  .cell {
+    aspect-ratio: 1/1;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.04);
+    display: grid; place-items: center;
+    font-size: 10px;
+  }
+  .cell.done { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.45); color: var(--green); }
+  .cell.done::before { content: "✓"; font-weight: 700; }
+  .cell.miss { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.4); color: var(--red); }
+  .cell.miss::before { content: "✕"; font-weight: 700; }
+
+  .heat-legend { display: flex; gap: 14px; margin-top: 10px; font-size: 10px; color: var(--muted); }
+  .leg-sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+
+  /* Tab bar */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 18px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--faint); font-size: 11px; font-weight: 500; }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { color: var(--green); }
+
+  /* Animations */
+  .fade { opacity: 0; transform: translateY(8px); animation: fadeUp 0.6s ease-out forwards; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .fade.d1 { animation-delay: 0.05s; }
+  .fade.d2 { animation-delay: 0.12s; }
+  .fade.d3 { animation-delay: 0.20s; }
+  .fade.d4 { animation-delay: 0.30s; }
+  .fade.d5 { animation-delay: 0.42s; }
+  .fade.d6 { animation-delay: 0.56s; }
+
+  /* Chart line draw */
+  .line-path {
+    stroke-dasharray: 800;
+    stroke-dashoffset: 800;
+    animation: draw 2s cubic-bezier(.22,.61,.36,1) 0.6s forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .line-area { opacity: 0; animation: fadeIn 1s ease-out 1.8s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .dot { opacity: 0; transform-origin: center; animation: dotIn 0.4s ease-out forwards; }
+  @keyframes dotIn { to { opacity: 1; } }
+
+  /* Heat cell pop-in */
+  .cell.done, .cell.miss { opacity: 0; animation: cellIn 0.45s ease-out forwards; }
+  @keyframes cellIn { to { opacity: 1; } }
+  .flame-pulse { display: inline-block; animation: flamePulse 1.4s ease-in-out infinite; }
+  @keyframes flamePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  .label-margin { margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="top fade d1">
+    <div class="logo"><span class="logo-dot"></span>AXIS</div>
+    <div class="menu">···</div>
+  </div>
+
+  <div class="fade d1">
+    <div class="greeting">Goedemiddag, Eva 👋</div>
+    <h1>Dinsdag 19 mei</h1>
+  </div>
+
+  <div class="label fade d2">Statistieken</div>
+  <div class="stats fade d2">
+    <div class="stat">
+      <div class="stat-lbl">HUIDIGE STREAK</div>
+      <div class="stat-val"><span class="flame flame-pulse">🔥</span> <span id="curStreak">3</span></div>
+      <div class="stat-sub">dagen</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">LANGSTE STREAK</div>
+      <div class="stat-val">129</div>
+      <div class="stat-sub">dagen</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">TOTAAL ACTIEF</div>
+      <div class="stat-val">538</div>
+      <div class="stat-sub">dagen</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">SUCCESRATIO</div>
+      <div class="stat-val">54%</div>
+      <div class="stat-sub">van alle dagen</div>
+    </div>
+  </div>
+
+  <div class="label label-margin fade d3">Gewicht</div>
+  <div class="toggle-row fade d3" style="margin-bottom:8px">
+    <div class="seg">7d</div>
+    <div class="seg active">30d</div>
+    <div class="seg">90d</div>
+  </div>
+  <div class="chart-card fade d3">
+    <div class="chart-head">
+      <div class="weight" style="white-space:nowrap">75.95&nbsp;kg<small>&nbsp;19/05</small></div>
+    </div>
+    <svg class="chart-svg" viewBox="0 0 320 160" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#22c55e" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+        </linearGradient>
+        <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+          <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="320" height="140" fill="url(#grid)"/>
+      <!-- y axis labels -->
+      <g font-size="9" fill="rgba(255,255,255,0.32)" font-family="Inter">
+        <text x="2" y="20">78.75</text>
+        <text x="2" y="48">78</text>
+        <text x="2" y="76">77.25</text>
+        <text x="2" y="104">76.5</text>
+        <text x="2" y="132">75.75</text>
+      </g>
+      <!-- trend line dashed -->
+      <line x1="32" y1="40" x2="310" y2="120" stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="3 4"/>
+      <!-- area -->
+      <path class="line-area" d="M32,38 L70,30 L108,52 L146,68 L184,80 L222,96 L260,108 L298,124 L298,140 L32,140 Z" fill="url(#grad)"/>
+      <!-- main line -->
+      <polyline class="line-path"
+        points="32,38 70,30 108,52 146,68 184,80 222,96 260,108 298,124"
+        fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- dots -->
+      <g fill="#22c55e">
+        <circle class="dot" style="animation-delay:1.5s" cx="32" cy="38" r="3"/>
+        <circle class="dot" style="animation-delay:1.6s" cx="70" cy="30" r="3"/>
+        <circle class="dot" style="animation-delay:1.7s" cx="108" cy="52" r="3"/>
+        <circle class="dot" style="animation-delay:1.8s" cx="146" cy="68" r="3"/>
+        <circle class="dot" style="animation-delay:1.9s" cx="184" cy="80" r="3"/>
+        <circle class="dot" style="animation-delay:2.0s" cx="222" cy="96" r="3"/>
+        <circle class="dot" style="animation-delay:2.1s" cx="260" cy="108" r="3"/>
+        <circle class="dot" style="animation-delay:2.2s" cx="298" cy="124" r="4"/>
+      </g>
+      <!-- x labels -->
+      <g font-size="9" fill="rgba(255,255,255,0.32)" font-family="Inter" text-anchor="middle">
+        <text x="32" y="156">20/04</text>
+        <text x="70" y="156">23/04</text>
+        <text x="108" y="156">26/04</text>
+        <text x="146" y="156">30/04</text>
+        <text x="184" y="156">01/05</text>
+        <text x="222" y="156">03/05</text>
+        <text x="260" y="156">10/05</text>
+        <text x="298" y="156">19/05</text>
+      </g>
+    </svg>
+    <div class="trend">Trend: <b>↓ 2.2kg in 30 dagen</b></div>
+  </div>
+
+  <div class="label label-margin fade d4">Voeding</div>
+  <div class="toggle-row fade d4" style="margin-bottom:8px">
+    <div class="seg active">7d</div>
+    <div class="seg">30d</div>
+  </div>
+  <div class="callout fade d4">
+    <div class="callout-msg">Stuur je dagelijkse kcal via <b>WhatsApp</b><br/>om bij te houden</div>
+    <div class="callout-sub">bijv. "2000 kcal"</div>
+  </div>
+
+  <div class="label label-margin fade d5">Afgelopen 8 weken</div>
+  <div class="heat fade d5">
+    <div class="heat-grid">
+      <div></div>
+      <div class="heat-h">MA</div><div class="heat-h">DI</div><div class="heat-h">WO</div><div class="heat-h">DO</div><div class="heat-h">VR</div><div class="heat-h">ZA</div><div class="heat-h">ZO</div>
+
+      <div class="heat-row-lbl">-7w<b>—</b></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+      <div class="heat-row-lbl">-6w<b>—</b></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+      <div class="heat-row-lbl">-5w<b>50%</b></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell miss" style="animation-delay:.1s"></div><div class="cell done" style="animation-delay:.15s"></div>
+
+      <div class="heat-row-lbl">-4w<b>60%</b></div>
+      <div class="cell miss" style="animation-delay:.2s"></div><div class="cell"></div><div class="cell"></div><div class="cell miss" style="animation-delay:.25s"></div><div class="cell done" style="animation-delay:.3s"></div><div class="cell done" style="animation-delay:.35s"></div><div class="cell done" style="animation-delay:.4s"></div>
+
+      <div class="heat-row-lbl">-3w<b>25%</b></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell miss" style="animation-delay:.45s"></div><div class="cell miss" style="animation-delay:.5s"></div><div class="cell miss" style="animation-delay:.55s"></div><div class="cell"></div><div class="cell done" style="animation-delay:.6s"></div>
+
+      <div class="heat-row-lbl">-2w<b>100%</b></div>
+      <div class="cell done" style="animation-delay:.65s"></div><div class="cell done" style="animation-delay:.7s"></div><div class="cell done" style="animation-delay:.75s"></div><div class="cell done" style="animation-delay:.8s"></div><div class="cell done" style="animation-delay:.85s"></div><div class="cell done" style="animation-delay:.9s"></div><div class="cell done" style="animation-delay:.95s"></div>
+
+      <div class="heat-row-lbl">-1w<b>83%</b></div>
+      <div class="cell done" style="animation-delay:1.0s"></div><div class="cell miss" style="animation-delay:1.05s"></div><div class="cell done" style="animation-delay:1.1s"></div><div class="cell done" style="animation-delay:1.15s"></div><div class="cell done" style="animation-delay:1.2s"></div><div class="cell done" style="animation-delay:1.25s"></div><div class="cell done" style="animation-delay:1.3s"></div>
+
+      <div class="heat-row-lbl">nu<b>100%</b></div>
+      <div class="cell done" style="animation-delay:1.35s"></div><div class="cell done" style="animation-delay:1.4s"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    </div>
+    <div class="heat-legend">
+      <span><span class="leg-sw" style="background:rgba(34,197,94,0.4)"></span>Gedaan</span>
+      <span><span class="leg-sw" style="background:rgba(239,68,68,0.4)"></span>Gemist</span>
+      <span><span class="leg-sw" style="background:rgba(255,255,255,0.08)"></span>Geen data</span>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="8,12 11,15 16,9"/></svg>
+      Vandaag
+    </div>
+    <div class="tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>
+      Voortgang
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 q4 -6 10 -6 t10 6"/><path d="M2 12 q4 6 10 6 t10 -6"/><circle cx="12" cy="12" r="2"/></svg>
+      Workout
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5 h18 v12 h-9 l-5 4 v-4 H3 z"/></svg>
+      Coach
+    </div>
+  </div>
+</div>
+<script>
+  // count up the streak
+  const el = document.getElementById('curStreak');
+  let n = 0, target = 3;
+  const t = setInterval(() => {
+    n++;
+    el.textContent = n;
+    if (n >= target) clearInterval(t);
+  }, 240);
+</script>
+</body>
+</html>

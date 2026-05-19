@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AXIS — Coach Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0a0a0a;
+    --card: rgba(255,255,255,0.025);
+    --card-hi: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #fff;
+    --muted: rgba(255,255,255,0.5);
+    --faint: rgba(255,255,255,0.32);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.35);
+    --red: #ef4444;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 100vh;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex; flex-direction: column;
+    gap: 4px;
+  }
+  .brand { padding: 0 8px 28px; }
+  .brand-row { display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 0.18em; font-size: 14px; }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2.4s ease-out infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .brand-sub { font-size: 9px; letter-spacing: 0.22em; color: var(--faint); margin-top: 6px; padding-left: 16px; }
+
+  .nav-item {
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+  }
+  .nav-item svg { width: 16px; height: 16px; opacity: 0.7; }
+  .nav-item.active { background: rgba(255,255,255,0.06); color: var(--text); }
+  .nav-item.active svg { opacity: 1; color: var(--green); }
+  .nav-item:hover:not(.active) { color: rgba(255,255,255,0.85); }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px; font-weight: 700; padding: 1px 6px;
+    background: rgba(34,197,94,0.15); color: var(--green);
+    border-radius: 99px;
+  }
+
+  /* Main */
+  .main {
+    padding: 28px 40px 40px;
+    min-width: 0;
+  }
+  .page-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  .page-title { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .page-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .head-actions { display: flex; align-items: center; gap: 10px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .pill svg { width: 14px; height: 14px; }
+  .pill.cta { background: var(--green); color: #052; border-color: var(--green); font-weight: 700; }
+
+  /* Stats row */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat-card {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px 20px;
+    position: relative;
+  }
+  .stat-lbl { font-size: 10px; letter-spacing: 0.22em; color: var(--faint); font-weight: 600; }
+  .stat-val { font-size: 36px; font-weight: 800; margin-top: 12px; letter-spacing: -0.02em; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .stat-delta {
+    position: absolute; top: 18px; right: 18px;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 99px;
+    background: rgba(34,197,94,0.14); color: var(--green);
+  }
+  .stat-delta.down { background: rgba(239,68,68,0.12); color: var(--red); }
+
+  /* Two column grid */
+  .grid {
+    display: grid; grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .card {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 11px; letter-spacing: 0.22em; color: var(--faint); font-weight: 600; text-transform: uppercase; }
+  .card-link { font-size: 12px; color: var(--muted); }
+
+  /* Clients table */
+  .clients {
+    width: 100%; border-collapse: collapse;
+  }
+  .clients th {
+    text-align: left;
+    font-size: 10px; letter-spacing: 0.18em; color: var(--faint);
+    font-weight: 600; text-transform: uppercase;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .clients td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .clients tr:last-child td { border-bottom: 0; }
+  .clients tr { transition: background 0.15s ease; }
+  .clients tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .client-cell { display: flex; align-items: center; gap: 10px; }
+  .av {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 11px; color: #fff;
+    flex-shrink: 0;
+  }
+  .av.g1 { background: linear-gradient(135deg, #4ade80, #16a34a); color: #052; }
+  .av.g2 { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+  .av.g3 { background: linear-gradient(135deg, #f472b6, #db2777); }
+  .av.g4 { background: linear-gradient(135deg, #fbbf24, #d97706); color: #4a2a00; }
+  .av.g5 { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+  .av.g6 { background: linear-gradient(135deg, #f87171, #dc2626); }
+  .av.g7 { background: linear-gradient(135deg, #2dd4bf, #0d9488); color: #042f2e; }
+  .av.g8 { background: linear-gradient(135deg, #fb7185, #be123c); }
+  .client-name { font-weight: 600; }
+  .client-phone { font-size: 11px; color: var(--faint); margin-top: 1px; }
+
+  .streak { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+  .streak .flame { display: inline-block; animation: flame 1.6s ease-in-out infinite; }
+  @keyframes flame {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.1) rotate(2deg); }
+  }
+  .weight-cell { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .weight-cell .delta { font-size: 11px; color: var(--green); font-weight: 700; }
+  .weight-cell .delta.up { color: var(--red); }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 99px;
+  }
+  .badge.green { background: rgba(34,197,94,0.14); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge.amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .badge.red { background: rgba(239,68,68,0.10); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .badge.gray { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+
+  /* Check-outs chart */
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap svg { width: 100%; height: 100%; display: block; }
+  .line-draw {
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: draw 2.2s cubic-bezier(.22,.61,.36,1) 0.4s forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .area-fade { opacity: 0; animation: fadeIn 1s ease-out 1.6s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .chart-dot { opacity: 0; animation: dotIn 0.3s ease-out forwards; }
+  @keyframes dotIn { to { opacity: 1; } }
+  .x-lbl { font-size: 10px; fill: var(--faint); font-weight: 600; letter-spacing: 0.06em; }
+  .y-lbl { font-size: 9px; fill: var(--faint); }
+  .chart-foot { font-size: 11px; color: var(--faint); text-align: center; margin-top: 8px; }
+
+  /* Bottom row: needs attention + recent */
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .alert {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .alert:last-child { border-bottom: 0; }
+  .alert-text { flex: 1; font-size: 13px; }
+  .alert-text small { color: var(--faint); font-size: 11px; display: block; margin-top: 2px; }
+  .alert-action {
+    font-size: 11px; font-weight: 700; padding: 4px 10px;
+    border-radius: 6px; background: rgba(34,197,94,0.12);
+    color: var(--green); border: 1px solid rgba(34,197,94,0.28);
+    flex-shrink: 0;
+  }
+
+  /* Activity feed */
+  .feed-item {
+    display: flex; gap: 10px; padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .feed-item:last-child { border-bottom: 0; }
+  .feed-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; flex-shrink: 0;
+    background: rgba(255,255,255,0.05); color: var(--muted);
+  }
+  .feed-icon.g { background: rgba(34,197,94,0.14); color: var(--green); }
+  .feed-icon.r { background: rgba(239,68,68,0.10); color: var(--red); }
+  .feed-icon.a { background: rgba(245,158,11,0.10); color: var(--amber); }
+  .feed-icon svg { width: 13px; height: 13px; }
+  .feed-text { flex: 1; line-height: 1.35; }
+  .feed-text b { font-weight: 600; }
+  .feed-text small { color: var(--faint); font-size: 11px; display: block; }
+  .feed-time { font-size: 11px; color: var(--faint); }
+
+  /* Fade-in stagger */
+  .fade { opacity: 0; transform: translateY(8px); animation: fadeUp 0.5s ease-out forwards; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .d1 { animation-delay: 0.05s; }
+  .d2 { animation-delay: 0.10s; }
+  .d3 { animation-delay: 0.18s; }
+  .d4 { animation-delay: 0.26s; }
+  .d5 { animation-delay: 0.34s; }
+  .d6 { animation-delay: 0.42s; }
+
+  /* number count */
+  .count-up { display: inline-block; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar fade d1">
+    <div class="brand">
+      <div class="brand-row"><span class="brand-dot"></span>AXIS</div>
+      <div class="brand-sub">COACH DASHBOARD</div>
+    </div>
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Overview
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c1.5-3.5 4.5-5 7-5s5.5 1.5 7 5"/><circle cx="17" cy="9" r="2.5"/><path d="M14.5 14c2-1 4-1 5.5 0 1.5 1 2 2.5 2 4.5"/></svg>
+      Clients
+      <span class="nav-badge">12</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Commitments
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+      Schema's
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+      Insights
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head fade d1">
+      <div>
+        <div class="page-title">Overview</div>
+        <div class="page-sub">Tuesday 19 May</div>
+      </div>
+      <div class="head-actions">
+        <div class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Search clients
+        </div>
+        <div class="pill cta">+ New client</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card fade d2">
+        <div class="stat-delta">+2</div>
+        <div class="stat-lbl">ACTIVE CLIENTS</div>
+        <div class="stat-val"><span class="count-up" data-target="12">0</span></div>
+        <div class="stat-sub">12 active today</div>
+      </div>
+      <div class="stat-card fade d3">
+        <div class="stat-delta">+3</div>
+        <div class="stat-lbl">TODAY'S COMMITMENTS</div>
+        <div class="stat-val"><span class="count-up" data-target="10">0</span><span style="color:var(--faint);font-size:24px">/12</span></div>
+        <div class="stat-sub">2 still pending</div>
+      </div>
+      <div class="stat-card fade d4">
+        <div class="stat-delta">+4%</div>
+        <div class="stat-lbl">AVG. EXECUTION</div>
+        <div class="stat-val"><span class="count-up" data-target="83">0</span>%</div>
+        <div class="stat-sub">across all clients</div>
+      </div>
+      <div class="stat-card fade d5">
+        <div class="stat-delta">+1</div>
+        <div class="stat-lbl">CURRENT STREAKS</div>
+        <div class="stat-val"><span class="count-up" data-target="9">0</span></div>
+        <div class="stat-sub">longest: 47 days</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card fade d4">
+        <div class="card-head">
+          <div class="card-title">Clients</div>
+          <div class="card-link">View all →</div>
+        </div>
+        <table class="clients">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Streak</th>
+              <th>Weight</th>
+              <th>Today</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g1">EV</div>
+                  <div>
+                    <div class="client-name">Eva V.</div>
+                    <div class="client-phone">06 ····· 41</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 12</span></td>
+              <td><span class="weight-cell">75.95 <span class="delta">↓ 0.4</span></span></td>
+              <td>5K hardlopen</td>
+              <td><span class="badge green">Voltooid</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g2">LB</div>
+                  <div>
+                    <div class="client-name">Lars B.</div>
+                    <div class="client-phone">06 ····· 18</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 47</span></td>
+              <td><span class="weight-cell">82.10 <span class="delta">↓ 0.2</span></span></td>
+              <td>Krachttraining</td>
+              <td><span class="badge amber">Bezig</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g3">SK</div>
+                  <div>
+                    <div class="client-name">Sophie K.</div>
+                    <div class="client-phone">06 ····· 09</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 8</span></td>
+              <td><span class="weight-cell">64.20 <span class="delta">↓ 0.1</span></span></td>
+              <td>10K stappen</td>
+              <td><span class="badge green">Voltooid</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g4">RD</div>
+                  <div>
+                    <div class="client-name">Ruben D.</div>
+                    <div class="client-phone">06 ····· 73</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak">— 0</span></td>
+              <td><span class="weight-cell">91.30 <span class="delta up">↑ 0.6</span></span></td>
+              <td>Geen check‑in</td>
+              <td><span class="badge red">Gemist</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g5">MJ</div>
+                  <div>
+                    <div class="client-name">Maud J.</div>
+                    <div class="client-phone">06 ····· 27</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 21</span></td>
+              <td><span class="weight-cell">58.40 <span class="delta">↓ 0.3</span></span></td>
+              <td>Yoga 45 min</td>
+              <td><span class="badge green">Voltooid</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g6">TS</div>
+                  <div>
+                    <div class="client-name">Tim S.</div>
+                    <div class="client-phone">06 ····· 55</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 4</span></td>
+              <td><span class="weight-cell">78.50 <span class="delta">↓ 0.2</span></span></td>
+              <td>Push workout</td>
+              <td><span class="badge amber">Bezig</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g7">NH</div>
+                  <div>
+                    <div class="client-name">Nina H.</div>
+                    <div class="client-phone">06 ····· 02</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 19</span></td>
+              <td><span class="weight-cell">62.80 <span class="delta">↓ 0.1</span></span></td>
+              <td>Pull workout</td>
+              <td><span class="badge green">Voltooid</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="av g8">JM</div>
+                  <div>
+                    <div class="client-name">Joost M.</div>
+                    <div class="client-phone">06 ····· 84</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="streak"><span class="flame">🔥</span> 6</span></td>
+              <td><span class="weight-cell">88.20 <span class="delta up">↑ 0.1</span></span></td>
+              <td>Geen check‑in</td>
+              <td><span class="badge gray">Wachtend</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card fade d5">
+        <div class="card-head">
+          <div class="card-title">Weekly Check-outs</div>
+          <div class="card-link">Last 7 days</div>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 320 200" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#22c55e" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+              </linearGradient>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)"/>
+              </pattern>
+            </defs>
+            <rect width="320" height="170" fill="url(#grid)"/>
+            <g class="y-lbl">
+              <text x="2" y="20">12</text>
+              <text x="2" y="60">8</text>
+              <text x="2" y="100">4</text>
+              <text x="2" y="140">0</text>
+            </g>
+            <path class="area-fade" d="M30,80 L75,30 L120,70 L165,100 L210,60 L255,45 L300,70 L300,170 L30,170 Z" fill="url(#grad)"/>
+            <polyline class="line-draw"
+              points="30,80 75,30 120,70 165,100 210,60 255,45 300,70"
+              fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <g fill="#22c55e">
+              <circle class="chart-dot" style="animation-delay:1.6s" cx="30" cy="80" r="4"/>
+              <circle class="chart-dot" style="animation-delay:1.75s" cx="75" cy="30" r="4"/>
+              <circle class="chart-dot" style="animation-delay:1.9s" cx="120" cy="70" r="4"/>
+              <circle class="chart-dot" style="animation-delay:2.05s" cx="165" cy="100" r="4"/>
+              <circle class="chart-dot" style="animation-delay:2.2s" cx="210" cy="60" r="4"/>
+              <circle class="chart-dot" style="animation-delay:2.35s" cx="255" cy="45" r="4"/>
+              <circle class="chart-dot" style="animation-delay:2.5s" cx="300" cy="70" r="5"/>
+            </g>
+            <g class="x-lbl" text-anchor="middle">
+              <text x="30" y="190">WO</text>
+              <text x="75" y="190">DO</text>
+              <text x="120" y="190">VR</text>
+              <text x="165" y="190">ZA</text>
+              <text x="210" y="190">ZO</text>
+              <text x="255" y="190">MA</text>
+              <text x="300" y="190">DI</text>
+            </g>
+          </svg>
+        </div>
+        <div class="chart-foot">evening check-ins last 7 days</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card fade d6">
+        <div class="card-head">
+          <div class="card-title">Needs attention</div>
+          <div class="card-link">3 clients</div>
+        </div>
+        <div class="alert">
+          <div class="av g6" style="width:34px;height:34px;font-size:12px">RD</div>
+          <div class="alert-text">
+            <b>Ruben D.</b> — 3 dagen gemist
+            <small>Streak verloren · weight ↑ 0.6kg</small>
+          </div>
+          <div class="alert-action">Bericht</div>
+        </div>
+        <div class="alert">
+          <div class="av g8" style="width:34px;height:34px;font-size:12px">JM</div>
+          <div class="alert-text">
+            <b>Joost M.</b> — niet gereageerd
+            <small>2 uur sinds check-in</small>
+          </div>
+          <div class="alert-action">Bericht</div>
+        </div>
+        <div class="alert">
+          <div class="av g4" style="width:34px;height:34px;font-size:12px">PV</div>
+          <div class="alert-text">
+            <b>Pieter V.</b> — execution daalt
+            <small>67% → 41% deze week</small>
+          </div>
+          <div class="alert-action">Bericht</div>
+        </div>
+      </div>
+
+      <div class="card fade d6">
+        <div class="card-head">
+          <div class="card-title">Live activity</div>
+          <div class="card-link">Realtime</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon g">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg>
+          </div>
+          <div class="feed-text"><b>Eva V.</b> completed commitment <small>5K hardlopen · 28 min</small></div>
+          <div class="feed-time">net nu</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon">⚖️</div>
+          <div class="feed-text"><b>Lars B.</b> logged weight <small>82.1 kg via WhatsApp</small></div>
+          <div class="feed-time">3 min</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon g">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg>
+          </div>
+          <div class="feed-text"><b>Sophie K.</b> hit 10K steps <small>+3% goal</small></div>
+          <div class="feed-time">12 min</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon a">💬</div>
+          <div class="feed-text"><b>Tim S.</b> asked AI coach <small>"bench press technique?"</small></div>
+          <div class="feed-time">18 min</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon r">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </div>
+          <div class="feed-text"><b>Ruben D.</b> missed check-out <small>Geen reactie · 21:00</small></div>
+          <div class="feed-time">24 min</div>
+        </div>
+      </div>
+
+      <div class="card fade d6">
+        <div class="card-head">
+          <div class="card-title">Top commitments</div>
+          <div class="card-link">Deze week</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Krachttraining</span><b>92%</b></div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden"><div class="bar" style="width:0;height:100%;background:var(--green);animation:bar1 1.5s ease-out 0.7s forwards"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Hardlopen</span><b>84%</b></div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden"><div class="bar" style="width:0;height:100%;background:var(--green);animation:bar2 1.5s ease-out 0.85s forwards"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>10K stappen</span><b>78%</b></div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden"><div class="bar" style="width:0;height:100%;background:var(--green);animation:bar3 1.5s ease-out 1s forwards"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Eiwit doel</span><b>71%</b></div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden"><div class="bar" style="width:0;height:100%;background:var(--green);animation:bar4 1.5s ease-out 1.15s forwards"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Yoga / mobility</span><b>52%</b></div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden"><div class="bar" style="width:0;height:100%;background:var(--amber);animation:bar5 1.5s ease-out 1.3s forwards"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<style>
+  @keyframes bar1 { to { width: 92%; } }
+  @keyframes bar2 { to { width: 84%; } }
+  @keyframes bar3 { to { width: 78%; } }
+  @keyframes bar4 { to { width: 71%; } }
+  @keyframes bar5 { to { width: 52%; } }
+</style>
+<script>
+  // count-up animation for stat values
+  document.querySelectorAll('.count-up').forEach(el => {
+    const target = parseInt(el.dataset.target, 10);
+    const duration = 1200 + Math.random() * 400;
+    const start = performance.now() + 250;
+    function step(now) {
+      const t = Math.max(0, Math.min(1, (now - start) / duration));
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(target * eased);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+</script>
+</body>
+</html>

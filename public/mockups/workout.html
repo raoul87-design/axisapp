@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AXIS — Workout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --card: rgba(255,255,255,0.025);
+    --card-hi: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.08);
+    --text: #fff;
+    --muted: rgba(255,255,255,0.5);
+    --faint: rgba(255,255,255,0.32);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.35);
+    --red: #ef4444;
+    --orange: #f59e0b;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  .screen {
+    width: 100%;
+    max-width: 390px;
+    min-height: 844px;
+    padding: 14px 20px 92px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.18em; font-size: 13px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2.4s ease-out infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--green-glow); }
+    70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .menu { color: var(--muted); font-size: 20px; }
+  .greeting { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  h1 { font-size: 26px; font-weight: 800; margin: 0 0 16px; letter-spacing: -0.02em; }
+
+  /* Workout header */
+  .wo-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .wo-controls { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+  .wo-controls .cancel { color: var(--red); }
+  .wo-controls span { display: inline-flex; align-items: center; gap: 4px; }
+  .klaar {
+    background: var(--green); color: #052; font-weight: 700;
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    box-shadow: 0 0 0 0 var(--green-glow);
+    animation: pulseGlow 2.6s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    50% { box-shadow: 0 0 24px 2px rgba(34,197,94,0.45); }
+  }
+  .wo-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 14px; }
+
+  /* Progress overall */
+  .ov {
+    background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .ov-text { flex: 1; font-size: 12px; color: var(--muted); }
+  .ov-text b { color: var(--text); }
+  .ov-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .ov-fill {
+    height: 100%; background: var(--green); width: 0;
+    animation: ovFill 1.6s cubic-bezier(.22,.61,.36,1) 0.3s forwards;
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+  @keyframes ovFill { to { width: 40%; } }
+  .ov-counter { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .ov-counter small { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  /* Exercise card */
+  .ex {
+    border: 1px solid var(--border); border-radius: 14px;
+    background: var(--card);
+    padding: 14px 14px 12px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .ex.complete { background: linear-gradient(180deg, rgba(34,197,94,0.06), rgba(34,197,94,0.02)); border-color: rgba(34,197,94,0.30); }
+  .ex.active { border-color: rgba(34,197,94,0.45); }
+  .ex.active::before {
+    content: ""; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px;
+    border-radius: 14px; pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(34,197,94,0.45), 0 0 26px rgba(34,197,94,0.18);
+  }
+  .ex-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .ex-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .ex-name .checkbadge {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--green); display: grid; place-items: center;
+  }
+  .ex-name .checkbadge svg { width: 10px; height: 10px; }
+  .ex-muscle { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .video-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.30);
+    color: var(--red);
+    font-size: 11px; font-weight: 600;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .video-btn::before {
+    content: ""; width: 0; height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+  }
+  .ex-help {
+    margin-top: 10px;
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 11px;
+  }
+  .help-row { color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .help-row.warn { color: var(--orange); }
+  .caret { font-size: 9px; }
+
+  /* Sets */
+  .sets {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  .sets-head {
+    display: grid; grid-template-columns: 28px 1fr 1fr 28px; gap: 8px;
+    font-size: 10px; letter-spacing: 0.14em; color: var(--faint);
+    font-weight: 600;
+    padding: 0 2px 6px;
+  }
+  .set-row {
+    display: grid; grid-template-columns: 28px 1fr 1fr 28px; gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .set-no { font-size: 12px; color: var(--muted); text-align: center; }
+  .input {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    background: rgba(0,0,0,0.3);
+  }
+  .input.done { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05); }
+  .input.placeholder { color: var(--faint); font-weight: 400; }
+  .set-check {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+  }
+  .set-check.done { background: var(--green); border-color: var(--green); }
+  .set-check.done::after {
+    content: ""; width: 10px; height: 10px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'><polyline points='2,7 6,11 12,3' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center / contain;
+  }
+  .set-check.active {
+    background: rgba(34,197,94,0.12);
+    border-color: rgba(34,197,94,0.45);
+    animation: pulseBox 1.6s ease-in-out infinite;
+  }
+  @keyframes pulseBox {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    50% { box-shadow: 0 0 0 4px rgba(34,197,94,0.08); }
+  }
+
+  /* Tab bar */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 18px;
+    display: grid; grid-template-columns: repeat(4,1fr);
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--faint); font-size: 11px; font-weight: 500; }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { color: var(--green); }
+
+  .fade { opacity: 0; transform: translateY(8px); animation: fadeUp 0.5s ease-out forwards; }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  .d1 { animation-delay: 0.05s; }
+  .d2 { animation-delay: 0.10s; }
+  .d3 { animation-delay: 0.18s; }
+  .d4 { animation-delay: 0.26s; }
+  .d5 { animation-delay: 0.34s; }
+  .d6 { animation-delay: 0.42s; }
+  .d7 { animation-delay: 0.50s; }
+  .d8 { animation-delay: 0.58s; }
+
+  /* The actively-counting kg value */
+  .live-kg { transition: opacity 0.4s ease; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="top fade d1">
+    <div class="logo"><span class="logo-dot"></span>AXIS</div>
+    <div class="menu">···</div>
+  </div>
+
+  <div class="fade d1">
+    <div class="greeting">Goedemiddag, Eva 👋</div>
+    <h1>Dinsdag 19 mei</h1>
+  </div>
+
+  <div class="wo-head fade d2">
+    <div class="wo-controls">
+      <span>← Terug</span>
+      <span class="cancel">✕ Annuleer</span>
+    </div>
+    <div class="klaar">Klaar</div>
+  </div>
+  <div class="wo-title fade d2">Eva — Borst</div>
+
+  <div class="ov fade d2">
+    <div class="ov-counter">2<small>/5</small></div>
+    <div class="ov-text">
+      <b>Borst & Triceps</b> — 40 min
+      <div class="ov-bar"><div class="ov-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Exercise 1: complete -->
+  <div class="ex complete fade d3">
+    <div class="ex-head">
+      <div>
+        <div class="ex-name">
+          <span class="checkbadge"><svg viewBox="0 0 14 14"><polyline points="2,7 6,11 12,3" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          Dumbbell Chest Press
+        </div>
+        <div class="ex-muscle">borst, triceps, schouders</div>
+      </div>
+      <div class="video-btn">Video</div>
+    </div>
+    <div class="sets">
+      <div class="sets-head"><div>#</div><div>Reps</div><div>Kg</div><div></div></div>
+      <div class="set-row">
+        <div class="set-no">1</div>
+        <div class="input done">12</div>
+        <div class="input done">22.5</div>
+        <div class="set-check done"></div>
+      </div>
+      <div class="set-row">
+        <div class="set-no">2</div>
+        <div class="input done">10</div>
+        <div class="input done">22.5</div>
+        <div class="set-check done"></div>
+      </div>
+      <div class="set-row">
+        <div class="set-no">3</div>
+        <div class="input done">8</div>
+        <div class="input done">25</div>
+        <div class="set-check done"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise 2: active -->
+  <div class="ex active fade d4">
+    <div class="ex-head">
+      <div>
+        <div class="ex-name">Bench Press</div>
+        <div class="ex-muscle">borst, triceps, schouders</div>
+      </div>
+      <div class="video-btn">Video</div>
+    </div>
+    <div class="ex-help">
+      <div class="help-row"><span class="caret">▼</span> Hoe doe je dit?</div>
+      <div class="help-row warn"><span class="caret">▼</span> Let op</div>
+    </div>
+    <div class="sets">
+      <div class="sets-head"><div>#</div><div>Reps</div><div>Kg</div><div></div></div>
+      <div class="set-row">
+        <div class="set-no">1</div>
+        <div class="input done">10</div>
+        <div class="input done">60</div>
+        <div class="set-check done"></div>
+      </div>
+      <div class="set-row">
+        <div class="set-no">2</div>
+        <div class="input done">10</div>
+        <div class="input live-kg" id="liveReps">8</div>
+        <div class="set-check active"></div>
+      </div>
+      <div class="set-row">
+        <div class="set-no">3</div>
+        <div class="input placeholder">—</div>
+        <div class="input placeholder">—</div>
+        <div class="set-check"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise 3: pending -->
+  <div class="ex fade d5">
+    <div class="ex-head">
+      <div>
+        <div class="ex-name">Overhead Tricep Extension</div>
+        <div class="ex-muscle">triceps</div>
+      </div>
+      <div class="video-btn">Video</div>
+    </div>
+  </div>
+
+  <!-- Exercise 4: pending -->
+  <div class="ex fade d6">
+    <div class="ex-head">
+      <div>
+        <div class="ex-name">Tricep Pushdown</div>
+        <div class="ex-muscle">triceps</div>
+      </div>
+      <div class="video-btn">Video</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="8,12 11,15 16,9"/></svg>
+      Vandaag
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,17 9,11 13,15 21,7"/><polyline points="15,7 21,7 21,13"/></svg>
+      Voortgang
+    </div>
+    <div class="tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 q4 -6 10 -6 t10 6"/><path d="M2 12 q4 6 10 6 t10 -6"/><circle cx="12" cy="12" r="2"/></svg>
+      Workout
+    </div>
+    <div class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5 h18 v12 h-9 l-5 4 v-4 H3 z"/></svg>
+      Coach
+    </div>
+  </div>
+</div>
+</body>
+</html>
