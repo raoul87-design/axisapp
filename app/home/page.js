@@ -7,6 +7,7 @@ import { calculateTDEE } from "../../lib/calculateTDEE"
 import { normalizeWhatsapp } from "../../lib/whatsapp"
 import { AxisLogo } from "../../components/AxisLogo"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
+import VoedingTab from "./VoedingTab"
 
 const GREEN = "#22c55e"
 const TAB_H = 56
@@ -3118,6 +3119,19 @@ return (
     </div>
   )}
 
+  {/* ── TAB: VOEDING ─────────────────────────────────────────── */}
+  {activeTab === "voeding" && (
+    <VoedingTab
+      publicUserId={publicUserId}
+      user={user}
+      kcalDoel={kcalDoel}
+      eiwittenDoel={eiwittenDoel}
+      koolhydratenDoel={koolhydratenDoel}
+      vettenDoel={vettenDoel}
+      TAB_H={TAB_H}
+    />
+  )}
+
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
   <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50, padding: "8px 8px 22px", boxSizing: "border-box" }}>
 
@@ -3139,6 +3153,13 @@ return (
           <path d="M3 11h2M17 11h2M5 11l2-3h8l2 3M5 11l2 3h8l2-3" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
           <circle cx={3} cy={11} r={1.5} stroke={c} strokeWidth={1.5} />
           <circle cx={19} cy={11} r={1.5} stroke={c} strokeWidth={1.5} />
+        </svg>
+      )},
+      { id: "voeding",   label: "Voeding",   icon: (c) => (
+        <svg width={20} height={20} viewBox="0 0 22 22" fill="none">
+          <path d="M4 17V10c0-3.3 2.7-6 6-6s6 2.7 6 6v7" stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+          <path d="M2 17h18" stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+          <path d="M10 4v3M12 6h-4" stroke={c} strokeWidth={1.3} strokeLinecap="round" />
         </svg>
       )},
       { id: "coach",     label: "Coach",     icon: (c) => (

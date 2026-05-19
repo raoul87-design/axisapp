@@ -873,6 +873,18 @@ export default function ClientDetail() {
               </div>
             )}
 
+            {/* Weekmenu samenstellen */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 4px" }}>Voedingsplan</p>
+                <p style={{ color: "#ccc", fontSize: 13, margin: 0 }}>Stel een weekmenu samen voor {user?.name?.split(" ")[0] || "deze client"}</p>
+              </div>
+              <button onClick={() => window.open(`/dashboard/clients/${id}/weekmenu`, "_blank")}
+                style={{ padding: "9px 16px", background: GREEN, color: "#061a0c", border: "none", borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
+                ✦ Weekmenu
+              </button>
+            </div>
+
             {/* Week planning */}
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BORDER}` }}>
