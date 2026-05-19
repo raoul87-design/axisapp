@@ -11,6 +11,204 @@ const TEXT = "#ffffff"
 const SUB = "#888"
 const MAX = 1100
 
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjgjwdeo"
+
+// ── Translations ──────────────────────────────────────────────
+const T = {
+  EN: {
+    navLinks: [
+      { label: "About",    href: "#probleem" },
+      { label: "Solution", href: "#oplossing" },
+      { label: "Pricing",  href: "#prijzen" },
+      { label: "Contact",  href: "#contact" },
+    ],
+    navCta: "Start free",
+    navSwitcher: "← For myself",
+    hero: {
+      badge: "Discipline System for Coaches",
+      h1a: "Stop chasing",
+      h1b: "your clients.",
+      sub1: "Let AXIS do it.",
+      sub2: "The accountability app for personal trainers — daily WhatsApp check-ins and AI coaching for more consistent clients.",
+      cta1: "Start free →",
+      cta2: "I'm a coach →",
+    },
+    problem: {
+      badge: "The problem",
+      h2: "Most people know what to do.",
+      h2sub: "They just don't do it consistently.",
+      p: "People want to get stronger, healthier or more focused. They know the steps. But consistency breaks down. Not because of motivation — but because there is no system that creates daily accountability, clear commitments and feedback when things get difficult.",
+    },
+    coaching: {
+      badge: "The coach",
+      h2: "That's why coaching exists.",
+      p: "Coaches help people set goals and create direction. But even great coaches can't monitor their clients every day. Most of the real work happens between sessions. That's where consistency is won or lost.",
+    },
+    solution: {
+      badge: "The solution",
+      h2: "Axis fills the gap between sessions.",
+      sub: "Everything your clients need to stay consistent — without extra apps or manual follow-up.",
+      features: [
+        { num: "01", title: "Daily commitment",    desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
+        { num: "02", title: "Execution tracking",  desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
+        { num: "03", title: "Metrics tracking",    desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
+        { num: "04", title: "AI coach",            desc: "Remembers your client's history and adjusts tone based on streak and progress." },
+        { num: "05", title: "Progress insights",   desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
+        { num: "06", title: "Personal reminders",  desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
+        { num: "07", title: "Workout delivery",    desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
+      ],
+    },
+    system: {
+      badge: "The system",
+      h2: "The Axis Discipline System.",
+      steps: [
+        { step: "Commit",  color: G,         desc: "Every morning, the client commits to one concrete goal for the day. Clear, specific, actionable." },
+        { step: "Execute", color: "#60a5fa", desc: "The client works on their commitment throughout the day. Axis tracks whether they follow through." },
+        { step: "Reflect", color: "#f59e0b", desc: "In the evening, Axis checks in. Did you do it? An honest answer drives the next step." },
+        { step: "Recover", color: "#a78bfa", desc: "Missed a day? No problem. Axis helps you bounce back instead of spiraling. Progress over perfection." },
+      ],
+    },
+    whatsapp: {
+      badge: "WhatsApp",
+      h2a: "Discipline without",
+      h2b: "opening an app.",
+      p: "Clients don't install anything. They simply respond. Commitments, weight, calories, reminders — all via WhatsApp. Workouts and progress tracking in the app.",
+    },
+    dashboard: {
+      badge: "Coach dashboard",
+      h2a: "Coaches see",
+      h2b: "who executes.",
+      p: "Axis gives coaches visibility into what happens between sessions. See which clients stay consistent. See who needs support. Spend less time chasing updates — and more time coaching.",
+      bullets: [
+        "See daily metrics — weight trends, kcal targets and macro progress",
+        "Full client history — commitments, metrics and conversations in one place",
+      ],
+    },
+    cta: {
+      h2a: "Turn commitments",
+      h2b: "into",
+      h2c: "execution.",
+      p: "Axis helps personal trainers build more consistent clients.",
+      btn: "Start free →",
+    },
+    contact: {
+      badge: "Contact",
+      h2: "Get in touch.",
+      p: "Questions about AXIS or want to get started? Send a message and we'll get back to you within one business day.",
+      name: "Name",
+      email: "Email",
+      message: "Message",
+      namePlaceholder: "Your name",
+      emailPlaceholder: "your@email.com",
+      msgPlaceholder: "Tell us about your coaching practice...",
+      send: "Send message",
+      sending: "Sending...",
+      successTitle: "Message sent.",
+      successSub: "We'll get back to you within one business day.",
+      sendAnother: "Send another →",
+      error: "Something went wrong. Please try again or email us directly.",
+    },
+    footer: { tagline: "Commit. Execute. Reflect. Recover." },
+    seo: "AXIS is an accountability app for personal trainers and coaches. Automated WhatsApp check-ins, metrics tracking and AI coaching help coaches keep their clients consistent between sessions.",
+  },
+  NL: {
+    navLinks: [
+      { label: "Over",      href: "#probleem" },
+      { label: "Oplossing", href: "#oplossing" },
+      { label: "Prijzen",   href: "#prijzen" },
+      { label: "Contact",   href: "#contact" },
+    ],
+    navCta: "Start gratis",
+    navSwitcher: "← Voor mezelf",
+    hero: {
+      badge: "Discipline Systeem voor Coaches",
+      h1a: "Stop met achternazitten",
+      h1b: "van je klanten.",
+      sub1: "Laat AXIS het doen.",
+      sub2: "De accountability app voor personal trainers — dagelijkse WhatsApp check-ins en AI coaching voor meer consistente klanten.",
+      cta1: "Start gratis →",
+      cta2: "Ik ben coach →",
+    },
+    problem: {
+      badge: "Het probleem",
+      h2: "De meeste mensen weten wat ze moeten doen.",
+      h2sub: "Ze doen het alleen niet consistent.",
+      p: "Mensen willen sterker, gezonder of meer gefocust worden. Ze kennen de stappen. Maar de consistentie breekt af. Niet door motivatie — maar omdat er geen systeem is dat dagelijkse verantwoording, duidelijke commitments en feedback geeft als het moeilijk wordt.",
+    },
+    coaching: {
+      badge: "De coach",
+      h2: "Daarom bestaat coaching.",
+      p: "Coaches helpen mensen doelen te stellen en richting te geven. Maar zelfs de beste coaches kunnen hun klanten niet elke dag monitoren. Het echte werk gebeurt tussen sessies. Daar wordt consistentie gewonnen of verloren.",
+    },
+    solution: {
+      badge: "De oplossing",
+      h2: "Axis vult het gat tussen sessies.",
+      sub: "Alles wat je klanten nodig hebben om consistent te blijven — zonder extra apps of handmatig opvolgen.",
+      features: [
+        { num: "01", title: "Dagelijkse commitment",      desc: "Klanten committen via WhatsApp aan wat ze vandaag gaan doen. Één heldere intentie, elke ochtend." },
+        { num: "02", title: "Uitvoering bijhouden",       desc: "Streaks, gemiste dagen en patronen worden automatisch bijgehouden — voor de coach in één oogopslag zichtbaar." },
+        { num: "03", title: "Metrics bijhouden",          desc: "Gewicht, kcal en stappen dagelijks bijhouden via WhatsApp. Geen handmatige invoer, geen aparte app." },
+        { num: "04", title: "AI coach",                   desc: "Onthoudt de geschiedenis van je klant en past de toon aan op basis van streak en voortgang." },
+        { num: "05", title: "Voortgangsinzichten",        desc: "Trends en patronen zichtbaar voor zowel coach als klant. Spot wie ondersteuning nodig heeft voordat ze afhaken." },
+        { num: "06", title: "Persoonlijke herinneringen", desc: "Klanten stellen dagelijkse of eenmalige herinneringen in via WhatsApp. Geen extra app nodig — gewoon één bericht." },
+        { num: "07", title: "Workouts leveren",           desc: "Coach plant workouts, klanten ontvangen ze in de app met oefeningsinstructies en gewichtlogging." },
+      ],
+    },
+    system: {
+      badge: "Het systeem",
+      h2: "Het Axis Discipline Systeem.",
+      steps: [
+        { step: "Commit",      color: G,         desc: "Elke ochtend committeert de klant aan één concreet doel voor die dag. Helder, specifiek, uitvoerbaar." },
+        { step: "Uitvoeren",   color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
+        { step: "Reflecteren", color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
+        { step: "Herstellen",  color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
+      ],
+    },
+    whatsapp: {
+      badge: "WhatsApp",
+      h2a: "Discipline zonder",
+      h2b: "een app te openen.",
+      p: "Klanten installeren niets. Ze reageren gewoon. Commitments, gewicht, calorieën, herinneringen — allemaal via WhatsApp. Workouts en voortgang bijhouden in de app.",
+    },
+    dashboard: {
+      badge: "Coach dashboard",
+      h2a: "Coaches zien",
+      h2b: "wie uitvoert.",
+      p: "Axis geeft coaches inzicht in wat er tussen sessies gebeurt. Zie welke klanten consistent blijven. Zie wie ondersteuning nodig heeft. Minder tijd aan achternazitten — meer tijd aan coachen.",
+      bullets: [
+        "Bekijk dagelijkse metrics — gewichtstendensen, kcal-doelen en macro-voortgang",
+        "Volledige klanthistorie — commitments, metrics en gesprekken op één plek",
+      ],
+    },
+    cta: {
+      h2a: "Zet commitments",
+      h2b: "om in",
+      h2c: "uitvoering.",
+      p: "Axis helpt personal trainers meer consistente klanten op te bouwen.",
+      btn: "Start gratis →",
+    },
+    contact: {
+      badge: "Contact",
+      h2: "Neem contact op.",
+      p: "Vragen over AXIS of wil je beginnen? Stuur een bericht en we reageren binnen één werkdag.",
+      name: "Naam",
+      email: "E-mail",
+      message: "Bericht",
+      namePlaceholder: "Jouw naam",
+      emailPlaceholder: "jij@email.com",
+      msgPlaceholder: "Vertel ons over jouw coaching praktijk...",
+      send: "Bericht versturen",
+      sending: "Versturen...",
+      successTitle: "Bericht verzonden.",
+      successSub: "We reageren binnen één werkdag.",
+      sendAnother: "Nog een bericht →",
+      error: "Er ging iets mis. Probeer opnieuw of mail ons direct.",
+    },
+    footer: { tagline: "Commit. Uitvoeren. Reflecteren. Herstellen." },
+    seo: "AXIS is een accountability app voor personal trainers en coaches in Nederland. Automatische WhatsApp check-ins, metrics tracking en AI coaching helpen coaches hun klanten consistent houden tussen sessies door.",
+  },
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 function Section({ children, style = {} }) {
   return (
@@ -63,15 +261,28 @@ function ScreenFrame({ src, alt }) {
   )
 }
 
-// ── Nav ───────────────────────────────────────────────────────
-const NAV_LINKS = [
-  { label: "About",    href: "#probleem" },
-  { label: "Solution", href: "#oplossing" },
-  { label: "Pricing",  href: "#prijzen" },
-  { label: "Contact",  href: "#contact" },
-]
+// ── Lang toggle (shared between desktop + mobile) ─────────────
+function LangToggle({ lang, setLang }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+      {[["NL","🇳🇱"],["EN","🇬🇧"]].map(([code, flag], i) => (
+        <span key={code} style={{ display: "flex", alignItems: "center" }}>
+          {i > 0 && <span style={{ color: "#333", fontSize: 11, padding: "0 1px" }}>|</span>}
+          <button onClick={() => setLang(code)} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 15, padding: "4px 5px", lineHeight: 1,
+            opacity: lang === code ? 1 : 0.4,
+          }}>
+            {flag}
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
 
-function Nav() {
+// ── Nav ───────────────────────────────────────────────────────
+function Nav({ lang, setLang, t }) {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
 
@@ -82,11 +293,17 @@ function Nav() {
 
         {/* Desktop links */}
         <div className="nav-links" style={{ display: "flex", gap: 32 }}>
-          {NAV_LINKS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+          {t.navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
         </div>
 
-        {/* Desktop CTA */}
-        <Link href="/signup" className="btn-green nav-cta" style={{ padding: "8px 20px", fontSize: 13 }}>Start gratis</Link>
+        {/* Desktop right */}
+        <div className="nav-right" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Link href="/website/b2c" style={{ color: SUB, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap" }}>
+            {t.navSwitcher}
+          </Link>
+          <LangToggle lang={lang} setLang={setLang} />
+          <Link href="/coach-signup" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</Link>
+        </div>
 
         {/* Mobile hamburger */}
         <button
@@ -110,7 +327,7 @@ function Nav() {
       {/* Mobile dropdown */}
       {open && (
         <div style={{ background: "#0a0a0a", borderTop: `1px solid ${BORDER}`, padding: "8px 0 16px" }}>
-          {NAV_LINKS.map(l => (
+          {t.navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={close} style={{
               display: "block", padding: "12px 24px",
               color: "#ccc", fontSize: 15, textDecoration: "none",
@@ -119,9 +336,19 @@ function Nav() {
               {l.label}
             </a>
           ))}
+          <Link href="/website/b2c" onClick={close} style={{
+            display: "block", padding: "12px 24px",
+            color: SUB, fontSize: 14, textDecoration: "none",
+            borderBottom: `1px solid ${BORDER}`,
+          }}>
+            {t.navSwitcher}
+          </Link>
+          <div style={{ padding: "12px 24px", borderBottom: `1px solid ${BORDER}` }}>
+            <LangToggle lang={lang} setLang={setLang} />
+          </div>
           <div style={{ padding: "14px 24px 0" }}>
-            <Link href="/signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
-              Start gratis
+            <Link href="/coach-signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+              {t.navCta}
             </Link>
           </div>
         </div>
@@ -131,12 +358,10 @@ function Nav() {
 }
 
 // ── Contact form ──────────────────────────────────────────────
-// Replace FORMSPREE_ENDPOINT with your endpoint from formspree.io
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjgjwdeo"
-
-function ContactForm() {
+function ContactForm({ t }) {
+  const tc = t.contact
   const [fields, setFields]   = useState({ name: "", email: "", message: "" })
-  const [status, setStatus]   = useState("idle") // idle | sending | success | error
+  const [status, setStatus]   = useState("idle")
   const [focused, setFocused] = useState("")
 
   const set = (k) => (e) => setFields(f => ({ ...f, [k]: e.target.value }))
@@ -161,17 +386,16 @@ function ContactForm() {
     width: "100%", padding: "12px 16px", borderRadius: 8,
     background: "#0a0a0a", color: "#fff", fontSize: 14,
     border: `1px solid ${focused === key ? G : "#2a2a2a"}`,
-    outline: "none", boxSizing: "border-box",
-    transition: "border-color 0.15s",
+    outline: "none", boxSizing: "border-box", transition: "border-color 0.15s",
   })
 
   if (status === "success") {
     return (
       <div style={{ background: "#0a1a0f", border: `1px solid #1a4d2a`, borderRadius: 12, padding: "32px 28px" }}>
-        <p style={{ color: G, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Message sent.</p>
-        <p style={{ color: "#888", fontSize: 14 }}>We'll get back to you within one business day.</p>
+        <p style={{ color: G, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{tc.successTitle}</p>
+        <p style={{ color: "#888", fontSize: 14 }}>{tc.successSub}</p>
         <button onClick={() => setStatus("idle")} style={{ marginTop: 20, background: "none", border: "none", color: G, fontSize: 14, cursor: "pointer", padding: 0 }}>
-          Send another →
+          {tc.sendAnother}
         </button>
       </div>
     )
@@ -180,41 +404,41 @@ function ContactForm() {
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Name</label>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.name}</label>
         <input
           type="text" required value={fields.name} onChange={set("name")}
-          placeholder="Your name"
+          placeholder={tc.namePlaceholder}
           onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
           style={inputStyle("name")}
         />
       </div>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Email</label>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.email}</label>
         <input
           type="email" required value={fields.email} onChange={set("email")}
-          placeholder="your@email.com"
+          placeholder={tc.emailPlaceholder}
           onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
           style={inputStyle("email")}
         />
       </div>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Message</label>
+        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.message}</label>
         <textarea
           required value={fields.message} onChange={set("message")}
-          placeholder="Tell us about your coaching practice..."
+          placeholder={tc.msgPlaceholder}
           rows={5}
           onFocus={() => setFocused("message")} onBlur={() => setFocused("")}
           style={{ ...inputStyle("message"), resize: "vertical", fontFamily: "inherit" }}
         />
       </div>
       {status === "error" && (
-        <p style={{ color: "#ef4444", fontSize: 13 }}>Something went wrong. Please try again or email us directly.</p>
+        <p style={{ color: "#ef4444", fontSize: 13 }}>{tc.error}</p>
       )}
       <button
         type="submit" disabled={status === "sending"}
         style={{ padding: "13px 28px", background: status === "sending" ? "#1a4d2a" : G, color: "#000", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: status === "sending" ? "default" : "pointer", transition: "opacity 0.15s", alignSelf: "flex-start", opacity: status === "sending" ? 0.7 : 1 }}
       >
-        {status === "sending" ? "Sending..." : "Send message"}
+        {status === "sending" ? tc.sending : tc.send}
       </button>
     </form>
   )
@@ -222,6 +446,8 @@ function ContactForm() {
 
 // ── Main ──────────────────────────────────────────────────────
 export default function Website() {
+  const [lang, setLang] = useState("EN")
+  const t = T[lang]
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth"
@@ -253,33 +479,33 @@ export default function Website() {
           .steps-grid { flex-wrap: wrap !important; }
           .feature-grid { flex-direction: column !important; }
           .nav-links { display: none !important; }
-          .nav-cta { display: none !important; }
+          .nav-right { display: none !important; }
           .nav-hamburger { display: block !important; }
         }
       `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────── */}
-      <Nav />
+      <Nav lang={lang} setLang={setLang} t={t} />
 
       {/* ── HERO ────────────────────────────────────────────── */}
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "96px 24px 80px" }}>
         <div className="hero-grid" style={{ display: "flex", alignItems: "center", gap: 64 }}>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Badge>Discipline System for Coaches</Badge>
+            <Badge>{t.hero.badge}</Badge>
             <h1 style={{ fontSize: "clamp(36px, 5vw, 60px)", fontWeight: 800, lineHeight: 1.1, margin: "24px 0 20px", letterSpacing: "-0.02em" }}>
-              Stop chasing<br />
-              <span style={{ color: G }}>your clients.</span>
+              {t.hero.h1a}<br />
+              <span style={{ color: G }}>{t.hero.h1b}</span>
             </h1>
             <p style={{ fontSize: 22, color: "#ccc", marginBottom: 12, fontWeight: 500 }}>
-              Let AXIS do it.
+              {t.hero.sub1}
             </p>
             <p style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>
-              De accountability app voor personal trainers — dagelijkse WhatsApp check-ins en AI coaching voor meer consistente klanten.
+              {t.hero.sub2}
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
-              <Link href="/signup" className="btn-green">Start gratis →</Link>
-              <Link href="/login" className="btn-ghost">Ik ben coach →</Link>
+              <Link href="/coach-signup" className="btn-green">{t.hero.cta1}</Link>
+              <Link href="/login" className="btn-ghost">{t.hero.cta2}</Link>
             </div>
           </div>
 
@@ -297,14 +523,12 @@ export default function Website() {
       <div id="probleem">
         <Section>
           <div style={{ maxWidth: 700 }}>
-            <Badge>The problem</Badge>
+            <Badge>{t.problem.badge}</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              Most people know what to do.<br />
-              <span style={{ color: SUB }}>They just don't do it consistently.</span>
+              {t.problem.h2}<br />
+              <span style={{ color: SUB }}>{t.problem.h2sub}</span>
             </h2>
-            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>
-              People want to get stronger, healthier or more focused. They know the steps. But consistency breaks down. Not because of motivation — but because there is no system that creates daily accountability, clear commitments and feedback when things get difficult.
-            </p>
+            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>{t.problem.p}</p>
           </div>
         </Section>
       </div>
@@ -313,13 +537,11 @@ export default function Website() {
       <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
         <Section>
           <div style={{ maxWidth: 700 }}>
-            <Badge>The coach</Badge>
+            <Badge>{t.coaching.badge}</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-              That's why coaching exists.
+              {t.coaching.h2}
             </h2>
-            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>
-              Coaches help people set goals and create direction. But even great coaches can't monitor their clients every day. Most of the real work happens between sessions. That's where consistency is won or lost.
-            </p>
+            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>{t.coaching.p}</p>
           </div>
         </Section>
       </div>
@@ -327,23 +549,13 @@ export default function Website() {
       {/* ── OPLOSSING ───────────────────────────────────────── */}
       <div id="oplossing" style={{ borderTop: `1px solid ${BORDER}` }}>
         <Section>
-          <Badge>The solution</Badge>
+          <Badge>{t.solution.badge}</Badge>
           <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
-            Axis fills the gap between sessions.
+            {t.solution.h2}
           </h2>
-          <p style={{ color: SUB, fontSize: 16, marginBottom: 48, maxWidth: 560 }}>
-            Everything your clients need to stay consistent — without extra apps or manual follow-up.
-          </p>
+          <p style={{ color: SUB, fontSize: 16, marginBottom: 48, maxWidth: 560 }}>{t.solution.sub}</p>
           <div className="feature-grid" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            {[
-              { num: "01", title: "Daily commitment", desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
-              { num: "02", title: "Execution tracking", desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
-              { num: "03", title: "Metrics tracking", desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
-              { num: "04", title: "AI coach", desc: "Remembers your client's history and adjusts tone based on streak and progress." },
-              { num: "05", title: "Progress insights", desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
-              { num: "06", title: "Personal reminders", desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
-              { num: "07", title: "Workout delivery", desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
-            ].map(f => (
+            {t.solution.features.map(f => (
               <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
                 <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{f.num}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{f.title}</h3>
@@ -358,18 +570,13 @@ export default function Website() {
       <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
         <Section>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <Badge>Het systeem</Badge>
+            <Badge>{t.system.badge}</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 0", letterSpacing: "-0.01em" }}>
-              The Axis Discipline System.
+              {t.system.h2}
             </h2>
           </div>
           <div className="steps-grid" style={{ display: "flex", gap: 16 }}>
-            {[
-              { step: "Commit",  color: G,       desc: "Every morning, the client commits to one concrete goal for the day. Clear, specific, actionable." },
-              { step: "Execute", color: "#60a5fa", desc: "The client works on their commitment throughout the day. Axis tracks whether they follow through." },
-              { step: "Reflect", color: "#f59e0b", desc: "In the evening, Axis checks in. Did you do it? An honest answer drives the next step." },
-              { step: "Recover", color: "#a78bfa", desc: "Missed a day? No problem. Axis helps you bounce back instead of spiraling. Progress over perfection." },
-            ].map(s => (
+            {t.system.steps.map(s => (
               <div key={s.step} className="step-card">
                 <div style={{ width: 36, height: 36, borderRadius: 8, background: s.color + "22", border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color }} />
@@ -388,13 +595,12 @@ export default function Website() {
           <div className="split-left" style={{ display: "flex", alignItems: "center", gap: 64 }}>
             <PhoneFrame src="/screenshot-whatsapp.png" alt="WhatsApp AI coach" />
             <div style={{ flex: 1 }}>
-              <Badge>WhatsApp</Badge>
+              <Badge>{t.whatsapp.badge}</Badge>
               <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-                Discipline without<br />opening an app.
+                {t.whatsapp.h2a}<br />
+                {t.whatsapp.h2b}
               </h2>
-              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>
-                Clients don't install anything. They simply respond. Commitments, weight, calories, reminders — all via WhatsApp. Workouts and progress tracking in the app.
-              </p>
+              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>{t.whatsapp.p}</p>
             </div>
           </div>
         </Section>
@@ -405,18 +611,14 @@ export default function Website() {
         <Section>
           <div className="split-right" style={{ display: "flex", alignItems: "center", gap: 64 }}>
             <div style={{ flex: 1 }}>
-              <Badge>Coach dashboard</Badge>
+              <Badge>{t.dashboard.badge}</Badge>
               <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
-                Coaches see<br />who executes.
+                {t.dashboard.h2a}<br />
+                {t.dashboard.h2b}
               </h2>
-              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>
-                Axis gives coaches visibility into what happens between sessions. See which clients stay consistent. See who needs support. Spend less time chasing updates — and more time coaching.
-              </p>
+              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>{t.dashboard.p}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-                {[
-                  "See daily metrics — weight trends, kcal targets and macro progress",
-                  "Full client history — commitments, metrics and conversations in one place",
-                ].map(item => (
+                {t.dashboard.bullets.map(item => (
                   <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: SUB, lineHeight: 1.5 }}>
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{item}</span>
@@ -521,12 +723,11 @@ export default function Website() {
       <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
         <Section style={{ textAlign: "center" }}>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>
-            Turn commitments<br />into <span style={{ color: G }}>execution.</span>
+            {t.cta.h2a}<br />
+            {t.cta.h2b} <span style={{ color: G }}>{t.cta.h2c}</span>
           </h2>
-          <p style={{ color: SUB, fontSize: 17, marginBottom: 36 }}>
-            Axis helps personal trainers build more consistent clients.
-          </p>
-          <Link href="/signup" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>Start gratis →</Link>
+          <p style={{ color: SUB, fontSize: 17, marginBottom: 36 }}>{t.cta.p}</p>
+          <Link href="/coach-signup" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>{t.cta.btn}</Link>
         </Section>
       </div>
 
@@ -534,15 +735,12 @@ export default function Website() {
       <div id="contact" style={{ borderTop: `1px solid ${BORDER}` }}>
         <Section>
           <div style={{ maxWidth: 560 }}>
-            <Badge>Contact</Badge>
+            <Badge>{t.contact.badge}</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
-              Get in touch.
+              {t.contact.h2}
             </h2>
-            <p style={{ color: SUB, fontSize: 16, marginBottom: 40, lineHeight: 1.7 }}>
-              Questions about AXIS or want to get started? Send a message and we'll get back to you within one business day.
-            </p>
-
-            <ContactForm />
+            <p style={{ color: SUB, fontSize: 16, marginBottom: 40, lineHeight: 1.7 }}>{t.contact.p}</p>
+            <ContactForm t={t} />
           </div>
         </Section>
       </div>
@@ -550,7 +748,7 @@ export default function Website() {
       {/* ── SEO TEXT ─────────────────────────────────────────── */}
       <div style={{ padding: "0 24px 8px" }}>
         <p style={{ fontSize: 12, color: "#555", textAlign: "center", maxWidth: 640, margin: "0 auto", lineHeight: 1.8 }}>
-          AXIS is een accountability app voor personal trainers en coaches in Nederland. Automatische WhatsApp check-ins, metrics tracking en AI coaching helpen coaches hun klanten consistent houden tussen sessies door. Geschikt voor zelfstandige personal trainers, sportscholen en online coaches.
+          {t.seo}
         </p>
       </div>
 
@@ -559,7 +757,7 @@ export default function Website() {
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>AXIS</span>
-            <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>Commit. Execute. Reflect. Recover.</p>
+            <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>{t.footer.tagline}</p>
           </div>
           <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
         </div>
