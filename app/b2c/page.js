@@ -70,7 +70,7 @@ const T = {
       p: "14 dagen gratis. Geen creditcard. Stop wanneer je wil.",
       btn: "Start gratis →",
     },
-    footer: { tagline: "Commit. Uitvoeren. Reflecteren. Herstellen." },
+    footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
   EN: {
     navLinks: [

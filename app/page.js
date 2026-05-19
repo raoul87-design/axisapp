@@ -158,9 +158,9 @@ const T = {
       h2: "Het Axis Discipline Systeem.",
       steps: [
         { step: "Commit",      color: G,         desc: "Elke ochtend committeert de klant aan één concreet doel voor die dag. Helder, specifiek, uitvoerbaar." },
-        { step: "Uitvoeren",   color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
-        { step: "Reflecteren", color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
-        { step: "Herstellen",  color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
+        { step: "Execute",   color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
+        { step: "Reflect",   color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
+        { step: "Recover",   color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
       ],
     },
     whatsapp: {
@@ -203,7 +203,7 @@ const T = {
       sendAnother: "Nog een bericht →",
       error: "Er ging iets mis. Probeer opnieuw of mail ons direct.",
     },
-    footer: { tagline: "Commit. Uitvoeren. Reflecteren. Herstellen." },
+    footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
 }
 
