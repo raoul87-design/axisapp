@@ -106,6 +106,14 @@ const [skipReason,      setSkipReason]      = useState("")
 const [skipNote,        setSkipNote]        = useState("")
 const [skipInlineMsgs,  setSkipInlineMsgs]  = useState({})
 
+// ── Rustdag ───────────────────────────────────────────────────
+const [showRestDayModal, setShowRestDayModal] = useState(false)
+const [restDayReason,    setRestDayReason]    = useState("")
+const [restDayNote,      setRestDayNote]      = useState("")
+const [restDayMsg,       setRestDayMsg]       = useState("")
+const [todayIsRestDay,   setTodayIsRestDay]   = useState(false)
+const [todayRestReason,  setTodayRestReason]  = useState("")
+
 // ── Onboarding wizard (5 stappen) ────────────────────────────
 const [showWizard,         setShowWizard]         = useState(false)
 const [wizardStep,         setWizardStep]         = useState(1)
@@ -516,7 +524,7 @@ async function addReminder() {
 async function loadHistory() {
   const uid = publicUserId ?? user.id
   const { data } = await supabase
-    .from("daily_results").select("date,score")
+    .from("daily_results").select("date,score,is_rest_day,rest_reason")
     .eq("user_id", uid).order("date", { ascending: false })
   if (!data) return
   const uniqueDays = Object.values(
@@ -528,6 +536,12 @@ async function loadHistory() {
   )
   const sortedDays = uniqueDays.sort((a, b) => new Date(b.date) - new Date(a.date))
   setHistory(sortedDays.slice(0, 7))
+  const todayStr = getNLDate()
+  const todayRow = uniqueDays.find(d => d.date === todayStr)
+  if (todayRow?.is_rest_day) {
+    setTodayIsRestDay(true)
+    setTodayRestReason(todayRow.rest_reason || "")
+  }
 }
 
 async function loadWeekData() {
@@ -964,6 +978,21 @@ async function skipCommitment() {
   setSkipReason("")
   setSkipNote("")
   loadCommitments()
+}
+
+async function confirmRestDay() {
+  if (!restDayReason) return
+  const uid = publicUserId ?? user.id
+  const full = restDayNote.trim() ? `${restDayReason} — ${restDayNote.trim()}` : restDayReason
+  await supabase.from("daily_results").upsert(
+    { user_id: uid, date: getNLDate(), is_rest_day: true, rest_reason: full, score: 100 }
+  )
+  setTodayIsRestDay(true)
+  setTodayRestReason(full)
+  setRestDayMsg(SKIP_AI[restDayReason] || SKIP_AI["Anders"])
+  setShowRestDayModal(false)
+  setRestDayReason("")
+  setRestDayNote("")
 }
 
 async function linkWhatsapp(number) {
@@ -1802,6 +1831,33 @@ return (
     </div>
   )}
 
+  {showRestDayModal && (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) setShowRestDayModal(false) }}>
+      <div style={{ width: "100%", maxWidth: 420, background: "#141414", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", border: "1px solid #2a2a2a" }}>
+        <div style={{ width: 36, height: 4, background: "#333", borderRadius: 2, margin: "0 auto 20px" }} />
+        <h3 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 20px" }}>Hoe kom je vandaag niet in actie?</h3>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {["Ziek / niet lekker", "Te druk", "Rustdag", "Anders"].map(r => (
+            <button key={r} onClick={() => setRestDayReason(r)}
+              style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${restDayReason === r ? "#facc15" : "#2a2a2a"}`, background: restDayReason === r ? "#2a2000" : "transparent", color: restDayReason === r ? "#facc15" : "#888", fontSize: 13, cursor: "pointer", fontWeight: restDayReason === r ? 600 : 400 }}>
+              {r}
+            </button>
+          ))}
+        </div>
+        <textarea value={restDayNote} onChange={e => setRestDayNote(e.target.value.slice(0, 100))}
+          placeholder="Wil je iets toevoegen? (optioneel)"
+          rows={2}
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#ccc", fontSize: 13, resize: "none", boxSizing: "border-box", outline: "none", marginBottom: 14 }} />
+        <p style={{ color: "#444", fontSize: 11, textAlign: "right", margin: "-10px 0 14px" }}>{restDayNote.length}/100</p>
+        <button onClick={confirmRestDay} disabled={!restDayReason}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: restDayReason ? "#facc15" : "#2a2a2a", color: restDayReason ? "#000" : "#555", fontSize: 14, fontWeight: 700, cursor: restDayReason ? "pointer" : "default" }}>
+          Bevestig →
+        </button>
+      </div>
+    </div>
+  )}
+
   {/* HEADER */}
   {(() => {
     const nlHour = parseInt(new Date().toLocaleString("nl-NL", { hour: "numeric", hour12: false, timeZone: "Europe/Amsterdam" }))
@@ -2066,6 +2122,22 @@ return (
         </div>
       )}
 
+      {/* ── RUSTDAG ── */}
+      {todayIsRestDay ? (
+        <div style={{ marginTop: 16, background: "#1a1500", border: "1px solid #3a3000", borderRadius: 12, padding: "12px 16px" }}>
+          <p style={{ color: "#a08020", fontSize: 13, margin: "0 0 4px", fontWeight: 600 }}>~ Rustdag</p>
+          <p style={{ color: "#6b6020", fontSize: 12, margin: 0 }}>{todayRestReason}</p>
+          {restDayMsg && <p style={{ color: "#facc15", fontSize: 12, margin: "8px 0 0" }}>💛 {restDayMsg}</p>}
+        </div>
+      ) : (
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+          <button onClick={() => { setRestDayReason(""); setRestDayNote(""); setShowRestDayModal(true) }}
+            style={{ background: "transparent", border: "none", color: "#4a4a4a", fontSize: 12, cursor: "pointer", padding: "6px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 14, color: "#3a3a3a" }}>~</span> Rustdag inplannen
+          </button>
+        </div>
+      )}
+
       {/* ── DEZE WEEK ── */}
       <div style={{ marginTop: 26 }}>
         <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 10.5, letterSpacing: "0.26em", color: "#5e5e5e", textTransform: "uppercase", margin: "0 0 12px" }}>Deze week</p>
@@ -2081,24 +2153,31 @@ return (
             return d.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
           })
           const scoreMap = {}
-          history.forEach(d => { scoreMap[d.date] = Number(d.score) })
-          const actiefDagen = weekDagen.filter(d => weekCheckIns.has(d) && (scoreMap[d] ?? 0) > 0).length
+          const restDayMap = {}
+          history.forEach(d => {
+            scoreMap[d.date] = Number(d.score)
+            if (d.is_rest_day) restDayMap[d.date] = true
+          })
+          if (todayIsRestDay) restDayMap[today] = true
+          const actiefDagen = weekDagen.filter(d => restDayMap[d] || (weekCheckIns.has(d) && (scoreMap[d] ?? 0) > 0)).length
           return (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
                 {weekDagen.map((datum, i) => {
                   const isToekomst   = datum > today
                   const isVandaag    = datum === today
+                  const isRustdag    = !!restDayMap[datum]
                   const heeftCheckIn = weekCheckIns.has(datum)
                   const score        = scoreMap[datum] ?? null
-                  const isVoltooid   = !isToekomst && !isVandaag && heeftCheckIn && score > 0
-                  const isGemist     = !isToekomst && !isVandaag && !heeftCheckIn
+                  const isVoltooid   = !isToekomst && !isVandaag && !isRustdag && heeftCheckIn && score > 0
+                  const isGemist     = !isToekomst && !isVandaag && !isRustdag && !heeftCheckIn
                   return (
                     <div key={datum} style={{
                       aspectRatio: "1 / 1.18", borderRadius: 9, position: "relative",
-                      background:  isVoltooid ? "rgba(34,197,94,0.12)" : isGemist ? "rgba(239,68,68,0.12)" : "transparent",
+                      background:  isRustdag ? "rgba(250,204,21,0.08)" : isVoltooid ? "rgba(34,197,94,0.12)" : isGemist ? "rgba(239,68,68,0.12)" : "transparent",
                       border:      isVandaag
                         ? `1px solid ${GREEN}`
+                        : isRustdag  ? "1px solid rgba(250,204,21,0.35)"
                         : isVoltooid ? "1px solid rgba(34,197,94,0.40)"
                         : isGemist  ? "1px solid rgba(239,68,68,0.35)"
                         : "1px solid #1f1f1f",
@@ -2106,13 +2185,14 @@ return (
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                       gap: 4,
                     }}>
-                      <div style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 8, color: isVandaag ? GREEN : isVoltooid ? GREEN : isGemist ? "#ef4444" : "#5e5e5e", opacity: isToekomst ? 0.25 : 1 }}>
+                      <div style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 8, color: isVandaag ? GREEN : isRustdag ? "#facc15" : isVoltooid ? GREEN : isGemist ? "#ef4444" : "#5e5e5e", opacity: isToekomst ? 0.25 : 1 }}>
                         {isVandaag  && <svg width={16} height={16} viewBox="0 0 16 16" fill="none"><circle cx={8} cy={8} r={2.5} fill="currentColor" /></svg>}
+                        {isRustdag  && <span style={{ fontSize: 14, lineHeight: 1 }}>~</span>}
                         {isVoltooid && <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5L6.5 12L13 4.5"/></svg>}
                         {isGemist   && <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M5 5L11 11M11 5L5 11"/></svg>}
                         {isToekomst && <span style={{ fontSize: 12, lineHeight: 1 }}>·</span>}
                       </div>
-                      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: isVandaag ? GREEN : "#5e5e5e", position: "absolute", bottom: 6, left: 0, right: 0, textAlign: "center" }}>{dagNamen[i]}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: isVandaag ? GREEN : isRustdag ? "#a08020" : "#5e5e5e", position: "absolute", bottom: 6, left: 0, right: 0, textAlign: "center" }}>{dagNamen[i]}</span>
                     </div>
                   )
                 })}
