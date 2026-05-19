@@ -59,15 +59,26 @@ export default function InvitePage() {
     }
 
     try {
+      const { data: inviteRow } = await supabase
+        .from("invite_links")
+        .select("coach_email, pre_data")
+        .eq("code", code)
+        .maybeSingle()
+
+      const resolvedCoachEmail = inviteRow?.coach_email || coachEmail
+      const resolvedPreData    = inviteRow?.pre_data    || preData
+
+      console.log("[invite] coach_email uit invite_links:", resolvedCoachEmail)
+
       const payload = {
         auth_user_id:         authUser.id,
-        naam:                 preData?.naam                          || null,
-        training_locations:   preData?.training_locations?.length
-                                ? preData.training_locations : [],
-        fitness_level:        preData?.fitness_level                 || null,
-        target_weight:        preData?.target_weight                 || null,
-        sport_frequentie:     preData?.sport_frequentie              || null,
-        coach_email:          coachEmail,
+        naam:                 resolvedPreData?.naam                          || null,
+        training_locations:   resolvedPreData?.training_locations?.length
+                                ? resolvedPreData.training_locations : [],
+        fitness_level:        resolvedPreData?.fitness_level                 || null,
+        target_weight:        resolvedPreData?.target_weight                 || null,
+        sport_frequentie:     resolvedPreData?.sport_frequentie              || null,
+        coach_email:          resolvedCoachEmail,
         role:                 "client",
         has_coach:            true,
         onboarding_completed: false,
