@@ -304,6 +304,33 @@ useEffect(() => {
   if (activeTab === "workout" && user) loadWorkoutData()
 }, [activeTab])
 
+// Auto-save actieve workout naar localStorage bij elke setLogs wijziging
+useEffect(() => {
+  if (workoutScreen !== "active" || !todayWorkout?.id) return
+  try {
+    localStorage.setItem("axis-workout-draft", JSON.stringify({
+      planningId: todayWorkout.id,
+      date:       getNLDate(),
+      setLogs,
+    }))
+  } catch {}
+}, [setLogs, workoutScreen, todayWorkout])
+
+// Herstel workout draft als de app is wegggevallen tijdens een actieve workout
+useEffect(() => {
+  if (!todayWorkout?.id || workoutScreen !== "overview") return
+  try {
+    const saved = localStorage.getItem("axis-workout-draft")
+    if (!saved) return
+    const { planningId, date, setLogs: savedLogs } = JSON.parse(saved)
+    if (planningId === todayWorkout.id && date === getNLDate()) {
+      console.log("[workout] draft hersteld uit localStorage")
+      setSetLogs(savedLogs)
+      setWorkoutScreen("active")
+    }
+  } catch {}
+}, [todayWorkout])
+
 async function loadCommitments() {
   const today = getNLDate()
   const uid = publicUserId ?? user.id
@@ -877,6 +904,7 @@ async function finishWorkout() {
       .update({ done: true })
       .eq("user_id", user.id).eq("date", today).eq("text", `💪 ${todayWorkout.workout.naam}`)
   }
+  try { localStorage.removeItem("axis-workout-draft") } catch {}
   setTodayWorkout(prev => ({ ...prev, gedaan: true }))
   setWorkoutScreen("done")
   loadCommitments()
