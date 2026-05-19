@@ -200,8 +200,24 @@ export default function Dashboard() {
     thirtyAgo.setDate(thirtyAgo.getDate() - 30)
     const thirtyAgoStr = thirtyAgo.toISOString().split("T")[0]
 
+    // ── diagnostic: toon alle clients voor deze coach, ook zonder WhatsApp
+    const { data: allClientsDebug, error: debugErr } = await supabase
+      .from("users")
+      .select("id, name, whatsapp_number, coach_email, has_coach, onboarding_completed")
+      .eq("coach_email", coachEmail)
+    console.log("[dashboard] loadAll voor coach_email:", coachEmail)
+    console.log("[dashboard] alle clients (incl. zonder WA):", allClientsDebug?.length ?? 0, "| error:", debugErr?.message ?? "geen")
+    if (allClientsDebug) allClientsDebug.forEach(u => console.log("  client:", u.id, u.name, "| WA:", u.whatsapp_number, "| has_coach:", u.has_coach))
+
+    const { data: usersData, error: usersErr } = await supabase
+      .from("users")
+      .select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection, kcal_doel")
+      .not("whatsapp_number", "is", null)
+      .eq("coach_email", coachEmail)
+      .order("id", { ascending: true })
+    console.log("[dashboard] users na whatsapp-filter:", usersData?.length ?? 0, "| error:", usersErr?.message ?? "geen")
+
     const [
-      { data: usersData },
       { data: commitsData },
       { data: recentCommitsData },
       { data: checkinsData },
@@ -209,7 +225,6 @@ export default function Dashboard() {
       { data: metricsRaw },
       { data: conversationsRaw },
     ] = await Promise.all([
-      supabase.from("users").select("id, auth_user_id, whatsapp_number, name, streak, missed_days, awaiting_reflection, kcal_doel").not("whatsapp_number", "is", null).eq("coach_email", coachEmail).order("id", { ascending: true }),
       supabase.from("commitments").select("user_id, text, done, date").eq("date", today),
       supabase.from("commitments").select("user_id, text, done, date").gte("date", thirtyAgoStr).order("date", { ascending: false }).limit(500),
       supabase.from("check_ins").select("user_id, sent_at, type").eq("type", "evening").gte("sent_at", new Date(Date.now() - 7 * 86400000).toISOString()),
