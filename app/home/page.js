@@ -306,9 +306,10 @@ useEffect(() => {
 
 async function loadCommitments() {
   const today = getNLDate()
+  const uid = publicUserId ?? user.id
   const { data } = await supabase
     .from("commitments").select("*")
-    .eq("user_id", user.id).eq("date", today)
+    .eq("user_id", uid).eq("date", today)
     .order("created_at", { ascending: false })
   if (data) { setCommitments(data); calculateProgress(data) }
 }
@@ -896,7 +897,7 @@ async function saveDailyScore(score) {
 async function addCommitment(customText) {
   const t = customText || text
   if (!t || !user) return
-  await supabase.from("commitments").insert({ text: t, user_id: user.id, date: getNLDate(), done: false, category: classifyCommitment(t) })
+  await supabase.from("commitments").insert({ text: t, user_id: publicUserId ?? user.id, date: getNLDate(), done: false, category: classifyCommitment(t) })
   if (!customText) setText("")
   loadCommitments()
 }
