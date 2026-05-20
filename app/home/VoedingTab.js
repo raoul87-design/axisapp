@@ -51,6 +51,14 @@ function getMondayNL() {
   today.setDate(today.getDate() + offset)
   return today.toLocaleDateString("en-CA")
 }
+function getWeekNumber(dateStr) {
+  const d = new Date(dateStr)
+  const jan4 = new Date(d.getFullYear(), 0, 4)
+  const startOfWeek1 = new Date(jan4)
+  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1)
+  const diff = d - startOfWeek1
+  return Math.floor(diff / 604800000) + 1
+}
 
 function MacroBar({ pct, color }) {
   return (
@@ -355,6 +363,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   const [aiGenError,    setAiGenError]    = useState("")
   const [aiPrefs,       setAiPrefs]       = useState({ doel: "Onderhouden", likes: "", tijd: "30" })
   const [checkedItems,  setCheckedItems]  = useState({})
+  const [copied,        setCopied]        = useState(false)
 
   const uid = publicUserId ?? user?.id
 
@@ -408,12 +417,33 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     }
   }, [subTab])
 
-  function updateCheckedItem(key, value) {
+  function updateCheckedItem(key) {
     setCheckedItems(prev => {
-      const next = { ...prev, [key]: value }
+      // default true = "I have this at home"; false = "still need to buy"
+      const next = { ...prev, [key]: !(prev[key] ?? true) }
       try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch {}
       return next
     })
+  }
+
+  async function copyShoppingList() {
+    const monday  = getMondayNL()
+    const weekNum = getWeekNumber(monday)
+    let text = `🛒 Boodschappenlijst AXIS — week ${weekNum}\n`
+    let hasItems = false
+    for (const { cat, items } of shoppingList) {
+      const needed = items.filter(item => !(checkedItems[`${cat}_${item.naam}`] ?? true))
+      if (needed.length === 0) continue
+      hasItems = true
+      text += `\n${cat}\n`
+      for (const item of needed) text += `- ${item.naam} (${item.q})\n`
+    }
+    if (!hasItems) text += "\n(Alle ingrediënten al aangevinkt)"
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
   }
 
   // Computed
@@ -780,22 +810,29 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
       )
     }
 
-    const total        = shoppingList.reduce((s, g) => s + g.items.length, 0)
-    const checkedCount = shoppingList.reduce((s, g) => s + g.items.filter(item => !!checkedItems[`${g.cat}_${item.naam}`]).length, 0)
-    const allNames     = shoppingList.flatMap(g => g.items.map(i => i.naam)).join(", ")
+    const total      = shoppingList.reduce((s, g) => s + g.items.length, 0)
+    // haveIt default = true (all start checked = "I have this")
+    const toKopen    = shoppingList.reduce((s, g) =>
+      s + g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? true)).length, 0)
+    const firstNeed  = shoppingList.flatMap(g =>
+      g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? true)).map(i => i.naam)
+    )[0] || ""
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {/* Progress */}
+        {/* Header */}
         <div style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-            <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.22em", color: FAINT, textTransform: "uppercase" }}>Boodschappen</span>
-            <span style={{ ...MONO, fontSize: 10, color: G, fontWeight: 600 }}>{checkedCount}/{total}</span>
+            <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.22em", color: FAINT, textTransform: "uppercase" }}>Te kopen</span>
+            <span style={{ ...MONO, fontSize: 10, color: toKopen > 0 ? G : DIM, fontWeight: 600 }}>{toKopen}/{total}</span>
           </div>
-          <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>{total} producten</span>
+          <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>{toKopen} producten</span>
           <div style={{ height: 5, background: BORDER, borderRadius: 3, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: `${total > 0 ? Math.round(checkedCount / total * 100) : 0}%`, background: G, borderRadius: 3, transition: "width 0.3s ease" }} />
+            <div style={{ height: "100%", width: `${total > 0 ? Math.round(toKopen / total * 100) : 0}%`, background: G, borderRadius: 3, transition: "width 0.3s ease" }} />
           </div>
+          <p style={{ ...MONO, fontSize: 10, color: FAINT, margin: "8px 0 0", letterSpacing: "0.1em" }}>
+            Vink af wat je al in huis hebt
+          </p>
         </div>
 
         {/* Categories */}
@@ -812,16 +849,16 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
             </div>
             <div>
               {items.map((item, i) => {
-                const key     = `${cat}_${item.naam}`
-                const checked = !!checkedItems[key]
+                const key    = `${cat}_${item.naam}`
+                const haveIt = checkedItems[key] ?? true   // true = already have = crossed out
                 return (
                   <div key={i} style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, fontSize: 13, borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
-                    <div onClick={() => updateCheckedItem(key, !checked)}
-                      style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? G : BD3}`, background: checked ? G : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#061a0c", cursor: "pointer" }}>
-                      {checked && <svg width={10} height={10} viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                    <div onClick={() => updateCheckedItem(key)}
+                      style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${haveIt ? G : BD3}`, background: haveIt ? G : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#061a0c", cursor: "pointer" }}>
+                      {haveIt && <svg width={10} height={10} viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
-                    <span style={{ flex: 1, lineHeight: 1.2, color: checked ? FAINT : TEXT, textDecoration: checked ? "line-through" : "none" }}>{item.naam}</span>
-                    <span style={{ ...MONO, fontSize: 10.5, color: DIM, flexShrink: 0 }}>{item.q}</span>
+                    <span style={{ flex: 1, lineHeight: 1.2, color: haveIt ? FAINT : TEXT, textDecoration: haveIt ? "line-through" : "none" }}>{item.naam}</span>
+                    <span style={{ ...MONO, fontSize: 10.5, color: haveIt ? FAINT : DIM, flexShrink: 0 }}>{item.q}</span>
                   </div>
                 )
               })}
@@ -829,17 +866,25 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
           </div>
         ))}
 
-        {/* Deeplinks */}
+        {/* CTAs */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
-          <a href={`https://www.ah.nl/zoeken?query=${encodeURIComponent(allNames)}`} target="_blank" rel="noreferrer"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 16px", background: G, color: "#061a0c", borderRadius: 11, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
-            🛒 Bestel bij Albert Heijn →
-          </a>
-          <a href={`https://www.jumbo.com/zoeken?searchTerms=${encodeURIComponent(allNames)}`} target="_blank" rel="noreferrer"
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "transparent", color: DIM, border: `1px solid ${BD2}`, borderRadius: 11, textDecoration: "none", fontWeight: 600, fontSize: 13 }}>
-            <span>🛒 Bestel bij Jumbo →</span>
-            <span style={{ color: FAINT }}>›</span>
-          </a>
+          {/* Primary: Copy */}
+          <button onClick={copyShoppingList}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 16px", background: copied ? "rgba(34,197,94,0.15)" : G, color: copied ? G : "#061a0c", border: copied ? `1px solid ${G}` : "none", borderRadius: 11, fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all 0.2s" }}>
+            {copied ? "✓ Gekopieerd!" : "Kopieer boodschappenlijst"}
+          </button>
+
+          {/* Secondary: AH + Jumbo — search on first unchecked item */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <a href={`https://www.ah.nl/zoeken?query=${encodeURIComponent(firstNeed)}`} target="_blank" rel="noreferrer"
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 10px", background: "transparent", color: FAINT, border: `1px solid ${BD2}`, borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: 11, opacity: firstNeed ? 1 : 0.4, pointerEvents: firstNeed ? "auto" : "none" }}>
+              <span style={{ fontSize: 13 }}>🛒</span> Albert Heijn
+            </a>
+            <a href={`https://www.jumbo.com/zoeken?searchTerms=${encodeURIComponent(firstNeed)}`} target="_blank" rel="noreferrer"
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 10px", background: "transparent", color: FAINT, border: `1px solid ${BD2}`, borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: 11, opacity: firstNeed ? 1 : 0.4, pointerEvents: firstNeed ? "auto" : "none" }}>
+              <span style={{ fontSize: 13 }}>🛒</span> Jumbo
+            </a>
+          </div>
         </div>
       </div>
     )
