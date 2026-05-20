@@ -60,15 +60,19 @@ Goal: ${prefs?.doel || "maintain"}. Max prep: ${prefs?.tijd || "30"}min.${prefs?
       }
     }
 
+    console.log("[generate-week] insert | user_id:", userId, "| week_start:", weekStart)
+
     const { data, error } = await supabaseAdmin
       .from("meal_plans")
       .upsert({ user_id: userId, week_start: weekStart, plan }, { onConflict: "user_id,week_start" })
       .select()
       .single()
 
+    console.log("[generate-week] insert result | data:", data ? "ok (id=" + data.id + ")" : "null", "| error:", error?.message ?? "geen")
+
     if (error) {
-      console.error("[generate-week] upsert error:", error.message)
-      return Response.json({ plan: { user_id: userId, week_start: weekStart, plan } })
+      console.error("[generate-week] insert failed:", JSON.stringify(error))
+      return Response.json({ error: "Weekmenu kon niet worden opgeslagen: " + error.message }, { status: 500 })
     }
 
     return Response.json({ plan: data })
