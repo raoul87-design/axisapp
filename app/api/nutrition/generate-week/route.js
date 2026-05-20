@@ -22,7 +22,8 @@ export async function POST(request) {
   try {
     const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
 
-    const prompt = `Respond with ONLY valid JSON, no markdown, no backticks, no explanation. The JSON must be complete and valid.
+    const prompt = `Generate the meal plan in Dutch. All meal names must be in Dutch (Netherlands).
+Respond with ONLY valid JSON, no markdown, no backticks, no explanation. The JSON must be complete and valid.
 
 7-day meal plan. Macros/day: ${kcalDoel}kcal, ${eiwittenDoel}g protein, ${koolhydratenDoel}g carbs, ${vettenDoel}g fat.
 Goal: ${prefs?.doel || "maintain"}. Max prep: ${prefs?.tijd || "30"}min.${prefs?.likes ? ` Notes: ${prefs.likes}.` : ""}
