@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "../../lib/supabase"
+import { BrowserMultiFormatReader } from "@zxing/browser"
 
 const MONO   = { fontFamily: "JetBrains Mono, monospace" }
 const G      = "#22c55e"
@@ -93,58 +94,37 @@ function AddFoodModal({ meal, onClose, onAdd }) {
   const [portie,     setPortie]   = useState("100")
   const [manual,     setManual]   = useState(false)
   const [form,       setForm]     = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
-  const debounce  = useRef(null)
-  const videoRef  = useRef(null)
-  const streamRef = useRef(null)
-  const rafRef    = useRef(null)
-  const [noScanner, setNoScanner] = useState(false)
-  const [barcodeInput, setBarcodeInput] = useState("")
+  const debounce     = useRef(null)
+  const videoRef     = useRef(null)
+  const controlsRef  = useRef(null)
+  const [noScanner,     setNoScanner]     = useState(false)
+  const [barcodeInput,  setBarcodeInput]  = useState("")
 
   function stopCamera() {
-    if (rafRef.current)    { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    try { controlsRef.current?.stop() } catch {}
+    controlsRef.current = null
   }
 
   useEffect(() => {
     if (!scanning) { stopCamera(); return }
-    let cancelled = false
-    ;(async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
-        streamRef.current = stream
-        const video = videoRef.current
-        video.srcObject = stream
-        await video.play()
-        const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"] })
-        function tick() {
-          if (cancelled) return
-          detector.detect(video).then(codes => {
-            if (codes.length > 0) {
-              setScanning(false)
-              handleBarcode(codes[0].rawValue)
-            } else {
-              rafRef.current = requestAnimationFrame(tick)
-            }
-          }).catch(() => { rafRef.current = requestAnimationFrame(tick) })
-        }
-        rafRef.current = requestAnimationFrame(tick)
-      } catch {
-        if (!cancelled) { setScanning(false); setErr("Camera niet beschikbaar of toegang geweigerd.") }
-      }
-    })()
-    return () => { cancelled = true; stopCamera() }
+    let active = true
+    const codeReader = new BrowserMultiFormatReader()
+    codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+      if (!active || !result) return
+      active = false
+      stopCamera()
+      setScanning(false)
+      handleBarcode(result.getText())
+    }).then(controls => {
+      if (!active) { try { controls.stop() } catch {} return }
+      controlsRef.current = controls
+    }).catch(() => {
+      if (active) { setScanning(false); setNoScanner(true); setErr("Camera niet beschikbaar of toegang geweigerd.") }
+    })
+    return () => { active = false; stopCamera() }
   }, [scanning])
 
   function openScanner() {
-    if (!("BarcodeDetector" in window)) {
-      setNoScanner(v => !v)
-      setScanning(false)
-      setSelected(null)
-      setRes([])
-      setErr("")
-      return
-    }
     if (scanning) {
       setScanning(false)
     } else {
