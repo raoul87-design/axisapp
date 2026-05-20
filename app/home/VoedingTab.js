@@ -18,6 +18,13 @@ const TEXT   = "#fafafa"
 const DIM    = "#9a9a9a"
 const FAINT  = "#5e5e5e"
 
+const MEAL_IMAGES = {
+  ontbijt: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&q=80",
+  lunch:   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80",
+  diner:   "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80",
+  snacks:  "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?w=400&q=80",
+}
+
 const MEALS = [
   { id: "ontbijt", label: "Ontbijt" },
   { id: "lunch",   label: "Lunch"   },
@@ -859,8 +866,11 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
                 {/* Weekmenu suggestions (pre-fill, tap checkbox to mark as eaten) */}
                 {showWmItems && wmItems.map((item, i) => (
                   <div key={`wm-${i}`} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 11, borderTop: i > 0 ? `1px solid ${BORDER}` : "none", background: "rgba(34,197,94,0.03)" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ ...MONO, fontSize: 11, fontWeight: 600, color: "rgba(34,197,94,0.7)" }}>{Math.round(item.kcal || 0)}</span>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, overflow: "hidden", position: "relative", opacity: 0.7 }}>
+                      <img src={item.image || MEAL_IMAGES[meal.id]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ ...MONO, fontSize: 9, fontWeight: 700, color: "#9ad1a8", lineHeight: 1 }}>{Math.round(item.kcal || 0)}</span>
+                      </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
@@ -883,8 +893,11 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
                 {/* Logged food items */}
                 {logs.map((f, i) => (
                   <div key={f.id} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 11, borderTop: (i > 0 || showWmItems) ? `1px solid ${BORDER}` : "none" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: `linear-gradient(135deg,#2a3a32,#1a2620)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ ...MONO, fontSize: 11, fontWeight: 600, color: "#9ad1a8" }}>{Math.round(f.kcal)}</span>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, overflow: "hidden", position: "relative" }}>
+                      <img src={f.image || MEAL_IMAGES[meal.id]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ ...MONO, fontSize: 9, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{Math.round(f.kcal)}</span>
+                      </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
@@ -994,9 +1007,10 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
               <p style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.22em", color: FAINT, textTransform: "uppercase", margin: "0 0 8px 2px" }}>{meal.label}</p>
               {recipes.map((r, i) => (
                 <div key={i} style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "stretch", marginBottom: 8 }}>
-                  <div style={{ width: 80, flexShrink: 0, background: `linear-gradient(135deg,#3a3422 20%,#241f12)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                    <div style={{ position: "absolute", top: 6, left: 6, ...MONO, fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", padding: "2px 5px", background: "rgba(0,0,0,0.4)", borderRadius: 3 }}>AI</div>
-                    <span style={{ fontSize: 26, opacity: 0.5 }}>🍽</span>
+                  <div style={{ width: 80, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+                    <img src={r.image || MEAL_IMAGES[meal.id]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.28)" }} />
+                    <div style={{ position: "absolute", top: 6, left: 6, ...MONO, fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.85)", padding: "2px 5px", background: "rgba(0,0,0,0.5)", borderRadius: 3 }}>AI</div>
                   </div>
                   <div style={{ flex: 1, padding: "11px 14px", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
                     <p style={{ ...MONO, fontSize: 9, letterSpacing: "0.22em", color: FAINT, textTransform: "uppercase", margin: 0 }}>{meal.label}</p>
