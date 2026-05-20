@@ -403,6 +403,13 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     if (uid) { loadFoodLogs(); loadMealPlan() }
   }, [uid])
 
+  useEffect(() => {
+    if ((subTab === "weekmenu" || subTab === "boodschappen") && uid) {
+      console.log("[WeekmenuTab] laden met userId:", uid)
+      loadMealPlan()
+    }
+  }, [subTab])
+
   // Computed
   const totals = foodLogs.reduce((a, f) => ({
     kcal:         a.kcal         + (f.kcal         || 0),
