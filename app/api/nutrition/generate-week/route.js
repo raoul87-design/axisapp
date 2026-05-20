@@ -22,13 +22,14 @@ export async function POST(request) {
   try {
     const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
 
-    const prompt = `7-daags weekmenu JSON. Alleen JSON, geen tekst.
-Macros/dag: ${kcalDoel}kcal, ${eiwittenDoel}g eiwit, ${koolhydratenDoel}g koolh, ${vettenDoel}g vet.
-Doel: ${prefs?.doel || "onderhouden"}. Max: ${prefs?.tijd || "30"}min.${prefs?.likes ? ` Extra: ${prefs.likes}.` : ""}
+    const prompt = `Respond with ONLY valid JSON, no markdown, no backticks, no explanation. The JSON must be complete and valid.
 
-Per dag: ontbijt/lunch/diner/snacks, elk array met 1 object {"naam":"string","kcal":number,"eiwit":number,"koolh":number,"vet":number}
+7-day meal plan. Macros/day: ${kcalDoel}kcal, ${eiwittenDoel}g protein, ${koolhydratenDoel}g carbs, ${vettenDoel}g fat.
+Goal: ${prefs?.doel || "maintain"}. Max prep: ${prefs?.tijd || "30"}min.${prefs?.likes ? ` Notes: ${prefs.likes}.` : ""}
 
-{"maandag":{"ontbijt":[...],"lunch":[...],"diner":[...],"snacks":[...]},"dinsdag":{...},"woensdag":{...},"donderdag":{...},"vrijdag":{...},"zaterdag":{...},"zondag":{...}}`
+3 meals per day (ontbijt/lunch/diner), each an array with 1 object: {"naam":"string","kcal":number,"eiwit":number,"koolh":number,"vet":number}
+
+{"maandag":{"ontbijt":[...],"lunch":[...],"diner":[...]},"dinsdag":{...},"woensdag":{...},"donderdag":{...},"vrijdag":{...},"zaterdag":{...},"zondag":{...}}`
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -37,13 +38,23 @@ Per dag: ontbijt/lunch/diner/snacks, elk array met 1 object {"naam":"string","kc
     })
 
     const raw = message.content[0].text
+    console.log("[generate-week] raw AI output length:", raw.length)
+
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error("No JSON in response")
-    const plan = JSON.parse(jsonMatch[0])
+
+    let plan
+    try {
+      plan = JSON.parse(jsonMatch[0])
+    } catch (parseErr) {
+      console.error("[generate-week] JSON parse error:", parseErr.message)
+      console.error("[generate-week] raw output:", raw)
+      throw new Error(`JSON parse failed: ${parseErr.message}`)
+    }
 
     for (const day of DAYS) {
       if (!plan[day]) throw new Error(`Missing day: ${day}`)
-      for (const meal of ["ontbijt", "lunch", "diner", "snacks"]) {
+      for (const meal of ["ontbijt", "lunch", "diner"]) {
         plan[day][meal] = (plan[day][meal] || []).map(normalize)
       }
     }
