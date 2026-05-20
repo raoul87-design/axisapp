@@ -1,28 +1,62 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { supabaseAdmin } from "../../../../lib/supabase"
 
-export const maxDuration = 60
+export const maxDuration = 90
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const DAYS = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+const DAYS       = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+const MEAL_TYPES = ["ontbijt", "lunch", "diner"]
 
-// Normalize short field names (eiwit/koolh/vet) → full names (eiwitten/koolhydraten/vetten)
 const normalize = r => ({
-  naam:          r.naam                              || "",
-  kcal:          r.kcal                              || 0,
-  eiwitten:      r.eiwitten      ?? r.eiwit          ?? 0,
-  koolhydraten:  r.koolhydraten  ?? r.koolh          ?? 0,
-  vetten:        r.vetten        ?? r.vet            ?? 0,
-  bereidingstijd: r.bereidingstijd                   ?? 0,
-  ingredienten:  r.ingredienten                      ?? [],
+  naam:           r.naam                            || "",
+  kcal:           r.kcal                            || 0,
+  eiwitten:       r.eiwitten      ?? r.eiwit        ?? 0,
+  koolhydraten:   r.koolhydraten  ?? r.koolh        ?? 0,
+  vetten:         r.vetten        ?? r.vet          ?? 0,
+  bereidingstijd: r.bereidingstijd                  ?? 0,
+  ingredienten:   r.ingredienten                    ?? [],
+  beschrijving:   r.beschrijving                    ?? "",
 })
+
+async function generateIngredients(plan) {
+  const lines = []
+  for (const day of DAYS) {
+    for (const meal of MEAL_TYPES) {
+      const item = plan[day]?.[meal]?.[0]
+      if (item?.naam) {
+        lines.push(`${day}_${meal}: ${item.naam} (${item.kcal}kcal, ${item.eiwitten}g eiwit)`)
+      }
+    }
+  }
+
+  const prompt = `Generate 3-5 ingredients per meal in Dutch. Use categories: "Groente & Fruit", "Vlees & Vis", "Zuivel", "Granen", "Overig".
+Add bereidingstijd (number of minutes) and beschrijving (1 short sentence in Dutch).
+Respond with ONLY valid JSON, no markdown, no explanation:
+{"maandag_ontbijt":{"bereidingstijd":number,"beschrijving":"string","ingredienten":[{"naam":"string","hoeveelheid":number,"eenheid":"string","categorie":"string"}]},...all 21 keys}
+
+Meals:
+${lines.join("\n")}`
+
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 5000,
+    messages: [{ role: "user", content: prompt }],
+  })
+
+  const raw = message.content[0].text
+  console.log("[generate-week] ingredients raw length:", raw.length)
+  const match = raw.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error("No JSON in ingredients response")
+  return JSON.parse(match[0])
+}
 
 export async function POST(request) {
   try {
     const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
 
-    const prompt = `Generate the meal plan in Dutch. All meal names must be in Dutch (Netherlands).
+    // Step 1: Generate 7-day plan (names + macros only)
+    const planPrompt = `Generate the meal plan in Dutch. All meal names must be in Dutch (Netherlands).
 Respond with ONLY valid JSON, no markdown, no backticks, no explanation. The JSON must be complete and valid.
 
 7-day meal plan. Macros/day: ${kcalDoel}kcal, ${eiwittenDoel}g protein, ${koolhydratenDoel}g carbs, ${vettenDoel}g fat.
@@ -32,31 +66,52 @@ Goal: ${prefs?.doel || "maintain"}. Max prep: ${prefs?.tijd || "30"}min.${prefs?
 
 {"maandag":{"ontbijt":[...],"lunch":[...],"diner":[...]},"dinsdag":{...},"woensdag":{...},"donderdag":{...},"vrijdag":{...},"zaterdag":{...},"zondag":{...}}`
 
-    const message = await anthropic.messages.create({
+    const planMsg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: planPrompt }],
     })
 
-    const raw = message.content[0].text
-    console.log("[generate-week] raw AI output length:", raw.length)
+    const planRaw = planMsg.content[0].text
+    console.log("[generate-week] plan raw length:", planRaw.length)
 
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error("No JSON in response")
+    const planMatch = planRaw.match(/\{[\s\S]*\}/)
+    if (!planMatch) throw new Error("No JSON in plan response")
 
     let plan
     try {
-      plan = JSON.parse(jsonMatch[0])
+      plan = JSON.parse(planMatch[0])
     } catch (parseErr) {
-      console.error("[generate-week] JSON parse error:", parseErr.message)
-      console.error("[generate-week] raw output:", raw)
-      throw new Error(`JSON parse failed: ${parseErr.message}`)
+      console.error("[generate-week] plan parse error:", parseErr.message, "\nraw:", planRaw)
+      throw new Error(`Plan JSON parse failed: ${parseErr.message}`)
     }
 
     for (const day of DAYS) {
       if (!plan[day]) throw new Error(`Missing day: ${day}`)
-      for (const meal of ["ontbijt", "lunch", "diner"]) {
+      for (const meal of MEAL_TYPES) {
         plan[day][meal] = (plan[day][meal] || []).map(normalize)
+      }
+    }
+
+    // Step 2: Generate ingredients + beschrijving for all 21 meals in one batch call
+    let ingredients = {}
+    try {
+      ingredients = await generateIngredients(plan)
+      console.log("[generate-week] ingredients generated for", Object.keys(ingredients).length, "meals")
+    } catch (ingErr) {
+      console.error("[generate-week] ingredients batch error (non-fatal):", ingErr.message)
+    }
+
+    // Merge ingredients into plan
+    for (const day of DAYS) {
+      for (const meal of MEAL_TYPES) {
+        const key = `${day}_${meal}`
+        const extra = ingredients[key]
+        if (extra && plan[day][meal][0]) {
+          if (extra.ingredienten?.length > 0) plan[day][meal][0].ingredienten = extra.ingredienten
+          if (extra.beschrijving)             plan[day][meal][0].beschrijving  = extra.beschrijving
+          if (extra.bereidingstijd > 0)       plan[day][meal][0].bereidingstijd = extra.bereidingstijd
+        }
       }
     }
 

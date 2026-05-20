@@ -27,15 +27,18 @@ const DAYS_SHORT = ["ma","di","wo","do","vr","za","zo"]
 const DAYS_FULL  = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"]
 
 const CAT_ICONS = {
-  "Groente":        "🥦",
-  "Fruit":          "🍎",
-  "Vlees":          "🥩",
-  "Vis":            "🐟",
-  "Zuivel":         "🥛",
-  "Granen":         "🌾",
-  "Noten & Zaden":  "🥜",
-  "Sauzen & Kruiden":"🫙",
-  "Overig":         "🛒",
+  "Groente & Fruit":   "🥦",
+  "Vlees & Vis":       "🥩",
+  "Zuivel":            "🥛",
+  "Granen":            "🌾",
+  "Noten & Zaden":     "🥜",
+  "Sauzen & Kruiden":  "🫙",
+  "Overig":            "🛒",
+  // legacy
+  "Groente": "🥦",
+  "Fruit":   "🍎",
+  "Vlees":   "🥩",
+  "Vis":     "🐟",
 }
 
 function getNLDate() {
@@ -163,7 +166,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
                 <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Geen resultaten. Probeer handmatige invoer.</p>
               )}
               {results.map((p, i) => (
-                <div key={i} onClick={() => { console.log("[AddFood] click:", p.name, "meal:", meal.id); onAdd(p, meal.id) }}
+                <div key={i} onClick={() => onAdd(p, meal.id)}
                   style={{ padding: "12px 0", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13.5, fontWeight: 500, margin: "0 0 3px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
@@ -186,31 +189,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
 }
 
 // ── Recipe Drilldown ───────────────────────────────────────────
-function RecipeView({ recipe: initialRecipe, mealLabel, onClose, onAddIngredient, savedIngredients }) {
-  const [recipe, setRecipe]             = useState(initialRecipe)
-  const [loadingRecipe, setLoadingRecipe] = useState(!initialRecipe.ingredienten?.length)
-
-  useEffect(() => {
-    if (!initialRecipe.ingredienten?.length) {
-      fetch("/api/nutrition/generate-recipe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          naam:         initialRecipe.naam,
-          mealLabel,
-          kcal:         initialRecipe.kcal,
-          eiwitten:     initialRecipe.eiwitten,
-          koolhydraten: initialRecipe.koolhydraten,
-          vetten:       initialRecipe.vetten,
-        }),
-      })
-        .then(r => r.json())
-        .then(d => { if (d.recipe) setRecipe(r => ({ ...r, ...d.recipe })) })
-        .catch(() => {})
-        .finally(() => setLoadingRecipe(false))
-    }
-  }, [])
-
+function RecipeView({ recipe, mealLabel, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: BG, zIndex: 1200, overflowY: "auto", maxWidth: 420, margin: "0 auto" }}>
       <div style={{ height: 220, background: `linear-gradient(160deg,#3a3422 10%,#241f12 80%)`, position: "relative", display: "flex", alignItems: "flex-end", padding: "18px 22px" }}>
@@ -229,17 +208,19 @@ function RecipeView({ recipe: initialRecipe, mealLabel, onClose, onAddIngredient
           </span>
         </div>
       </div>
+
       <div style={{ padding: "20px 22px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", margin: "0 0 6px" }}>{recipe.naam}</h2>
           {recipe.beschrijving && <p style={{ fontSize: 13, color: DIM, lineHeight: 1.5, margin: 0 }}>{recipe.beschrijving}</p>}
         </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, background: TILE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 11 }}>
           {[
-            { l: "Kcal", v: recipe.kcal, u: "", color: G },
-            { l: "Eiwit", v: recipe.eiwitten, u: "g", color: PROT },
-            { l: "Koolh.", v: recipe.koolhydraten, u: "g", color: CARB },
-            { l: "Vet", v: recipe.vetten, u: "g", color: FAT },
+            { l: "Kcal",   v: recipe.kcal,         u: "",  color: G    },
+            { l: "Eiwit",  v: recipe.eiwitten,      u: "g", color: PROT },
+            { l: "Koolh.", v: recipe.koolhydraten,  u: "g", color: CARB },
+            { l: "Vet",    v: recipe.vetten,        u: "g", color: FAT  },
           ].map(({ l, v, u, color }) => (
             <div key={l} style={{ borderLeft: l !== "Kcal" ? `1px solid ${BORDER}` : "none", paddingLeft: l !== "Kcal" ? 8 : 0 }}>
               <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 8.5, letterSpacing: "0.2em", color: FAINT, textTransform: "uppercase", margin: "0 0 3px" }}>{l}</p>
@@ -249,32 +230,31 @@ function RecipeView({ recipe: initialRecipe, mealLabel, onClose, onAddIngredient
             </div>
           ))}
         </div>
-        {loadingRecipe ? (
-          <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "12px 0" }}>Recept laden...</p>
-        ) : recipe.ingredienten?.length > 0 ? (
+
+        {recipe.ingredienten?.length > 0 ? (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: DIM, margin: 0 }}>Ingrediënten</p>
-            </div>
+            <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: DIM, margin: "0 0 10px" }}>Ingrediënten</p>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              {recipe.ingredienten.map((ingr, i) => {
-                const added = savedIngredients?.some(s => s.naam.toLowerCase() === ingr.naam.toLowerCase())
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i > 0 ? `1px solid ${BORDER}` : "none", fontSize: 13 }}>
-                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: G, fontWeight: 600, minWidth: 64, letterSpacing: "0.04em" }}>{ingr.hoeveelheid} {ingr.eenheid}</span>
-                    <span style={{ flex: 1, fontWeight: 500 }}>{ingr.naam}</span>
-                    {onAddIngredient && (
-                      <button onClick={() => !added && onAddIngredient(ingr)}
-                        style={{ width: 26, height: 26, borderRadius: 6, border: `1.5px solid ${added ? G : "#333"}`, background: added ? G : "transparent", color: added ? "#061a0c" : "#9a9a9a", fontSize: 14, fontWeight: 700, cursor: added ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {added ? "✓" : "+"}
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
+              {recipe.ingredienten.map((ingr, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i > 0 ? `1px solid ${BORDER}` : "none", fontSize: 13 }}>
+                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: G, fontWeight: 600, minWidth: 70, letterSpacing: "0.04em" }}>
+                    {ingr.hoeveelheid} {ingr.eenheid}
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 500 }}>{ingr.naam}</span>
+                  {ingr.categorie && (
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 9, color: FAINT, letterSpacing: "0.1em" }}>
+                      {CAT_ICONS[ingr.categorie] || ""}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "12px 0" }}>
+            Geen ingrediënten beschikbaar. Genereer het weekmenu opnieuw voor volledige recepten.
+          </p>
+        )}
       </div>
     </div>
   )
@@ -304,7 +284,7 @@ function AiGenModal({ onClose, onGenerate, loading, error, prefs, setPrefs }) {
                 <div style={{ height: 4, background: "rgba(34,197,94,0.18)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: "60%", background: G, borderRadius: 2, animation: "slideRight 1.5s infinite" }} />
                 </div>
-                <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Dit duurt ~25 seconden</p>
+                <p style={{ color: FAINT, fontSize: 11, margin: "10px 0 0" }}>Maaltijdplan + ingrediënten genereren — dit duurt ~45 seconden</p>
               </div>
             </div>
             {error && (
@@ -374,8 +354,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   const [aiGenLoading,  setAiGenLoading]  = useState(false)
   const [aiGenError,    setAiGenError]    = useState("")
   const [aiPrefs,       setAiPrefs]       = useState({ doel: "Onderhouden", likes: "", tijd: "30" })
-  const [checkedItems,      setCheckedItems]      = useState({})
-  const [savedIngredients,  setSavedIngredients]  = useState([])
+  const [checkedItems,  setCheckedItems]  = useState({})
 
   const uid = publicUserId ?? user?.id
 
@@ -383,6 +362,8 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   const doelEiwit = parseInt(eiwittenDoel)      || 150
   const doelKoolh = parseInt(koolhydratenDoel)  || 200
   const doelVet   = parseInt(vettenDoel)        || 65
+
+  const LS_KEY = `axis_boodschappen_${getMondayNL()}`
 
   async function loadFoodLogs() {
     if (!uid) return
@@ -397,14 +378,12 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     if (!uid) return
     setLoadingPlan(true)
     const monday = getMondayNL()
-    console.log("[Boodschappen] loadMealPlan | user_id:", uid, "| week_start:", monday)
     try {
       const res = await fetch(`/api/nutrition/meal-plan?userId=${encodeURIComponent(uid)}&weekStart=${monday}`)
       const d = await res.json()
-      console.log("[Boodschappen] meal_plan gevonden:", d.plan ? "ja" : "nee", "| user_id:", uid)
       setMealPlan(d.plan || null)
     } catch (err) {
-      console.error("[Boodschappen] loadMealPlan error:", err.message)
+      console.error("[loadMealPlan] error:", err.message)
     }
     setLoadingPlan(false)
   }
@@ -415,10 +394,27 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
 
   useEffect(() => {
     if ((subTab === "weekmenu" || subTab === "boodschappen") && uid) {
-      console.log("[WeekmenuTab] laden met userId:", uid)
       loadMealPlan()
     }
   }, [subTab])
+
+  // Load checked items from localStorage when switching to boodschappen
+  useEffect(() => {
+    if (subTab === "boodschappen") {
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}")
+        setCheckedItems(saved)
+      } catch {}
+    }
+  }, [subTab])
+
+  function updateCheckedItem(key, value) {
+    setCheckedItems(prev => {
+      const next = { ...prev, [key]: value }
+      try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   // Computed
   const totals = foodLogs.reduce((a, f) => ({
@@ -438,8 +434,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   async function addFoodLog(product, mealId) {
-    if (!uid) { console.warn("[addFoodLog] no uid"); return }
-    console.log("[addFoodLog] inserting:", product.name, "meal:", mealId, "uid:", uid)
+    if (!uid) return
     const res = await fetch("/api/food/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -458,7 +453,6 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     })
     const d = await res.json()
     if (d.error) { console.error("[addFoodLog] API error:", d.error); return }
-    console.log("[addFoodLog] inserted ok")
     setAddFoodMeal(null)
     loadFoodLogs()
   }
@@ -473,44 +467,30 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     setFoodLogs(prev => prev.filter(f => f.id !== id))
   }
 
-  function addIngredient(ingr) {
-    setSavedIngredients(prev => {
-      const key = ingr.naam.toLowerCase()
-      if (prev.find(i => i.naam.toLowerCase() === key)) return prev
-      return [...prev, { naam: ingr.naam, hoeveelheid: ingr.hoeveelheid || "", eenheid: ingr.eenheid || "", categorie: ingr.categorie || "Overig" }]
-    })
-  }
-
-  function removeIngredient(naam) {
-    setSavedIngredients(prev => prev.filter(i => i.naam.toLowerCase() !== naam.toLowerCase()))
-  }
-
   async function generateMealPlan() {
     if (!uid) return
     setAiGenLoading(true)
     setAiGenError("")
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 25000)
-    )
     try {
       const monday = getMondayNL()
-      const res = await Promise.race([
-        fetch("/api/nutrition/generate-week", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: uid, weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
-        }),
-        timeout,
-      ])
+      const res = await fetch("/api/nutrition/generate-week", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: uid, weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
+        signal: AbortSignal.timeout(85000),
+      })
       const data = await res.json()
       if (data.plan) {
         setMealPlan(data.plan)
         setAiGenModal(false)
+        // Reset checked items for the new week's plan
+        try { localStorage.removeItem(LS_KEY) } catch {}
+        setCheckedItems({})
       } else {
         setAiGenError(data.error || "Onbekende fout. Probeer het opnieuw.")
       }
     } catch (err) {
-      if (err.message === "timeout") {
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
         setAiGenError("Menu genereren duurt langer dan verwacht. Probeer het opnieuw.")
       } else {
         setAiGenError("Er ging iets mis. Probeer het opnieuw.")
@@ -519,6 +499,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     setAiGenLoading(false)
   }
 
+  // Build shopping list from ingredients embedded in meal_plans.plan
   function buildShoppingList(plan) {
     if (!plan?.plan) return []
     const cats = {}
@@ -529,26 +510,35 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
             const cat = ingr.categorie || "Overig"
             if (!cats[cat]) cats[cat] = {}
             const key = ingr.naam.toLowerCase()
-            if (!cats[cat][key]) cats[cat][key] = { naam: ingr.naam, qty: 0, eenheid: ingr.eenheid }
+            if (!cats[cat][key]) cats[cat][key] = { naam: ingr.naam, qty: 0, eenheid: ingr.eenheid || "" }
             cats[cat][key].qty += parseFloat(ingr.hoeveelheid) || 0
           }
         }
       }
     }
-    return Object.entries(cats).map(([cat, items]) => ({
+    const CAT_ORDER = ["Groente & Fruit", "Vlees & Vis", "Zuivel", "Granen", "Noten & Zaden", "Sauzen & Kruiden", "Overig"]
+    const sorted = Object.keys(cats).sort((a, b) => {
+      const ai = CAT_ORDER.indexOf(a); const bi = CAT_ORDER.indexOf(b)
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+    })
+    return sorted.map(cat => ({
       cat,
-      items: Object.values(items).map(i => ({ naam: i.naam, q: `${Math.round(i.qty)} ${i.eenheid}` })),
+      items: Object.values(cats[cat]).map(i => ({
+        naam: i.naam,
+        q: i.qty > 0 ? `${Number.isInteger(i.qty) ? i.qty : Math.round(i.qty * 10) / 10} ${i.eenheid}`.trim() : i.eenheid,
+      })),
     }))
   }
 
   const shoppingList = buildShoppingList(mealPlan)
-
   const dayPlan = mealPlan?.plan?.[DAYS_FULL[selectedDay]] || null
 
   const dayTotals = dayPlan ? Object.values(dayPlan).flat().reduce((a, r) => ({
     kcal: a.kcal + (r.kcal || 0),
     eiwitten: a.eiwitten + (r.eiwitten || 0),
-  }), { kcal: 0, eiwitten: 0 }) : null
+    koolhydraten: a.koolhydraten + (r.koolhydraten || 0),
+    vetten: a.vetten + (r.vetten || 0),
+  }), { kcal: 0, eiwitten: 0, koolhydraten: 0, vetten: 0 }) : null
 
   const MONO = { fontFamily: "JetBrains Mono, monospace" }
 
@@ -706,10 +696,10 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
         {dayTotals && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, padding: "11px 12px", background: TILE2, border: `1px solid ${BORDER}`, borderRadius: 11 }}>
             {[
-              { l: "Kcal",  v: dayTotals.kcal,                          u: "",  color: G    },
-              { l: "Eiwit", v: Math.round(dayTotals.eiwitten),           u: "g", color: PROT },
-              { l: "Koolh", v: Math.round(dayPlan ? Object.values(dayPlan).flat().reduce((s,r)=>s+(r.koolhydraten||0),0) : 0), u: "g", color: CARB },
-              { l: "Vet",   v: Math.round(dayPlan ? Object.values(dayPlan).flat().reduce((s,r)=>s+(r.vetten||0),0) : 0),      u: "g", color: FAT  },
+              { l: "Kcal",  v: Math.round(dayTotals.kcal),         u: "",  color: G    },
+              { l: "Eiwit", v: Math.round(dayTotals.eiwitten),      u: "g", color: PROT },
+              { l: "Koolh", v: Math.round(dayTotals.koolhydraten),  u: "g", color: CARB },
+              { l: "Vet",   v: Math.round(dayTotals.vetten),        u: "g", color: FAT  },
             ].map(({ l, v, u, color }) => (
               <div key={l} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <p style={{ ...MONO, fontSize: 8.5, letterSpacing: "0.2em", color: FAINT, textTransform: "uppercase", margin: 0 }}>{l}</p>
@@ -777,30 +767,22 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
       )
     }
 
-    if (savedIngredients.length === 0) {
+    if (shoppingList.length === 0) {
       return (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(34,197,94,0.08)", border: `1px solid rgba(34,197,94,0.25)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, margin: "0 auto 14px" }}>🛒</div>
-          <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: "0 0 6px" }}>Nog geen ingrediënten</p>
-          <p style={{ color: FAINT, fontSize: 13, lineHeight: 1.5, margin: "0 0 18px" }}>Klik op <strong style={{ color: G }}>Bekijk →</strong> bij een maaltijd en tik <strong style={{ color: TEXT }}>+</strong> naast een ingrediënt om het toe te voegen.</p>
+          <p style={{ color: FAINT, fontSize: 14, marginBottom: 12 }}>Weekmenu heeft nog geen ingrediënten.</p>
+          <p style={{ color: FAINT, fontSize: 13 }}>Genereer het weekmenu opnieuw — ingrediënten worden automatisch toegevoegd.</p>
           <button onClick={() => setSubTab("weekmenu")}
-            style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: G, color: "#061a0c", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            style={{ marginTop: 16, padding: "10px 20px", borderRadius: 10, border: "none", background: G, color: "#061a0c", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
             Naar weekmenu →
           </button>
         </div>
       )
     }
 
-    // Group savedIngredients by category
-    const grouped = savedIngredients.reduce((acc, ingr) => {
-      const cat = ingr.categorie || "Overig"
-      if (!acc[cat]) acc[cat] = []
-      acc[cat].push(ingr)
-      return acc
-    }, {})
-    const groupedList = Object.entries(grouped)
-    const total = savedIngredients.length
-    const checkedCount = Object.values(checkedItems).filter(Boolean).length
+    const total        = shoppingList.reduce((s, g) => s + g.items.length, 0)
+    const checkedCount = shoppingList.reduce((s, g) => s + g.items.filter(item => !!checkedItems[`${g.cat}_${item.naam}`]).length, 0)
+    const allNames     = shoppingList.flatMap(g => g.items.map(i => i.naam)).join(", ")
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -812,12 +794,12 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
           </div>
           <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>{total} producten</span>
           <div style={{ height: 5, background: BORDER, borderRadius: 3, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: `${total > 0 ? Math.round(checkedCount / total * 100) : 0}%`, background: G, borderRadius: 3 }} />
+            <div style={{ height: "100%", width: `${total > 0 ? Math.round(checkedCount / total * 100) : 0}%`, background: G, borderRadius: 3, transition: "width 0.3s ease" }} />
           </div>
         </div>
 
         {/* Categories */}
-        {groupedList.map(([cat, items]) => (
+        {shoppingList.map(({ cat, items }) => (
           <div key={cat} style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 13, overflow: "hidden" }}>
             <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${BORDER}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700 }}>
@@ -830,18 +812,16 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
             </div>
             <div>
               {items.map((item, i) => {
-                const key = `${cat}-${item.naam}`
+                const key     = `${cat}_${item.naam}`
                 const checked = !!checkedItems[key]
                 return (
                   <div key={i} style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, fontSize: 13, borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
-                    <div onClick={() => setCheckedItems(p => ({ ...p, [key]: !p[key] }))}
+                    <div onClick={() => updateCheckedItem(key, !checked)}
                       style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? G : BD3}`, background: checked ? G : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#061a0c", cursor: "pointer" }}>
                       {checked && <svg width={10} height={10} viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
                     <span style={{ flex: 1, lineHeight: 1.2, color: checked ? FAINT : TEXT, textDecoration: checked ? "line-through" : "none" }}>{item.naam}</span>
-                    <span style={{ ...MONO, fontSize: 10.5, color: DIM }}>{item.hoeveelheid} {item.eenheid}</span>
-                    <button onClick={() => removeIngredient(item.naam)}
-                      style={{ background: "none", border: "none", color: FAINT, fontSize: 14, cursor: "pointer", padding: "0 2px", lineHeight: 1 }}>×</button>
+                    <span style={{ ...MONO, fontSize: 10.5, color: DIM, flexShrink: 0 }}>{item.q}</span>
                   </div>
                 )
               })}
@@ -849,15 +829,15 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
           </div>
         ))}
 
-        {/* CTAs */}
+        {/* Deeplinks */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
-          <a href={`https://www.ah.nl/producten?query=${encodeURIComponent(savedIngredients.map(i => i.naam).join(" "))}`} target="_blank" rel="noreferrer"
+          <a href={`https://www.ah.nl/zoeken?query=${encodeURIComponent(allNames)}`} target="_blank" rel="noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 16px", background: G, color: "#061a0c", borderRadius: 11, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
-            🛒 Zoek bij Albert Heijn
+            🛒 Bestel bij Albert Heijn →
           </a>
-          <a href={`https://www.jumbo.com/producten?searchTerms=${encodeURIComponent(savedIngredients[0]?.naam || "")}`} target="_blank" rel="noreferrer"
+          <a href={`https://www.jumbo.com/zoeken?searchTerms=${encodeURIComponent(allNames)}`} target="_blank" rel="noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: "transparent", color: DIM, border: `1px solid ${BD2}`, borderRadius: 11, textDecoration: "none", fontWeight: 600, fontSize: 13 }}>
-            <span>🛒 Zoek bij Jumbo</span>
+            <span>🛒 Bestel bij Jumbo →</span>
             <span style={{ color: FAINT }}>›</span>
           </a>
         </div>
@@ -869,7 +849,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     <>
       {/* Modals */}
       {addFoodMeal && <AddFoodModal meal={addFoodMeal} onClose={() => setAddFoodMeal(null)} onAdd={addFoodLog} />}
-      {recipeView  && <RecipeView  recipe={recipeView}  mealLabel={recipeMeal} onClose={() => setRecipeView(null)} onAddIngredient={addIngredient} savedIngredients={savedIngredients} />}
+      {recipeView  && <RecipeView  recipe={recipeView} mealLabel={recipeMeal} onClose={() => setRecipeView(null)} />}
       {aiGenModal  && <AiGenModal  onClose={() => !aiGenLoading && setAiGenModal(false)} onGenerate={generateMealPlan} loading={aiGenLoading} error={aiGenError} prefs={aiPrefs} setPrefs={setAiPrefs} />}
 
       {/* Sub-nav */}
