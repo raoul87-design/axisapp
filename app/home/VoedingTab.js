@@ -419,8 +419,8 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
 
   function updateCheckedItem(key) {
     setCheckedItems(prev => {
-      // default true = "I have this at home"; false = "still need to buy"
-      const next = { ...prev, [key]: !(prev[key] ?? true) }
+      // default false = "still need to buy"; true = "I have this at home"
+      const next = { ...prev, [key]: !(prev[key] ?? false) }
       try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch {}
       return next
     })
@@ -432,7 +432,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     let text = `🛒 Boodschappenlijst AXIS — week ${weekNum}\n`
     let hasItems = false
     for (const { cat, items } of shoppingList) {
-      const needed = items.filter(item => !(checkedItems[`${cat}_${item.naam}`] ?? true))
+      const needed = items.filter(item => !(checkedItems[`${cat}_${item.naam}`] ?? false))
       if (needed.length === 0) continue
       hasItems = true
       text += `\n${cat}\n`
@@ -811,11 +811,11 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     }
 
     const total      = shoppingList.reduce((s, g) => s + g.items.length, 0)
-    // haveIt default = true (all start checked = "I have this")
+    // haveIt default = false (all start unchecked = "still need to buy")
     const toKopen    = shoppingList.reduce((s, g) =>
-      s + g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? true)).length, 0)
+      s + g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? false)).length, 0)
     const firstNeed  = shoppingList.flatMap(g =>
-      g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? true)).map(i => i.naam)
+      g.items.filter(item => !(checkedItems[`${g.cat}_${item.naam}`] ?? false)).map(i => i.naam)
     )[0] || ""
 
     return (
@@ -850,7 +850,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
             <div>
               {items.map((item, i) => {
                 const key    = `${cat}_${item.naam}`
-                const haveIt = checkedItems[key] ?? true   // true = already have = crossed out
+                const haveIt = checkedItems[key] ?? false  // false = need to buy; true = already have = crossed out
                 return (
                   <div key={i} style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, fontSize: 13, borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
                     <div onClick={() => updateCheckedItem(key)}
