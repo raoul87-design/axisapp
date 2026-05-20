@@ -19,10 +19,10 @@ const DIM    = "#9a9a9a"
 const FAINT  = "#5e5e5e"
 
 const MEAL_IMAGES = {
-  ontbijt: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&q=80",
-  lunch:   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80",
-  diner:   "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80",
-  snacks:  "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?w=400&q=80",
+  ontbijt: "https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=400&q=80", // pancakes / ontbijt
+  lunch:   "https://images.unsplash.com/photo-1540189549336-e6e99eb4b951?w=400&q=80", // salade bowl
+  diner:   "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80", // bord met eten
+  snacks:  "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80", // fruit / snacks
 }
 
 const MEALS = [
