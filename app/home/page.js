@@ -145,6 +145,7 @@ const chatBottomRef        = useRef(null)
 const messagesEndRef       = useRef(null)
 const scrollRef            = useRef(null)
 const checkFirstUseDoneRef = useRef(false)
+const publicUserIdRef      = useRef(null)
 const router = useRouter()
 const FORCE_ONBOARDING = false
 
@@ -304,9 +305,9 @@ useEffect(() => {
     }
     try {
       await checkFirstUse()
+      await loadWeekData()
       await loadCommitments()
       await loadHistory()
-      await loadWeekData()
       await loadProgressData()
       await loadWorkoutData()
     } catch (err) {
@@ -349,7 +350,7 @@ useEffect(() => {
 
 async function loadCommitments() {
   const today = getNLDate()
-  const uid = publicUserId ?? user.id
+  const uid = publicUserIdRef.current ?? publicUserId ?? user.id
   const { data } = await supabase
     .from("commitments").select("*")
     .eq("user_id", uid).eq("date", today)
@@ -523,10 +524,12 @@ async function addReminder() {
 }
 
 async function loadHistory() {
-  const uid = publicUserId ?? user.id
+  const uid = publicUserIdRef.current ?? publicUserId ?? user.id
+  console.log("[loadHistory] uid:", uid, "| publicUserIdRef:", publicUserIdRef.current, "| publicUserId state:", publicUserId)
   const { data } = await supabase
     .from("daily_results").select("date,score,is_rest_day,rest_reason")
     .eq("user_id", uid).order("date", { ascending: false })
+  console.log("[loadHistory] resultaten:", data?.length ?? 0, "rijen")
   if (!data) return
   const uniqueDays = Object.values(
     data.reduce((acc, item) => {
@@ -553,7 +556,9 @@ async function loadWeekData() {
   if (userData?.missed_days != null) setMissedDays(userData.missed_days)
   if (userData?.streak != null) setStreak(userData.streak)
   const pid = userData?.id ?? null
+  publicUserIdRef.current = pid
   setPublicUserId(pid)
+  console.log("[loadWeekData] publicUserId:", pid, "| auth user.id:", user.id)
   if (pid) { loadReminders(pid); loadChatHistory(pid) }
   const publicUserId = pid
   const [{ data: checkIns }, { data: commits }] = await Promise.all([
@@ -563,7 +568,7 @@ async function loadWeekData() {
           .gte("sent_at", `${monday}T00:00:00`)
       : Promise.resolve({ data: [] }),
     supabase.from("commitments").select("date")
-      .eq("user_id", user.id).gte("date", monday).lte("date", today),
+      .eq("user_id", publicUserId ?? user.id).gte("date", monday).lte("date", today),
   ])
   setWeekCheckIns(new Set((checkIns || []).map(c => c.sent_at.split("T")[0])))
   setWeekCommits(new Set((commits || []).map(c => c.date)))
@@ -943,7 +948,8 @@ function calculateProgress(list) {
 
 async function saveDailyScore(score) {
   if (!user) return
-  const uid = publicUserId ?? user.id
+  const uid = publicUserIdRef.current ?? publicUserId ?? user.id
+  console.log("[saveDailyScore] uid:", uid, "score:", score)
   await supabase.from("daily_results").upsert({ user_id: uid, date: getNLDate(), score })
 }
 
