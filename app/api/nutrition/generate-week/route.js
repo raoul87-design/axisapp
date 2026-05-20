@@ -7,26 +7,32 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const DAYS = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 
+// Normalize short field names (eiwit/koolh/vet) → full names (eiwitten/koolhydraten/vetten)
+const normalize = r => ({
+  naam:          r.naam                              || "",
+  kcal:          r.kcal                              || 0,
+  eiwitten:      r.eiwitten      ?? r.eiwit          ?? 0,
+  koolhydraten:  r.koolhydraten  ?? r.koolh          ?? 0,
+  vetten:        r.vetten        ?? r.vet            ?? 0,
+  bereidingstijd: r.bereidingstijd                   ?? 0,
+  ingredienten:  r.ingredienten                      ?? [],
+})
+
 export async function POST(request) {
   try {
     const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
 
-    const prompt = `Maak een 7-daags weekmenu in JSON. Alleen JSON, geen uitleg.
+    const prompt = `7-daags weekmenu JSON. Alleen JSON, geen tekst.
+Macros/dag: ${kcalDoel}kcal, ${eiwittenDoel}g eiwit, ${koolhydratenDoel}g koolh, ${vettenDoel}g vet.
+Doel: ${prefs?.doel || "onderhouden"}. Max: ${prefs?.tijd || "30"}min.${prefs?.likes ? ` Extra: ${prefs.likes}.` : ""}
 
-Macro doelen/dag: ${kcalDoel}kcal, ${eiwittenDoel}g eiwit, ${koolhydratenDoel}g koolh, ${vettenDoel}g vet.
-Doel: ${prefs?.doel || "onderhouden"}. Tijd: max ${prefs?.tijd || "30"}min. ${prefs?.likes ? `Extra: ${prefs.likes}.` : ""}
+Per dag: ontbijt/lunch/diner/snacks, elk array met 1 object {"naam":"string","kcal":number,"eiwit":number,"koolh":number,"vet":number}
 
-Schema per dag (4 velden: ontbijt/lunch/diner/snacks, elk een array met 1 recept):
-{"naam":"string","kcal":number,"eiwitten":number,"koolhydraten":number,"vetten":number,"bereidingstijd":number,"ingredienten":[{"naam":"string","hoeveelheid":"string","eenheid":"string","categorie":"string"}]}
-
-Categorieën: Groente, Fruit, Vlees, Vis, Zuivel, Granen, Noten & Zaden, Sauzen & Kruiden, Overig.
-
-Geef exact dit JSON object:
 {"maandag":{"ontbijt":[...],"lunch":[...],"diner":[...],"snacks":[...]},"dinsdag":{...},"woensdag":{...},"donderdag":{...},"vrijdag":{...},"zaterdag":{...},"zondag":{...}}`
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 6000,
+      max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     })
 
@@ -35,9 +41,11 @@ Geef exact dit JSON object:
     if (!jsonMatch) throw new Error("No JSON in response")
     const plan = JSON.parse(jsonMatch[0])
 
-    // Validate all 7 days present
     for (const day of DAYS) {
       if (!plan[day]) throw new Error(`Missing day: ${day}`)
+      for (const meal of ["ontbijt", "lunch", "diner", "snacks"]) {
+        plan[day][meal] = (plan[day][meal] || []).map(normalize)
+      }
     }
 
     const { data, error } = await supabaseAdmin

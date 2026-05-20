@@ -72,11 +72,12 @@ function SourceBadge({ source }) {
 
 // ── Search / Add Food Modal ────────────────────────────────────
 function AddFoodModal({ meal, onClose, onAdd }) {
-  const [q, setQ]           = useState("")
-  const [results, setRes]   = useState([])
-  const [loading, setLoad]  = useState(false)
-  const [manual, setManual] = useState(false)
-  const [form, setForm]     = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
+  const [q, setQ]             = useState("")
+  const [results, setRes]     = useState([])
+  const [loading, setLoad]    = useState(false)
+  const [searchErr, setSearchErr] = useState("")
+  const [manual, setManual]   = useState(false)
+  const [form, setForm]       = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
   const debounce = useRef(null)
 
   function onType(val) {
@@ -86,13 +87,15 @@ function AddFoodModal({ meal, onClose, onAdd }) {
   }
 
   async function search(term) {
-    if (!term || term.length < 2) { setRes([]); return }
+    if (!term || term.length < 2) { setRes([]); setSearchErr(""); return }
     setLoad(true)
+    setSearchErr("")
     try {
       const r = await fetch(`/api/food/search?q=${encodeURIComponent(term)}`)
       const d = await r.json()
       setRes(d.products || [])
-    } catch {}
+      if (d.error === "timeout") setSearchErr("Zoeken duurt lang, probeer een kortere zoekterm.")
+    } catch { setSearchErr("Zoekopdracht mislukt. Probeer opnieuw.") }
     setLoad(false)
   }
 
@@ -155,7 +158,8 @@ function AddFoodModal({ meal, onClose, onAdd }) {
           ) : (
             <>
               {loading && <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Zoeken...</p>}
-              {!loading && q.length > 1 && results.length === 0 && (
+              {searchErr && <p style={{ color: "#fca5a5", fontSize: 12, textAlign: "center", padding: "8px 0" }}>{searchErr}</p>}
+              {!loading && !searchErr && q.length > 1 && results.length === 0 && (
                 <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Geen resultaten. Probeer handmatige invoer.</p>
               )}
               {results.map((p, i) => (
@@ -182,7 +186,31 @@ function AddFoodModal({ meal, onClose, onAdd }) {
 }
 
 // ── Recipe Drilldown ───────────────────────────────────────────
-function RecipeView({ recipe, mealLabel, onClose }) {
+function RecipeView({ recipe: initialRecipe, mealLabel, onClose }) {
+  const [recipe, setRecipe]             = useState(initialRecipe)
+  const [loadingRecipe, setLoadingRecipe] = useState(!initialRecipe.ingredienten?.length)
+
+  useEffect(() => {
+    if (!initialRecipe.ingredienten?.length) {
+      fetch("/api/nutrition/generate-recipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          naam:         initialRecipe.naam,
+          mealLabel,
+          kcal:         initialRecipe.kcal,
+          eiwitten:     initialRecipe.eiwitten,
+          koolhydraten: initialRecipe.koolhydraten,
+          vetten:       initialRecipe.vetten,
+        }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.recipe) setRecipe(r => ({ ...r, ...d.recipe })) })
+        .catch(() => {})
+        .finally(() => setLoadingRecipe(false))
+    }
+  }, [])
+
   return (
     <div style={{ position: "fixed", inset: 0, background: BG, zIndex: 1200, overflowY: "auto", maxWidth: 420, margin: "0 auto" }}>
       <div style={{ height: 220, background: `linear-gradient(160deg,#3a3422 10%,#241f12 80%)`, position: "relative", display: "flex", alignItems: "flex-end", padding: "18px 22px" }}>
@@ -221,7 +249,9 @@ function RecipeView({ recipe, mealLabel, onClose }) {
             </div>
           ))}
         </div>
-        {recipe.ingredienten?.length > 0 && (
+        {loadingRecipe ? (
+          <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "12px 0" }}>Recept laden...</p>
+        ) : recipe.ingredienten?.length > 0 ? (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: DIM, margin: 0 }}>Ingrediënten</p>
@@ -235,7 +265,7 @@ function RecipeView({ recipe, mealLabel, onClose }) {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -387,24 +417,25 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   async function addFoodLog(product, mealId) {
     if (!uid) { console.warn("[addFoodLog] no uid"); return }
     console.log("[addFoodLog] inserting:", product.name, "meal:", mealId, "uid:", uid)
-    const { data, error } = await supabase.from("food_logs").insert({
-      user_id:      uid,
-      date:         getNLDate(),
-      meal_type:    mealId,
-      product_name: product.name,
-      kcal:         product.kcal,
-      eiwitten:     product.eiwitten,
-      koolhydraten: product.koolhydraten,
-      vetten:       product.vetten,
-      portie_gram:  product.portie || 100,
-      source:       product.source || "EIGEN",
-      done:         false,
+    const res = await fetch("/api/food/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id:      uid,
+        date:         getNLDate(),
+        meal_type:    mealId,
+        product_name: product.name,
+        kcal:         product.kcal,
+        eiwitten:     product.eiwitten,
+        koolhydraten: product.koolhydraten,
+        vetten:       product.vetten,
+        portie_gram:  product.portie || 100,
+        source:       product.source || "EIGEN",
+      }),
     })
-    if (error) {
-      console.error("[addFoodLog] insert error:", error.message, error.code)
-      return
-    }
-    console.log("[addFoodLog] inserted ok:", data)
+    const d = await res.json()
+    if (d.error) { console.error("[addFoodLog] API error:", d.error); return }
+    console.log("[addFoodLog] inserted ok")
     setAddFoodMeal(null)
     loadFoodLogs()
   }
