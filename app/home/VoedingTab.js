@@ -387,9 +387,15 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     if (!uid) return
     setLoadingPlan(true)
     const monday = getMondayNL()
-    const { data } = await supabase.from("meal_plans").select("*")
-      .eq("user_id", uid).eq("week_start", monday).maybeSingle()
-    setMealPlan(data || null)
+    console.log("[Boodschappen] loadMealPlan | user_id:", uid, "| week_start:", monday)
+    try {
+      const res = await fetch(`/api/nutrition/meal-plan?userId=${encodeURIComponent(uid)}&weekStart=${monday}`)
+      const d = await res.json()
+      console.log("[Boodschappen] meal_plan gevonden:", d.plan ? "ja" : "nee", "| user_id:", uid)
+      setMealPlan(d.plan || null)
+    } catch (err) {
+      console.error("[Boodschappen] loadMealPlan error:", err.message)
+    }
     setLoadingPlan(false)
   }
 
@@ -730,7 +736,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   function BoodschappenTab() {
     if (loadingPlan) return <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "40px 0" }}>Laden...</p>
 
-    if (!mealPlan || shoppingList.length === 0) {
+    if (!mealPlan) {
       return (
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <p style={{ color: FAINT, fontSize: 14 }}>Maak eerst een weekmenu aan om de boodschappenlijst te genereren.</p>
@@ -738,6 +744,37 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
             style={{ marginTop: 12, padding: "10px 20px", borderRadius: 10, border: "none", background: G, color: "#061a0c", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
             Naar weekmenu →
           </button>
+        </div>
+      )
+    }
+
+    if (shoppingList.length === 0) {
+      const mealNames = []
+      if (mealPlan?.plan) {
+        DAYS_FULL.forEach(day => {
+          const dayPlan = mealPlan.plan[day]
+          if (!dayPlan) return
+          ;["ontbijt", "lunch", "diner"].forEach(slot => {
+            (dayPlan[slot] || []).forEach(item => {
+              if (item.naam && !mealNames.includes(item.naam)) mealNames.push(item.naam)
+            })
+          })
+        })
+      }
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 13, padding: "14px 16px" }}>
+            <p style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.22em", color: FAINT, textTransform: "uppercase", margin: "0 0 10px" }}>Maaltijden deze week</p>
+            {mealNames.map((naam, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 11, padding: "8px 0", borderTop: i > 0 ? `1px solid ${BORDER}` : "none", fontSize: 13 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: G, flexShrink: 0 }} />
+                <span>{naam}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: FAINT, fontSize: 12, textAlign: "center" }}>
+            Klik op "Bekijk" bij een maaltijd voor ingrediënten.
+          </p>
         </div>
       )
     }
