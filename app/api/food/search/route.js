@@ -4,6 +4,7 @@ function mapProduct(p) {
   return {
     name:         p.product_name || "",
     brand:        p.brands || "",
+    image:        p.image_front_thumb_url || p.image_url || "",
     portie:       100,
     kcal:         Math.round(kcalPer100),
     eiwitten:     Math.round((n["proteins_100g"]      || 0) * 10) / 10,
@@ -13,7 +14,7 @@ function mapProduct(p) {
   }
 }
 
-async function fetchWithTimeout(url, timeout = 5000) {
+async function fetchWithTimeout(url, timeout = 8000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
   try {
@@ -47,7 +48,7 @@ export async function GET(request) {
     // Text search — try NL first, fall back to global
     const searchOFF = async (extraParams) => {
       try {
-        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&fields=product_name,nutriments,brands&page_size=10${extraParams}`
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&fields=product_name,nutriments,brands,image_front_thumb_url,image_url&page_size=10${extraParams}`
         const res = await fetchWithTimeout(url)
         const d = await res.json()
         return (d.products || []).filter(p => p.product_name && p.nutriments)

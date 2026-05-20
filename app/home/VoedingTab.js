@@ -1,7 +1,9 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
+import { useZxing } from "react-zxing"
 import { supabase } from "../../lib/supabase"
 
+const MONO   = { fontFamily: "JetBrains Mono, monospace" }
 const G      = "#22c55e"
 const PROT   = "#7DD3FC"
 const CARB   = "#F472B6"
@@ -83,113 +85,230 @@ function SourceBadge({ source }) {
 
 // ── Search / Add Food Modal ────────────────────────────────────
 function AddFoodModal({ meal, onClose, onAdd }) {
-  const [q, setQ]             = useState("")
-  const [results, setRes]     = useState([])
-  const [loading, setLoad]    = useState(false)
-  const [searchErr, setSearchErr] = useState("")
-  const [manual, setManual]   = useState(false)
-  const [form, setForm]       = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
+  const [q,          setQ]        = useState("")
+  const [results,    setRes]      = useState([])
+  const [loading,    setLoad]     = useState(false)
+  const [searchErr,  setErr]      = useState("")
+  const [scanning,   setScanning] = useState(false)
+  const [selected,   setSelected] = useState(null)
+  const [portie,     setPortie]   = useState("100")
+  const [manual,     setManual]   = useState(false)
+  const [form,       setForm]     = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
   const debounce = useRef(null)
 
+  const { ref: camRef } = useZxing({
+    onDecodeResult(result) {
+      const code = result.getText()
+      setScanning(false)
+      handleBarcode(code)
+    },
+    onError() {
+      setScanning(false)
+      setErr("Camera niet beschikbaar of toegang geweigerd.")
+    },
+    paused: !scanning,
+  })
+
+  async function handleBarcode(code) {
+    setLoad(true); setErr("")
+    try {
+      const d = await fetch(`/api/food/search?q=${encodeURIComponent(code)}`).then(r => r.json())
+      if (d.products?.length) { setSelected(d.products[0]); setPortie("100"); setRes([]) }
+      else setErr("Product niet gevonden voor deze barcode.")
+    } catch { setErr("Barcode lookup mislukt.") }
+    setLoad(false)
+  }
+
   function onType(val) {
-    setQ(val)
+    setQ(val); setSelected(null); setRes([]); setErr("")
     clearTimeout(debounce.current)
-    debounce.current = setTimeout(() => search(val), 400)
+    if (val.length >= 3) debounce.current = setTimeout(() => search(val), 500)
   }
 
   async function search(term) {
-    if (!term || term.length < 2) { setRes([]); setSearchErr(""); return }
     setLoad(true)
-    setSearchErr("")
     try {
-      const r = await fetch(`/api/food/search?q=${encodeURIComponent(term)}`)
-      const d = await r.json()
+      const d = await fetch(`/api/food/search?q=${encodeURIComponent(term)}`).then(r => r.json())
       setRes(d.products || [])
-      if (d.error === "timeout") setSearchErr("Zoeken duurt lang, probeer een kortere zoekterm.")
-    } catch { setSearchErr("Zoekopdracht mislukt. Probeer opnieuw.") }
+      if (d.error === "timeout") setErr("Zoeken duurt lang, probeer een kortere zoekterm.")
+    } catch { setErr("Zoekopdracht mislukt. Probeer opnieuw.") }
     setLoad(false)
+  }
+
+  function calcMacros(p, g) {
+    const f = (parseFloat(g) || 0) / 100
+    return {
+      kcal:         Math.round(p.kcal * f),
+      eiwitten:     Math.round(p.eiwitten * f * 10) / 10,
+      koolhydraten: Math.round(p.koolhydraten * f * 10) / 10,
+      vetten:       Math.round(p.vetten * f * 10) / 10,
+    }
+  }
+
+  function confirmAdd() {
+    if (!selected) return
+    const m = calcMacros(selected, portie)
+    onAdd({ name: selected.name, ...m, portie: parseInt(portie) || 100, source: selected.source || "OPEN FOOD FACTS" }, meal.id)
   }
 
   function submitManual() {
     if (!form.naam || !form.kcal) return
-    onAdd({
-      name: form.naam,
-      kcal: parseInt(form.kcal) || 0,
-      eiwitten: parseFloat(form.eiwitten) || 0,
-      koolhydraten: parseFloat(form.koolhydraten) || 0,
-      vetten: parseFloat(form.vetten) || 0,
-      portie: parseInt(form.portie) || 100,
-      source: "EIGEN",
-    }, meal.id)
+    onAdd({ name: form.naam, kcal: parseInt(form.kcal) || 0, eiwitten: parseFloat(form.eiwitten) || 0, koolhydraten: parseFloat(form.koolhydraten) || 0, vetten: parseFloat(form.vetten) || 0, portie: parseInt(form.portie) || 100, source: "EIGEN" }, meal.id)
   }
+
+  const macros = selected ? calcMacros(selected, portie) : null
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ width: "100%", maxWidth: 420, background: TILE, borderRadius: "20px 20px 0 0", border: `1px solid ${BD2}`, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "16px 20px 10px" }}>
-          <div style={{ width: 36, height: 4, background: BD3, borderRadius: 2, margin: "0 auto 16px" }} />
-          <p style={{ color: DIM, fontFamily: "JetBrains Mono, monospace", fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", margin: "0 0 8px" }}>{meal.label}</p>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <input value={q} onChange={e => onType(e.target.value)} autoFocus
-              placeholder="Zoek product..."
-              style={{ flex: 1, padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 14, outline: "none" }} />
-            <button onClick={() => setManual(v => !v)}
-              style={{ padding: "10px 13px", borderRadius: 10, border: `1px solid ${manual ? G : BD2}`, background: manual ? "rgba(34,197,94,0.1)" : "transparent", color: manual ? G : DIM, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+      <div style={{ width: "100%", maxWidth: 420, background: TILE, borderRadius: "20px 20px 0 0", border: `1px solid ${BD2}`, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
+
+        {/* Header */}
+        <div style={{ padding: "16px 20px 10px", flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, background: BD3, borderRadius: 2, margin: "0 auto 14px" }} />
+          <p style={{ ...MONO, color: DIM, fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", margin: "0 0 10px" }}>{meal.label}</p>
+          <div style={{ display: "flex", gap: 7 }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <input value={q} onChange={e => onType(e.target.value)} autoFocus
+                placeholder="Zoek product of scan barcode..."
+                style={{ width: "100%", padding: "10px 36px 10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+              {loading && (
+                <div style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, border: `2px solid ${BD3}`, borderTopColor: G, borderRadius: "50%", animation: "axisSpinSearch 0.7s linear infinite" }} />
+              )}
+            </div>
+            <button onClick={() => { setScanning(v => !v); setSelected(null); setRes([]) }}
+              style={{ width: 42, height: 42, borderRadius: 10, border: `1px solid ${scanning ? G : BD2}`, background: scanning ? "rgba(34,197,94,0.12)" : "transparent", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              📷
+            </button>
+            <button onClick={() => { setManual(v => !v); setSelected(null) }}
+              style={{ padding: "0 11px", height: 42, borderRadius: 10, border: `1px solid ${manual ? G : BD2}`, background: manual ? "rgba(34,197,94,0.1)" : "transparent", color: manual ? G : DIM, fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
               Handmatig
             </button>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 24px" }}>
-          {manual ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 28px" }}>
+
+          {/* Camera viewfinder */}
+          {scanning && (
+            <div style={{ marginBottom: 12, position: "relative", borderRadius: 12, overflow: "hidden", border: `1.5px solid rgba(34,197,94,0.5)` }}>
+              <video ref={camRef} style={{ width: "100%", display: "block", height: 180, objectFit: "cover" }} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                <div style={{ width: 200, height: 54, border: `2px solid ${G}`, borderRadius: 5, boxShadow: "0 0 0 1000px rgba(0,0,0,0.4)" }} />
+              </div>
+              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}>
+                <span style={{ ...MONO, fontSize: 9, letterSpacing: "0.2em", color: G, background: "rgba(0,0,0,0.7)", padding: "3px 9px", borderRadius: 4, textTransform: "uppercase" }}>Richt op barcode</span>
+              </div>
+            </div>
+          )}
+
+          {/* Manual form */}
+          {manual && !scanning && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
               <input value={form.naam} onChange={e => setForm(f => ({ ...f, naam: e.target.value }))} placeholder="Productnaam *"
                 style={{ padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
-                  { key: "kcal", label: "Kcal *" },
-                  { key: "portie", label: "Portie (g)" },
-                  { key: "eiwitten", label: "Eiwit (g)" },
+                  { key: "kcal",         label: "Kcal *"     },
+                  { key: "portie",       label: "Portie (g)" },
+                  { key: "eiwitten",     label: "Eiwit (g)"  },
                   { key: "koolhydraten", label: "Koolh. (g)" },
-                  { key: "vetten", label: "Vet (g)" },
+                  { key: "vetten",       label: "Vet (g)"    },
                 ].map(({ key, label }) => (
                   <div key={key}>
-                    <p style={{ color: FAINT, fontFamily: "JetBrains Mono, monospace", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
+                    <p style={{ ...MONO, color: FAINT, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
                     <input type="number" value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                       style={{ width: "100%", padding: "8px 11px", borderRadius: 8, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>
               <button onClick={submitManual} disabled={!form.naam || !form.kcal}
-                style={{ marginTop: 4, padding: "12px 0", borderRadius: 11, border: "none", background: form.naam && form.kcal ? G : BD2, color: form.naam && form.kcal ? "#061a0c" : FAINT, fontWeight: 700, fontSize: 14, cursor: form.naam && form.kcal ? "pointer" : "default" }}>
+                style={{ padding: "12px 0", borderRadius: 11, border: "none", background: form.naam && form.kcal ? G : BD2, color: form.naam && form.kcal ? "#061a0c" : FAINT, fontWeight: 700, fontSize: 14, cursor: form.naam && form.kcal ? "pointer" : "default" }}>
                 Toevoegen →
               </button>
             </div>
-          ) : (
-            <>
-              {loading && <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Zoeken...</p>}
-              {searchErr && <p style={{ color: "#fca5a5", fontSize: 12, textAlign: "center", padding: "8px 0" }}>{searchErr}</p>}
-              {!loading && !searchErr && q.length > 1 && results.length === 0 && (
-                <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Geen resultaten. Probeer handmatige invoer.</p>
-              )}
-              {results.map((p, i) => (
-                <div key={i} onClick={() => onAdd(p, meal.id)}
-                  style={{ padding: "12px 0", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13.5, fontWeight: 500, margin: "0 0 3px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                    <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 10.5, color: FAINT, margin: 0 }}>
-                      <span style={{ color: DIM, fontWeight: 500 }}>{p.kcal} kcal</span>
-                      <span style={{ margin: "0 6px", color: FAINT }}>·</span>E {p.eiwitten}g
-                      <span style={{ margin: "0 6px", color: FAINT }}>·</span>K {p.koolhydraten}g
-                      <span style={{ margin: "0 6px", color: FAINT }}>·</span>V {p.vetten}g
-                    </p>
-                  </div>
-                  <span style={{ color: G, fontSize: 18, fontWeight: 300, flexShrink: 0 }}>+</span>
-                </div>
-              ))}
-            </>
           )}
+
+          {/* Selected product + portion adjuster */}
+          {selected && !manual && (
+            <div style={{ marginBottom: 12, padding: 14, background: "#0d0d0d", border: `1px solid ${BD2}`, borderRadius: 13 }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                {selected.image ? (
+                  <img src={selected.image} alt="" style={{ width: 50, height: 50, borderRadius: 9, objectFit: "cover", flexShrink: 0, background: BD3 }} />
+                ) : (
+                  <div style={{ width: 50, height: 50, borderRadius: 9, background: BD3, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>🍽</div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.name}</p>
+                  {selected.brand && <p style={{ ...MONO, fontSize: 10, color: FAINT, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.brand}</p>}
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: FAINT, fontSize: 18, cursor: "pointer", padding: 0, alignSelf: "flex-start", lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+
+              {/* Portion */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "8px 12px", background: TILE, borderRadius: 9, border: `1px solid ${BORDER}` }}>
+                <span style={{ ...MONO, fontSize: 9.5, color: FAINT, letterSpacing: "0.2em", textTransform: "uppercase", flex: 1 }}>Portie</span>
+                <input type="number" value={portie} onChange={e => setPortie(e.target.value)} min="1"
+                  style={{ width: 64, padding: "5px 8px", borderRadius: 7, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center" }} />
+                <span style={{ ...MONO, fontSize: 10, color: DIM }}>gram</span>
+              </div>
+
+              {/* Live macros */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 5, marginBottom: 13 }}>
+                {[
+                  { l: "Kcal",  v: macros.kcal,         color: G    },
+                  { l: "Eiwit", v: macros.eiwitten,      color: PROT },
+                  { l: "Koolh", v: macros.koolhydraten,  color: CARB },
+                  { l: "Vet",   v: macros.vetten,        color: FAT  },
+                ].map(({ l, v, color }) => (
+                  <div key={l} style={{ textAlign: "center", padding: "8px 4px", background: TILE, borderRadius: 8, border: `1px solid ${BORDER}` }}>
+                    <p style={{ ...MONO, fontSize: 8.5, color: FAINT, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.14em" }}>{l}</p>
+                    <p style={{ fontSize: 15, fontWeight: 800, color, margin: 0, letterSpacing: "-0.01em" }}>{v}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={confirmAdd}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: G, color: "#061a0c", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                Toevoegen →
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {searchErr && <p style={{ color: "#fca5a5", fontSize: 12, textAlign: "center", padding: "8px 0" }}>{searchErr}</p>}
+
+          {/* Hints */}
+          {!loading && !searchErr && q.length > 0 && q.length < 3 && !selected && (
+            <p style={{ ...MONO, color: FAINT, fontSize: 11, textAlign: "center", padding: "10px 0", letterSpacing: "0.1em" }}>Typ minimaal 3 tekens om te zoeken</p>
+          )}
+          {!loading && !searchErr && q.length >= 3 && results.length === 0 && !selected && (
+            <p style={{ color: FAINT, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Geen resultaten gevonden. Probeer handmatige invoer.</p>
+          )}
+
+          {/* Search results */}
+          {!selected && results.map((p, i) => (
+            <div key={i} onClick={() => { setSelected(p); setPortie("100"); setRes([]) }}
+              style={{ padding: "10px 0", borderBottom: `1px solid ${BORDER}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 11 }}>
+              {p.image ? (
+                <img src={p.image} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0, background: BD3 }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: 8, background: BD3, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🍽</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                {p.brand && <p style={{ ...MONO, fontSize: 9.5, color: FAINT, margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.brand}</p>}
+                <p style={{ ...MONO, fontSize: 10, color: FAINT, margin: 0 }}>
+                  <span style={{ color: DIM, fontWeight: 600 }}>{p.kcal} kcal</span>
+                  <span style={{ margin: "0 4px" }}>·</span>E {p.eiwitten}g
+                  <span style={{ margin: "0 4px" }}>·</span>K {p.koolhydraten}g
+                  <span style={{ margin: "0 4px" }}>·</span>V {p.vetten}g
+                  <span style={{ color: FAINT }}> /100g</span>
+                </p>
+              </div>
+              <span style={{ color: G, fontSize: 16, flexShrink: 0 }}>›</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -579,8 +698,6 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     koolhydraten: a.koolhydraten + (r.koolhydraten || 0),
     vetten: a.vetten + (r.vetten || 0),
   }), { kcal: 0, eiwitten: 0, koolhydraten: 0, vetten: 0 }) : null
-
-  const MONO = { fontFamily: "JetBrains Mono, monospace" }
 
   // ── SUB-TAB: VANDAAG ──────────────────────────────────────────
   function VandaagTab() {
