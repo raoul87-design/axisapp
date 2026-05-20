@@ -553,11 +553,15 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   async function loadMealPlan() {
-    if (!uid) return
     setLoadingPlan(true)
     const monday = getMondayNL()
     try {
-      const res = await fetch(`/api/nutrition/meal-plan?userId=${encodeURIComponent(uid)}&weekStart=${monday}`)
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) { setLoadingPlan(false); return }
+      const res = await fetch(`/api/nutrition/meal-plan?weekStart=${monday}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const d = await res.json()
       setMealPlan(d.plan || null)
     } catch (err) {
@@ -567,7 +571,8 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   useEffect(() => {
-    if (uid) { loadFoodLogs(); loadMealPlan() }
+    if (uid) loadFoodLogs()
+    loadMealPlan()
   }, [uid])
 
   useEffect(() => {
@@ -697,15 +702,17 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   async function generateMealPlan() {
-    if (!uid) return
     setAiGenLoading(true)
     setAiGenError("")
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) { setAiGenError("Niet ingelogd — herlaad de pagina."); setAiGenLoading(false); return }
       const monday = getMondayNL()
       const res = await fetch("/api/nutrition/generate-week", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: uid, weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ weekStart: monday, kcalDoel: doelKcal, eiwittenDoel: doelEiwit, koolhydratenDoel: doelKoolh, vettenDoel: doelVet, prefs: aiPrefs }),
         signal: AbortSignal.timeout(85000),
       })
       const data = await res.json()

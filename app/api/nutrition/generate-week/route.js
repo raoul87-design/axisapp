@@ -51,9 +51,39 @@ ${lines.join("\n")}`
   return JSON.parse(match[0])
 }
 
+async function resolvePublicUserId(request) {
+  const token = request.headers.get("authorization")?.replace("Bearer ", "").trim()
+  if (!token) return { authUid: null, publicUid: null }
+
+  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+  if (authErr || !user) {
+    console.error("[generate-week] auth.getUser failed:", authErr?.message)
+    return { authUid: null, publicUid: null }
+  }
+
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .single()
+
+  if (profileErr || !profile) {
+    console.error("[generate-week] users lookup failed for auth_uid:", user.id, profileErr?.message)
+    return { authUid: user.id, publicUid: null }
+  }
+
+  console.log("[generate-week] auth_uid:", user.id, "| public_uid:", profile.id)
+  return { authUid: user.id, publicUid: profile.id }
+}
+
 export async function POST(request) {
   try {
-    const { userId, weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
+    const { weekStart, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, prefs } = await request.json()
+
+    const { publicUid } = await resolvePublicUserId(request)
+    if (!publicUid) {
+      return Response.json({ error: "Authenticatie mislukt — probeer opnieuw in te loggen." }, { status: 401 })
+    }
 
     // Step 1: Generate 7-day plan (names + macros only)
     const planPrompt = `Generate the meal plan in Dutch. All meal names must be in Dutch (Netherlands).
@@ -115,11 +145,11 @@ Goal: ${prefs?.doel || "maintain"}. Max prep: ${prefs?.tijd || "30"}min.${prefs?
       }
     }
 
-    console.log("[generate-week] insert | user_id:", userId, "| week_start:", weekStart)
+    console.log("[generate-week] insert | user_id:", publicUid, "| week_start:", weekStart)
 
     const { data, error } = await supabaseAdmin
       .from("meal_plans")
-      .upsert({ user_id: userId, week_start: weekStart, plan }, { onConflict: "user_id,week_start" })
+      .upsert({ user_id: publicUid, week_start: weekStart, plan }, { onConflict: "user_id,week_start" })
       .select()
       .single()
 
