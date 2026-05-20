@@ -377,9 +377,13 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   async function loadFoodLogs() {
     if (!uid) return
     setLoadingLogs(true)
-    const { data } = await supabase.from("food_logs").select("*")
-      .eq("user_id", uid).eq("date", getNLDate()).order("created_at", { ascending: true })
-    setFoodLogs(data || [])
+    try {
+      const res = await fetch(`/api/food/log?userId=${encodeURIComponent(uid)}&date=${getNLDate()}`)
+      const d   = await res.json()
+      setFoodLogs(d.logs || [])
+    } catch (err) {
+      console.error("[loadFoodLogs] error:", err.message)
+    }
     setLoadingLogs(false)
   }
 
@@ -446,8 +450,8 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     } catch {}
   }
 
-  // Computed
-  const totals = foodLogs.reduce((a, f) => ({
+  // Only count eaten items (done = true) toward kcal/macros
+  const totals = foodLogs.filter(f => f.done).reduce((a, f) => ({
     kcal:         a.kcal         + (f.kcal         || 0),
     eiwitten:     a.eiwitten     + (f.eiwitten     || 0),
     koolhydraten: a.koolhydraten + (f.koolhydraten || 0),
@@ -488,13 +492,19 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   }
 
   async function toggleFoodDone(id, current) {
-    await supabase.from("food_logs").update({ done: !current }).eq("id", id)
-    setFoodLogs(prev => prev.map(f => f.id === id ? { ...f, done: !current } : f))
+    const newDone = !current
+    setFoodLogs(prev => prev.map(f => f.id === id ? { ...f, done: newDone } : f))
+    fetch("/api/food/log", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, done: newDone }),
+    }).catch(err => console.error("[toggleFoodDone]", err.message))
   }
 
   async function deleteFoodLog(id) {
-    await supabase.from("food_logs").delete().eq("id", id)
     setFoodLogs(prev => prev.filter(f => f.id !== id))
+    fetch(`/api/food/log?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+      .catch(err => console.error("[deleteFoodLog]", err.message))
   }
 
   async function generateMealPlan() {
