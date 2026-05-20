@@ -24,7 +24,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const { user_id, date, meal_type, product_name, kcal, eiwitten, koolhydraten, vetten, portie_gram, source } = await request.json()
+    const { user_id, date, meal_type, product_name, kcal, eiwitten, koolhydraten, vetten, portie_gram, source, done: initialDone } = await request.json()
 
     if (!user_id || !meal_type || !product_name) {
       return Response.json({ error: "Missing required fields" }, { status: 400 })
@@ -43,7 +43,7 @@ export async function POST(request) {
         vetten:       vetten       || 0,
         portie_gram:  portie_gram  || 100,
         source:       source       || "EIGEN",
-        done:         false,
+        done:         initialDone  ?? false,
       })
       .select()
       .single()

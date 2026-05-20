@@ -1,6 +1,5 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { useZxing } from "react-zxing"
 import { supabase } from "../../lib/supabase"
 
 const MONO   = { fontFamily: "JetBrains Mono, monospace" }
@@ -94,20 +93,68 @@ function AddFoodModal({ meal, onClose, onAdd }) {
   const [portie,     setPortie]   = useState("100")
   const [manual,     setManual]   = useState(false)
   const [form,       setForm]     = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
-  const debounce = useRef(null)
+  const debounce  = useRef(null)
+  const videoRef  = useRef(null)
+  const streamRef = useRef(null)
+  const rafRef    = useRef(null)
+  const [noScanner, setNoScanner] = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState("")
 
-  const { ref: camRef } = useZxing({
-    onDecodeResult(result) {
-      const code = result.getText()
+  function stopCamera() {
+    if (rafRef.current)    { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+  }
+
+  useEffect(() => {
+    if (!scanning) { stopCamera(); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
+        streamRef.current = stream
+        const video = videoRef.current
+        video.srcObject = stream
+        await video.play()
+        const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"] })
+        function tick() {
+          if (cancelled) return
+          detector.detect(video).then(codes => {
+            if (codes.length > 0) {
+              setScanning(false)
+              handleBarcode(codes[0].rawValue)
+            } else {
+              rafRef.current = requestAnimationFrame(tick)
+            }
+          }).catch(() => { rafRef.current = requestAnimationFrame(tick) })
+        }
+        rafRef.current = requestAnimationFrame(tick)
+      } catch {
+        if (!cancelled) { setScanning(false); setErr("Camera niet beschikbaar of toegang geweigerd.") }
+      }
+    })()
+    return () => { cancelled = true; stopCamera() }
+  }, [scanning])
+
+  function openScanner() {
+    if (!("BarcodeDetector" in window)) {
+      setNoScanner(v => !v)
       setScanning(false)
-      handleBarcode(code)
-    },
-    onError() {
+      setSelected(null)
+      setRes([])
+      setErr("")
+      return
+    }
+    if (scanning) {
       setScanning(false)
-      setErr("Camera niet beschikbaar of toegang geweigerd.")
-    },
-    paused: !scanning,
-  })
+    } else {
+      setScanning(true)
+      setNoScanner(false)
+      setSelected(null)
+      setRes([])
+      setErr("")
+    }
+  }
 
   async function handleBarcode(code) {
     setLoad(true); setErr("")
@@ -176,8 +223,8 @@ function AddFoodModal({ meal, onClose, onAdd }) {
                 <div style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, border: `2px solid ${BD3}`, borderTopColor: G, borderRadius: "50%", animation: "axisSpinSearch 0.7s linear infinite" }} />
               )}
             </div>
-            <button onClick={() => { setScanning(v => !v); setSelected(null); setRes([]) }}
-              style={{ width: 42, height: 42, borderRadius: 10, border: `1px solid ${scanning ? G : BD2}`, background: scanning ? "rgba(34,197,94,0.12)" : "transparent", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <button onClick={openScanner}
+              style={{ width: 42, height: 42, borderRadius: 10, border: `1px solid ${(scanning || noScanner) ? G : BD2}`, background: (scanning || noScanner) ? "rgba(34,197,94,0.12)" : "transparent", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               📷
             </button>
             <button onClick={() => { setManual(v => !v); setSelected(null) }}
@@ -185,6 +232,24 @@ function AddFoodModal({ meal, onClose, onAdd }) {
               Handmatig
             </button>
           </div>
+
+          {/* Fallback barcode input — shown when BarcodeDetector not available */}
+          {noScanner && (
+            <div style={{ marginTop: 10, padding: "10px 13px", background: "rgba(34,197,94,0.06)", border: `1px solid rgba(34,197,94,0.3)`, borderRadius: 10 }}>
+              <p style={{ ...MONO, fontSize: 9.5, color: G, letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px" }}>Barcode scanner niet beschikbaar in deze browser</p>
+              <div style={{ display: "flex", gap: 7 }}>
+                <input autoFocus value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && barcodeInput.trim()) { setBarcodeInput(""); setNoScanner(false); handleBarcode(barcodeInput.trim()) } }}
+                  placeholder="Voer barcode in (bijv. 8710398522191)"
+                  style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none" }} />
+                <button onClick={() => { if (barcodeInput.trim()) { const v = barcodeInput.trim(); setBarcodeInput(""); setNoScanner(false); handleBarcode(v) } }}
+                  disabled={!barcodeInput.trim()}
+                  style={{ padding: "0 14px", borderRadius: 8, border: "none", background: barcodeInput.trim() ? G : BD2, color: barcodeInput.trim() ? "#061a0c" : FAINT, fontWeight: 700, fontSize: 13, cursor: barcodeInput.trim() ? "pointer" : "default" }}>
+                  Zoek
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 28px" }}>
@@ -192,7 +257,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
           {/* Camera viewfinder */}
           {scanning && (
             <div style={{ marginBottom: 12, position: "relative", borderRadius: 12, overflow: "hidden", border: `1.5px solid rgba(34,197,94,0.5)` }}>
-              <video ref={camRef} style={{ width: "100%", display: "block", height: 180, objectFit: "cover" }} />
+              <video ref={videoRef} playsInline muted style={{ width: "100%", display: "block", height: 180, objectFit: "cover" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                 <div style={{ width: 200, height: 54, border: `2px solid ${G}`, borderRadius: 5, boxShadow: "0 0 0 1000px rgba(0,0,0,0.4)" }} />
               </div>
@@ -201,6 +266,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
               </div>
             </div>
           )}
+
 
           {/* Manual form */}
           {manual && !scanning && (
@@ -610,6 +676,30 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
     loadFoodLogs()
   }
 
+  async function logWeekMenuItem(mealId, item) {
+    if (!uid) return
+    const res = await fetch("/api/food/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id:      uid,
+        date:         getNLDate(),
+        meal_type:    mealId,
+        product_name: item.naam,
+        kcal:         item.kcal         || 0,
+        eiwitten:     item.eiwitten     || 0,
+        koolhydraten: item.koolhydraten || 0,
+        vetten:       item.vetten       || 0,
+        portie_gram:  100,
+        source:       "WEEKMENU",
+        done:         true,
+      }),
+    })
+    const d = await res.json()
+    if (d.error) { console.error("[logWeekMenuItem] error:", d.error); return }
+    loadFoodLogs()
+  }
+
   async function toggleFoodDone(id, current) {
     const newDone = !current
     setFoodLogs(prev => prev.map(f => f.id === id ? { ...f, done: newDone } : f))
@@ -692,6 +782,10 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   const shoppingList = buildShoppingList(mealPlan)
   const dayPlan = mealPlan?.plan?.[DAYS_FULL[selectedDay]] || null
 
+  // Today's weekmenu (for Vandaag tab pre-fill)
+  const todayDow = (() => { const d = new Date(getNLDate()).getDay(); return d === 0 ? 6 : d - 1 })()
+  const todayWeekMenuMeals = mealPlan?.plan?.[DAYS_FULL[todayDow]] || null
+
   const dayTotals = dayPlan ? Object.values(dayPlan).flat().reduce((a, r) => ({
     kcal: a.kcal + (r.kcal || 0),
     eiwitten: a.eiwitten + (r.eiwitten || 0),
@@ -751,23 +845,57 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
 
         {/* Meal blocks */}
         {MEALS.map(meal => {
-          const logs = byMeal[meal.id] || []
+          const logs    = byMeal[meal.id] || []
           const mealKcal = logs.reduce((s, f) => s + (f.kcal || 0), 0)
+
+          // Weekmenu suggestions: items from today's plan not yet logged (no WEEKMENU entry for this meal)
+          const wmItems     = todayWeekMenuMeals?.[meal.id] || []
+          const wmLogged    = logs.some(f => f.source?.toUpperCase() === "WEEKMENU")
+          const showWmItems = wmItems.length > 0 && !wmLogged
+
           return (
             <div key={meal.id} style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: "hidden" }}>
+              {/* Meal header */}
               <div style={{ padding: "11px 14px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderBottom: `1px solid ${BORDER}` }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.005em" }}>{meal.label}</span>
-                    <span style={{ ...MONO, fontSize: 10.5, color: mealKcal > 0 ? DIM : FAINT, fontWeight: 500 }}>{mealKcal} kcal</span>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.005em" }}>{meal.label}</span>
+                  <span style={{ ...MONO, fontSize: 10.5, color: mealKcal > 0 ? DIM : FAINT, fontWeight: 500 }}>{mealKcal} kcal</span>
+                  {showWmItems && (
+                    <span style={{ ...MONO, fontSize: 8.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(34,197,94,0.6)", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 4, padding: "1px 5px" }}>Weekmenu</span>
+                  )}
                 </div>
                 <button onClick={() => setAddFoodMeal(meal)}
                   style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${BD2}`, background: "transparent", color: DIM, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", lineHeight: 1, fontWeight: 300 }}>+</button>
               </div>
+
               <div>
+                {/* Weekmenu suggestions (pre-fill, tap checkbox to mark as eaten) */}
+                {showWmItems && wmItems.map((item, i) => (
+                  <div key={`wm-${i}`} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 11, borderTop: i > 0 ? `1px solid ${BORDER}` : "none", background: "rgba(34,197,94,0.03)" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ ...MONO, fontSize: 11, fontWeight: 600, color: "rgba(34,197,94,0.7)" }}>{Math.round(item.kcal || 0)}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: "-0.005em", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: DIM }}>{item.naam}</span>
+                        <SourceBadge source="WEEKMENU" />
+                      </div>
+                      <p style={{ ...MONO, fontSize: 10.5, color: FAINT, margin: 0 }}>
+                        <span style={{ color: FAINT, fontWeight: 500 }}>{item.kcal || 0} kcal</span>
+                        {item.eiwitten > 0 && <><span style={{ margin: "0 5px" }}>·</span>E {item.eiwitten}g</>}
+                        {item.koolhydraten > 0 && <><span style={{ margin: "0 5px" }}>·</span>K {item.koolhydraten}g</>}
+                        {item.vetten > 0 && <><span style={{ margin: "0 5px" }}>·</span>V {item.vetten}g</>}
+                      </p>
+                    </div>
+                    <div onClick={() => logWeekMenuItem(meal.id, item)}
+                      style={{ width: 22, height: 22, borderRadius: 6, border: `1.5px dashed rgba(34,197,94,0.4)`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+                      title="Klik om als gegeten te markeren" />
+                  </div>
+                ))}
+
+                {/* Logged food items */}
                 {logs.map((f, i) => (
-                  <div key={f.id} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 11, borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+                  <div key={f.id} style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 11, borderTop: (i > 0 || showWmItems) ? `1px solid ${BORDER}` : "none" }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: `linear-gradient(135deg,#2a3a32,#1a2620)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ ...MONO, fontSize: 11, fontWeight: 600, color: "#9ad1a8" }}>{Math.round(f.kcal)}</span>
                     </div>
@@ -792,8 +920,10 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
                     </div>
                   </div>
                 ))}
+
+                {/* + row */}
                 <div onClick={() => setAddFoodMeal(meal)}
-                  style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 11, color: FAINT, fontSize: 13, fontWeight: 500, borderTop: logs.length > 0 ? `1px solid ${BORDER}` : "none", cursor: "pointer" }}>
+                  style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 11, color: FAINT, fontSize: 13, fontWeight: 500, borderTop: (logs.length > 0 || showWmItems) ? `1px solid ${BORDER}` : "none", cursor: "pointer" }}>
                   <div style={{ width: 36, height: 36, borderRadius: 8, border: `1px dashed ${BD3}`, display: "flex", alignItems: "center", justifyContent: "center", color: FAINT, fontSize: 18, fontWeight: 300 }}>+</div>
                   Product toevoegen
                 </div>

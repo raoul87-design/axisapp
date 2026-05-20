@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["react-zxing", "@zxing/browser", "@zxing/library"],
+  /* config options here */
 };
 
 export default nextConfig;
