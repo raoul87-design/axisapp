@@ -922,12 +922,6 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
                   </div>
                 ))}
 
-                {/* + row */}
-                <div onClick={() => setAddFoodMeal(meal)}
-                  style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 11, color: FAINT, fontSize: 13, fontWeight: 500, borderTop: (logs.length > 0 || showWmItems) ? `1px solid ${BORDER}` : "none", cursor: "pointer" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, border: `1px dashed ${BD3}`, display: "flex", alignItems: "center", justifyContent: "center", color: FAINT, fontSize: 18, fontWeight: 300 }}>+</div>
-                  Product toevoegen
-                </div>
               </div>
             </div>
           )
