@@ -96,9 +96,11 @@ const [myWorkouts,       setMyWorkouts]       = useState([])
 const [coachWorkouts,    setCoachWorkouts]    = useState([])
 const [builderNaam,      setBuilderNaam]      = useState("")
 const [builderItems,     setBuilderItems]     = useState([])
-const [builderSearch,    setBuilderSearch]    = useState("")
-const [builderResults,   setBuilderResults]   = useState([])
-const [builderSaving,    setBuilderSaving]    = useState(false)
+const [builderSearch,      setBuilderSearch]      = useState("")
+const [builderResults,     setBuilderResults]     = useState([])
+const [builderFilterSpier, setBuilderFilterSpier] = useState("alle")
+const [builderFilterEquip, setBuilderFilterEquip] = useState("alle")
+const [builderSaving,      setBuilderSaving]      = useState(false)
 
 // ── Skip modal ────────────────────────────────────────────────
 const [showSkipModal,   setShowSkipModal]   = useState(false)
@@ -788,16 +790,52 @@ async function chooseSelfWorkout(workoutId) {
 
 // ── Schema builder ────────────────────────────────────────────
 
+// Spiergroep filter keywords — matches against the free-text spiergroep column
+const SPIER_KEYWORDS = {
+  borst:      ["borst"],
+  rug:        ["rug"],
+  schouders:  ["schouder"],
+  armen:      ["biceps", "triceps", "onderarm"],
+  benen:      ["quadricep", "hamstring", "billen", "kuiten"],
+  core:       ["core", "buik", "stabiliteit"],
+  cardio:     ["conditie"],
+}
+const EQUIP_NIVEAU = { gym: "gym", thuis: "homegym", lichaamsgewicht: "lichaamsgewicht" }
+
+async function loadBuilderOefeningen(q = builderSearch, spier = builderFilterSpier, equip = builderFilterEquip) {
+  let query = supabase
+    .from("oefeningen")
+    .select("id, naam, spiergroep, niveau")
+    .order("naam", { ascending: true })
+    .limit(80)
+
+  if (q.trim().length >= 2) query = query.ilike("naam", `%${q.trim()}%`)
+  if (equip !== "alle") query = query.eq("niveau", EQUIP_NIVEAU[equip])
+
+  const { data } = await query
+  let results = data || []
+
+  if (spier !== "alle") {
+    const kws = SPIER_KEYWORDS[spier] || [spier]
+    results = results.filter(oe => kws.some(kw => oe.spiergroep?.toLowerCase().includes(kw)))
+  }
+
+  setBuilderResults(results)
+}
+
 async function searchOefeningen(q) {
   setBuilderSearch(q)
-  if (q.trim().length < 2) { setBuilderResults([]); return }
-  const { data } = await supabase
-    .from("oefeningen")
-    .select("id, naam, spiergroep")
-    .ilike("naam", `%${q}%`)
-    .order("naam", { ascending: true })
-    .limit(20)
-  setBuilderResults(data || [])
+  await loadBuilderOefeningen(q, builderFilterSpier, builderFilterEquip)
+}
+
+async function setSpierFilter(v) {
+  setBuilderFilterSpier(v)
+  await loadBuilderOefeningen(builderSearch, v, builderFilterEquip)
+}
+
+async function setEquipFilter(v) {
+  setBuilderFilterEquip(v)
+  await loadBuilderOefeningen(builderSearch, builderFilterSpier, v)
 }
 
 function addBuilderOefening(oe) {
@@ -2885,7 +2923,7 @@ return (
               )}
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
-                <button onClick={() => { setBuilderNaam(""); setBuilderItems([]); setBuilderSearch(""); setBuilderResults([]); setWorkoutScreen("builder") }}
+                <button onClick={() => { setBuilderNaam(""); setBuilderItems([]); setBuilderSearch(""); setBuilderResults([]); setBuilderFilterSpier("alle"); setBuilderFilterEquip("alle"); setWorkoutScreen("builder"); loadBuilderOefeningen("", "alle", "alle") }}
                   style={{ width: "100%", padding: "13px 16px", background: "transparent", border: `1.5px dashed ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 14, cursor: "pointer" }}>
                   + Maak eigen schema
                 </button>
@@ -2914,20 +2952,61 @@ return (
 
               {/* Oefeningen zoeken */}
               <div style={{ marginBottom: 20 }}>
-                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Oefeningen toevoegen</p>
+                <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Oefeningen toevoegen</p>
+
+                {/* Spiergroep filter pills */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 7 }}>
+                  {["alle","borst","rug","schouders","armen","benen","core","cardio"].map(v => (
+                    <button key={v} onClick={() => setSpierFilter(v)}
+                      style={{ padding: "5px 11px", borderRadius: 20, border: `1px solid ${builderFilterSpier === v ? GREEN : C.border}`, background: builderFilterSpier === v ? GREEN + "22" : "transparent", color: builderFilterSpier === v ? GREEN : C.textDim, fontSize: 12, fontWeight: builderFilterSpier === v ? 700 : 400, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }}>
+                      {v === "alle" ? "Alle" : v.charAt(0).toUpperCase() + v.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Equipment filter pills */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  {[{v:"alle",l:"Alle"},{v:"gym",l:"Gym"},{v:"thuis",l:"Thuis"},{v:"lichaamsgewicht",l:"Lichaamsgewicht"}].map(({v,l}) => (
+                    <button key={v} onClick={() => setEquipFilter(v)}
+                      style={{ padding: "5px 11px", borderRadius: 20, border: `1px solid ${builderFilterEquip === v ? "#7dd3fc" : C.border}`, background: builderFilterEquip === v ? "rgba(125,211,252,0.12)" : "transparent", color: builderFilterEquip === v ? "#7dd3fc" : C.textDim, fontSize: 12, fontWeight: builderFilterEquip === v ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Zoekbalk */}
                 <input value={builderSearch} onChange={e => searchOefeningen(e.target.value)}
                   placeholder="Zoek op naam..."
-                  style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, boxSizing: "border-box", outline: "none" }} />
-                {builderResults.length > 0 && (
-                  <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, marginTop: 4, overflow: "hidden" }}>
-                    {builderResults.map(oe => (
-                      <button key={oe.id} onClick={() => addBuilderOefening(oe)}
-                        style={{ width: "100%", padding: "11px 14px", background: builderItems.find(x => x.oefening_id === oe.id) ? C.cardAlt : C.card, border: "none", borderBottom: `1px solid ${C.border}`, color: builderItems.find(x => x.oefening_id === oe.id) ? C.textDim : C.text, fontSize: 14, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between" }}>
-                        <span>{oe.naam}</span>
-                        <span style={{ color: C.textDim, fontSize: 12 }}>{oe.spiergroep || ""}</span>
-                      </button>
-                    ))}
+                  style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, boxSizing: "border-box", outline: "none", marginBottom: 4 }} />
+
+                {/* Resultaten */}
+                {builderResults.length > 0 ? (
+                  <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
+                    {builderResults.map(oe => {
+                      const added = !!builderItems.find(x => x.oefening_id === oe.id)
+                      const niveauLabel = oe.niveau === "gym" ? "Gym" : oe.niveau === "homegym" ? "Thuis" : "BW"
+                      const niveauColor = oe.niveau === "gym" ? "#7dd3fc" : oe.niveau === "homegym" ? "#fbbf24" : "#86efac"
+                      return (
+                        <button key={oe.id} onClick={() => addBuilderOefening(oe)}
+                          style={{ width: "100%", padding: "10px 14px", background: added ? C.cardAlt : C.card, border: "none", borderBottom: `1px solid ${C.border}`, color: added ? C.textDim : C.text, fontSize: 13.5, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ flex: 1, fontWeight: added ? 400 : 500 }}>{oe.naam}</span>
+                          {oe.spiergroep && (
+                            <span style={{ fontSize: 10, color: C.textDim, background: C.cardAlt, padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {oe.spiergroep.split(",")[0].trim()}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 10, color: niveauColor, background: niveauColor + "1a", border: `1px solid ${niveauColor}44`, padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", flexShrink: 0 }}>
+                            {niveauLabel}
+                          </span>
+                          {added && <span style={{ color: GREEN, fontSize: 14, flexShrink: 0 }}>✓</span>}
+                        </button>
+                      )
+                    })}
                   </div>
+                ) : (
+                  <p style={{ color: C.textDim, fontSize: 13, textAlign: "center", padding: "18px 0" }}>
+                    Geen oefeningen gevonden. Probeer een andere filter.
+                  </p>
                 )}
               </div>
 
