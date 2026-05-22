@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "../../lib/supabase"
 import { BrowserMultiFormatReader } from "@zxing/browser"
+import { DecodeHintType, BarcodeFormat } from "@zxing/library"
 
 const MONO   = { fontFamily: "JetBrains Mono, monospace" }
 const G      = "#22c55e"
@@ -101,35 +102,87 @@ function AddFoodModal({ meal, onClose, onAdd }) {
   const [portie,     setPortie]   = useState("100")
   const [manual,     setManual]   = useState(false)
   const [form,       setForm]     = useState({ naam: "", kcal: "", eiwitten: "", koolhydraten: "", vetten: "", portie: "100" })
-  const debounce     = useRef(null)
-  const videoRef     = useRef(null)
-  const controlsRef  = useRef(null)
-  const [noScanner,     setNoScanner]     = useState(false)
-  const [barcodeInput,  setBarcodeInput]  = useState("")
+  const debounce    = useRef(null)
+  const videoRef    = useRef(null)
+  const controlsRef = useRef(null)
+  const trackRef    = useRef(null)
+  const timeoutRef  = useRef(null)
+  const [noScanner,    setNoScanner]    = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState("")
+  const [torchOn,      setTorchOn]      = useState(false)
+  const [scanFlash,    setScanFlash]    = useState(false)
 
   function stopCamera() {
+    clearTimeout(timeoutRef.current)
     try { controlsRef.current?.stop() } catch {}
     controlsRef.current = null
+    trackRef.current = null
   }
 
   useEffect(() => {
     if (!scanning) { stopCamera(); return }
     let active = true
-    const codeReader = new BrowserMultiFormatReader()
-    codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+
+    const hints = new Map([
+      [DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,  BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
+      ]],
+      [DecodeHintType.TRY_HARDER, true],
+    ])
+    const codeReader = new BrowserMultiFormatReader(hints)
+    const constraints = { video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } }
+
+    // Auto-fallback after 10 s
+    timeoutRef.current = setTimeout(() => {
+      if (active) {
+        active = false
+        stopCamera()
+        setScanning(false)
+        setNoScanner(true)
+        setErr("Geen barcode herkend. Voer de barcode handmatig in.")
+      }
+    }, 10000)
+
+    codeReader.decodeFromConstraints(constraints, videoRef.current, (result) => {
       if (!active || !result) return
       active = false
+      clearTimeout(timeoutRef.current)
+      // Flash + vibrate feedback
+      setScanFlash(true)
+      setTimeout(() => setScanFlash(false), 350)
+      try { if (navigator.vibrate) navigator.vibrate(80) } catch {}
       stopCamera()
       setScanning(false)
       handleBarcode(result.getText())
     }).then(controls => {
       if (!active) { try { controls.stop() } catch {} return }
       controlsRef.current = controls
+      // Grab track for torch control
+      const stream = videoRef.current?.srcObject
+      trackRef.current = stream?.getVideoTracks?.()?.[0] || null
     }).catch(() => {
-      if (active) { setScanning(false); setNoScanner(true); setErr("Camera niet beschikbaar of toegang geweigerd.") }
+      if (active) {
+        active = false
+        clearTimeout(timeoutRef.current)
+        setScanning(false)
+        setNoScanner(true)
+        setErr("Camera niet beschikbaar of toegang geweigerd.")
+      }
     })
+
     return () => { active = false; stopCamera() }
   }, [scanning])
+
+  async function toggleTorch() {
+    if (!trackRef.current) return
+    try {
+      const next = !torchOn
+      await trackRef.current.applyConstraints({ advanced: [{ torch: next }] })
+      setTorchOn(next)
+    } catch {} // torch not supported on this device
+  }
 
   function openScanner() {
     if (scanning) {
@@ -137,6 +190,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
     } else {
       setScanning(true)
       setNoScanner(false)
+      setTorchOn(false)
       setSelected(null)
       setRes([])
       setErr("")
@@ -220,10 +274,10 @@ function AddFoodModal({ meal, onClose, onAdd }) {
             </button>
           </div>
 
-          {/* Fallback barcode input — shown when BarcodeDetector not available */}
+          {/* Fallback barcode input — timeout or camera error */}
           {noScanner && (
             <div style={{ marginTop: 10, padding: "10px 13px", background: "rgba(34,197,94,0.06)", border: `1px solid rgba(34,197,94,0.3)`, borderRadius: 10 }}>
-              <p style={{ ...MONO, fontSize: 9.5, color: G, letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px" }}>Barcode scanner niet beschikbaar in deze browser</p>
+              <p style={{ ...MONO, fontSize: 9.5, color: G, letterSpacing: "0.18em", textTransform: "uppercase", margin: "0 0 8px" }}>Barcode handmatig invoeren</p>
               <div style={{ display: "flex", gap: 7 }}>
                 <input autoFocus value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && barcodeInput.trim()) { setBarcodeInput(""); setNoScanner(false); handleBarcode(barcodeInput.trim()) } }}
@@ -243,14 +297,23 @@ function AddFoodModal({ meal, onClose, onAdd }) {
 
           {/* Camera viewfinder */}
           {scanning && (
-            <div style={{ marginBottom: 12, position: "relative", borderRadius: 12, overflow: "hidden", border: `1.5px solid rgba(34,197,94,0.5)` }}>
-              <video ref={videoRef} playsInline muted style={{ width: "100%", display: "block", height: 180, objectFit: "cover" }} />
+            <div style={{ marginBottom: 12, position: "relative", borderRadius: 12, overflow: "hidden", border: `1.5px solid ${scanFlash ? G : "rgba(34,197,94,0.5)"}`, transition: "border-color 0.1s", boxShadow: scanFlash ? `0 0 18px rgba(34,197,94,0.6)` : "none" }}>
+              {/* Success flash */}
+              {scanFlash && <div style={{ position: "absolute", inset: 0, background: "rgba(34,197,94,0.3)", zIndex: 10, pointerEvents: "none", borderRadius: 10 }} />}
+              <video ref={videoRef} playsInline muted style={{ width: "100%", display: "block", height: 200, objectFit: "cover" }} />
+              {/* Viewfinder crosshair */}
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <div style={{ width: 200, height: 54, border: `2px solid ${G}`, borderRadius: 5, boxShadow: "0 0 0 1000px rgba(0,0,0,0.4)" }} />
+                <div style={{ width: 220, height: 58, border: `2px solid ${G}`, borderRadius: 5, boxShadow: "0 0 0 1000px rgba(0,0,0,0.45)" }} />
               </div>
-              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}>
+              {/* Bottom label */}
+              <div style={{ position: "absolute", bottom: 10, left: 0, right: 50, textAlign: "center", pointerEvents: "none" }}>
                 <span style={{ ...MONO, fontSize: 9, letterSpacing: "0.2em", color: G, background: "rgba(0,0,0,0.7)", padding: "3px 9px", borderRadius: 4, textTransform: "uppercase" }}>Richt op barcode</span>
               </div>
+              {/* Torch button */}
+              <button onClick={toggleTorch}
+                style={{ position: "absolute", bottom: 8, right: 8, width: 34, height: 34, borderRadius: 8, border: `1px solid ${torchOn ? G : "rgba(255,255,255,0.2)"}`, background: torchOn ? "rgba(34,197,94,0.25)" : "rgba(0,0,0,0.55)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                💡
+              </button>
             </div>
           )}
 
