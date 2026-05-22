@@ -272,14 +272,31 @@ const FALLBACK_SYSTEM = `Je bent de AXIS discipline coach. Gebaseerd op James Sm
 - Maximaal 3 zinnen per antwoord
 - Gebruik 'je' constructies, geen formele taal`
 
+async function resolveUserByPublicId(publicUserId) {
+  if (!publicUserId) return null
+  const { data: profile } = await supabaseAdmin
+    .from("users")
+    .select("id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
+    .eq("id", publicUserId)
+    .single()
+  return profile || null
+}
+
 export async function POST(request) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "").trim()
-    console.log("[chat] Authorization header aanwezig:", token ? "ja" : "nee")
+    const rawToken = request.headers.get("authorization")?.replace("Bearer ", "").trim()
+    // Sanitize: "null", "undefined", leeg → behandel als geen token
+    const token = rawToken && rawToken !== "null" && rawToken !== "undefined" ? rawToken : null
+    console.log("[chat] Authorization header aanwezig:", token ? "ja" : "nee (raw: " + rawToken + ")")
 
-    const { messages } = await request.json()
+    const { messages, publicUserId } = await request.json()
 
-    const profile = token ? await resolveUser(token) : null
+    // Probeer eerst token, daarna publicUserId als fallback
+    let profile = token ? await resolveUser(token) : null
+    if (!profile && publicUserId) {
+      console.log("[chat] token fallthrough → probeer publicUserId:", publicUserId)
+      profile = await resolveUserByPublicId(publicUserId)
+    }
 
     let systemPrompt = FALLBACK_SYSTEM
     let tools        = undefined
@@ -291,7 +308,7 @@ export async function POST(request) {
       console.log("[chat] context geladen: ja | naam:", profile.name, "| streak:", profile.streak)
       console.log("[chat] system prompt (eerste 200 tekens):", systemPrompt.slice(0, 200))
     } else {
-      console.log("[chat] context geladen: nee — geen profiel opgehaald (token:", token ? "aanwezig maar ongeldig" : "ontbreekt", ")")
+      console.log("[chat] context geladen: nee — geen profiel (token:", token ? "aanwezig maar ongeldig" : "ontbreekt", "| publicUserId:", publicUserId ?? "ontbreekt", ")")
     }
 
     const firstResponse = await anthropic.messages.create({
