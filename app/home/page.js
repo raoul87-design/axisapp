@@ -653,10 +653,10 @@ async function loadWorkoutData() {
     const [{ data: planning, error: planErr }, { data: weekPlan }, { data: libraryData, error: libErr }, { data: personalData, error: personalErr }, { data: coachData, error: coachErr }] = await Promise.all([
       supabase.from("workout_planning")
         .select(PLANNING_SELECT)
-        .eq("user_id", user.id).eq("datum", today).maybeSingle(),
+        .eq("user_id", profile.id).eq("datum", today).maybeSingle(),
       supabase.from("workout_planning")
         .select(`id, datum, gedaan, workout:workout_id ( naam, dag_type )`)
-        .eq("user_id", user.id).gte("datum", monday).lte("datum", sunday)
+        .eq("user_id", profile.id).gte("datum", monday).lte("datum", sunday)
         .order("datum", { ascending: true }),
       supabase.from("workouts")
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
@@ -693,7 +693,7 @@ async function loadWorkoutData() {
       const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
       const { data: prev } = await supabase
         .from("workout_sets").select("oefening_id, gewicht, reps_gedaan, set_nummer, datum")
-        .eq("user_id", user.id)
+        .eq("user_id", profile.id)
         .in("oefening_id", ids)
         .order("datum", { ascending: false })
         .order("set_nummer", { ascending: true })
@@ -751,10 +751,12 @@ async function chooseSelfWorkout(workoutId) {
   const today = getNLDate()
   const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, spiergroep, youtube_url, instructies, fouten ) ) )`
 
+  const uid = publicUserId ?? user.id
+
   // Stap 1: check of er al een planning bestaat voor vandaag
   const { data: existing } = await supabase
     .from("workout_planning").select(PLANNING_SELECT)
-    .eq("user_id", user.id).eq("datum", today).maybeSingle()
+    .eq("user_id", uid).eq("datum", today).maybeSingle()
 
   if (existing) {
     // Rij bestaat al → gebruik direct
@@ -767,20 +769,20 @@ async function chooseSelfWorkout(workoutId) {
 
   // Stap 2: geen rij → probeer INSERT
   const { error: insertErr } = await supabase.from("workout_planning")
-    .insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
+    .insert({ user_id: uid, workout_id: workoutId, datum: today, gedaan: false })
 
   if (insertErr) {
     // INSERT faalde (bv. 409) → verwijder bestaande rij en probeer opnieuw
     await supabase.from("workout_planning")
-      .delete().eq("user_id", user.id).eq("datum", today)
+      .delete().eq("user_id", uid).eq("datum", today)
     await supabase.from("workout_planning")
-      .insert({ user_id: user.id, workout_id: workoutId, datum: today, gedaan: false })
+      .insert({ user_id: uid, workout_id: workoutId, datum: today, gedaan: false })
   }
 
   // Haal de nieuwe rij op met volledige workout data
   const { data: fresh } = await supabase
     .from("workout_planning").select(PLANNING_SELECT)
-    .eq("user_id", user.id).eq("datum", today).maybeSingle()
+    .eq("user_id", uid).eq("datum", today).maybeSingle()
 
   if (fresh) {
     setTodayWorkout(fresh)
@@ -958,13 +960,14 @@ async function finishWorkout() {
   const today = getNLDate()
   const exercises = [...(todayWorkout.workout?.workout_oefeningen || [])]
     .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+  const uid = publicUserId ?? user.id
   const rows = []
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
     const cardio = isCardio(wo.oefening)
     ;(setLogs[wo.oefening.id] || []).forEach((s, i) => {
       if (s.done) rows.push({
-        user_id: user.id, workout_id: todayWorkout.workout.id,
+        user_id: uid, workout_id: todayWorkout.workout.id,
         oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
         ...(cardio ? {
           duur_minuten: s.duur ? parseFloat(s.duur) : null,
@@ -978,7 +981,7 @@ async function finishWorkout() {
   }
   console.log("[finishWorkout] rows to save:", rows)
   if (rows.length) {
-    await supabase.from("workout_sets").delete().eq("user_id", user.id).eq("datum", today)
+    await supabase.from("workout_sets").delete().eq("user_id", uid).eq("datum", today)
     const { error: setsErr } = await supabase.from("workout_sets").insert(rows)
     console.log("[finishWorkout] insert error:", setsErr)
   } else {
