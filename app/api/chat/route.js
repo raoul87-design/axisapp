@@ -275,6 +275,8 @@ const FALLBACK_SYSTEM = `Je bent de AXIS discipline coach. Gebaseerd op James Sm
 export async function POST(request) {
   try {
     const token = request.headers.get("authorization")?.replace("Bearer ", "").trim()
+    console.log("[chat] Authorization header aanwezig:", token ? "ja" : "nee")
+
     const { messages } = await request.json()
 
     const profile = token ? await resolveUser(token) : null
@@ -286,9 +288,10 @@ export async function POST(request) {
       const ctx  = await fetchContext(profile)
       systemPrompt = buildSystemPrompt(profile, ctx)
       tools        = COACH_TOOLS
-      console.log("[chat] context loaded | user:", profile.name, "| streak:", profile.streak)
+      console.log("[chat] context geladen: ja | naam:", profile.name, "| streak:", profile.streak)
+      console.log("[chat] system prompt (eerste 200 tekens):", systemPrompt.slice(0, 200))
     } else {
-      console.log("[chat] no profile — using fallback prompt")
+      console.log("[chat] context geladen: nee — geen profiel opgehaald (token:", token ? "aanwezig maar ongeldig" : "ontbreekt", ")")
     }
 
     const firstResponse = await anthropic.messages.create({

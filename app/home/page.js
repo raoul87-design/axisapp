@@ -1111,6 +1111,7 @@ async function sendChat(messageText) {
   try {
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
+    console.log("[coachTab] token aanwezig:", token ? "ja" : "nee")
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
