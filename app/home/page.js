@@ -644,7 +644,7 @@ async function loadWorkoutData() {
     sundayDate.setDate(sundayDate.getDate() + 6)
     const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-    const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
+    const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, spiergroep, youtube_url, instructies, fouten ) ) )`
 
     const { data: profile } = await supabase.from("users").select("id, coach_email").eq("auth_user_id", user.id).maybeSingle()
 
@@ -728,9 +728,13 @@ function startWorkoutFromPlanning(planning) {
   const logs = {}
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
-    logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
-      reps: wo.reps ? String(wo.reps) : "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
-    }))
+    if (isCardio(wo.oefening)) {
+      logs[wo.oefening.id] = [{ duur: "", afstand: "", done: false }]
+    } else {
+      logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
+        reps: wo.reps ? String(wo.reps) : "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
+      }))
+    }
   }
   setSetLogs(logs)
   setWorkoutScreen("active")
@@ -745,7 +749,7 @@ async function chooseSelfWorkout(workoutId) {
 
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, spiergroep, youtube_url, instructies, fouten ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, spiergroep, youtube_url, instructies, fouten ) ) )`
 
   // Stap 1: check of er al een planning bestaat voor vandaag
   const { data: existing } = await supabase
@@ -798,14 +802,20 @@ const SPIER_KEYWORDS = {
   armen:      ["biceps", "triceps", "onderarm"],
   benen:      ["quadricep", "hamstring", "billen", "kuiten"],
   core:       ["core", "buik", "stabiliteit"],
-  cardio:     ["conditie"],
+  cardio:     ["conditie", "cardio", "hardloop", "fietsen", "rowing"],
 }
 const EQUIP_NIVEAU = { gym: "gym", thuis: "homegym", lichaamsgewicht: "lichaamsgewicht" }
+
+function isCardio(oe) {
+  if (!oe) return false
+  return (oe.dag_type || "").toLowerCase() === "cardio" ||
+    /conditie|cardio|hardloop|fietsen|rowing/i.test(oe.spiergroep || "")
+}
 
 async function loadBuilderOefeningen(q = builderSearch, spier = builderFilterSpier, equip = builderFilterEquip) {
   let query = supabase
     .from("oefeningen")
-    .select("id, naam, spiergroep, niveau")
+    .select("id, naam, spiergroep, niveau, dag_type")
     .order("naam", { ascending: true })
     .limit(80)
 
@@ -816,8 +826,12 @@ async function loadBuilderOefeningen(q = builderSearch, spier = builderFilterSpi
   let results = data || []
 
   if (spier !== "alle") {
-    const kws = SPIER_KEYWORDS[spier] || [spier]
-    results = results.filter(oe => kws.some(kw => oe.spiergroep?.toLowerCase().includes(kw)))
+    if (spier === "cardio") {
+      results = results.filter(oe => isCardio(oe))
+    } else {
+      const kws = SPIER_KEYWORDS[spier] || [spier]
+      results = results.filter(oe => kws.some(kw => oe.spiergroep?.toLowerCase().includes(kw)))
+    }
   }
 
   setBuilderResults(results)
@@ -840,7 +854,8 @@ async function setEquipFilter(v) {
 
 function addBuilderOefening(oe) {
   if (builderItems.find(x => x.oefening_id === oe.id)) return
-  setBuilderItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 3, reps: 10 }])
+  const cardio = isCardio(oe)
+  setBuilderItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 1, reps: cardio ? 0 : 10, cardio }])
   setBuilderSearch("")
   setBuilderResults([])
 }
@@ -946,12 +961,18 @@ async function finishWorkout() {
   const rows = []
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
+    const cardio = isCardio(wo.oefening)
     ;(setLogs[wo.oefening.id] || []).forEach((s, i) => {
       if (s.done) rows.push({
         user_id: user.id, workout_id: todayWorkout.workout.id,
         oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
-        reps_gedaan: s.reps ? parseInt(s.reps) : null,
-        gewicht: s.gewicht ? parseFloat(s.gewicht) : null,
+        ...(cardio ? {
+          duur_minuten: s.duur ? parseFloat(s.duur) : null,
+          afstand_km:   s.afstand ? parseFloat(s.afstand) : null,
+        } : {
+          reps_gedaan: s.reps    ? parseInt(s.reps)      : null,
+          gewicht:     s.gewicht ? parseFloat(s.gewicht) : null,
+        }),
       })
     })
   }
@@ -3019,25 +3040,34 @@ return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {builderItems.map((item, i) => (
                       <div key={item.oefening_id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                          <span style={{ color: C.text, fontSize: 14, fontWeight: "bold" }}>{i + 1}. {item.naam}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: item.cardio ? 0 : 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: C.text, fontSize: 14, fontWeight: "bold" }}>{i + 1}. {item.naam}</span>
+                            {item.cardio && (
+                              <span style={{ fontSize: 10, color: "#f97316", background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.3)", padding: "2px 7px", borderRadius: 4, fontWeight: 600 }}>CARDIO</span>
+                            )}
+                          </div>
                           <button onClick={() => removeBuilderOefening(item.oefening_id)}
                             style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                         </div>
-                        <div style={{ display: "flex", gap: 12 }}>
-                          <label style={{ flex: 1 }}>
-                            <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Sets</p>
-                            <input type="number" min={1} max={10} value={item.sets}
-                              onChange={e => updateBuilderItem(item.oefening_id, "sets", e.target.value)}
-                              style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
-                          </label>
-                          <label style={{ flex: 1 }}>
-                            <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Reps</p>
-                            <input type="number" min={1} max={100} value={item.reps}
-                              onChange={e => updateBuilderItem(item.oefening_id, "reps", e.target.value)}
-                              style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
-                          </label>
-                        </div>
+                        {item.cardio ? (
+                          <p style={{ color: C.textDim, fontSize: 12, margin: "6px 0 0" }}>Duur en afstand log je tijdens de workout</p>
+                        ) : (
+                          <div style={{ display: "flex", gap: 12 }}>
+                            <label style={{ flex: 1 }}>
+                              <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Sets</p>
+                              <input type="number" min={1} max={10} value={item.sets}
+                                onChange={e => updateBuilderItem(item.oefening_id, "sets", e.target.value)}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
+                            </label>
+                            <label style={{ flex: 1 }}>
+                              <p style={{ color: C.textDim, fontSize: 11, marginBottom: 4 }}>Reps</p>
+                              <input type="number" min={1} max={100} value={item.reps}
+                                onChange={e => updateBuilderItem(item.oefening_id, "reps", e.target.value)}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 15, textAlign: "center", boxSizing: "border-box" }} />
+                            </label>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -3120,42 +3150,73 @@ return (
                           )}
                         </div>
                       )}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, paddingBottom: 2 }}>
-                          <span style={{ color: C.textDim, fontSize: 11 }}>#</span>
-                          <span style={{ color: C.textDim, fontSize: 11 }}>Reps</span>
-                          <span style={{ color: C.textDim, fontSize: 11 }}>Kg</span>
-                          <span></span>
+                      {isCardio(oe) ? (
+                        // ── Cardio invoer ──
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input type="number" min="0" value={sets[0]?.duur || ""} placeholder="min"
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], duur: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
+                            />
+                            <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>minuten</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input type="number" min="0" step="0.1" value={sets[0]?.afstand || ""} placeholder="km (optioneel)"
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], afstand: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
+                            />
+                            <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>km</span>
+                          </div>
+                          {prevSets[oe.id]?.[0]?.duur_minuten != null && (
+                            <p style={{ color: C.textDim, fontSize: 11, margin: 0 }}>
+                              Vorige keer: {prevSets[oe.id][0].duur_minuten} min{prevSets[oe.id][0].afstand_km != null ? ` — ${prevSets[oe.id][0].afstand_km} km` : ""}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [oe.id]: u } })}
+                            style={{ padding: "10px 0", borderRadius: 8, border: `2px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: sets[0]?.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: sets[0]?.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>
+                            {sets[0]?.done ? "✓ Gedaan" : "Markeer als gedaan"}
+                          </button>
                         </div>
-                        {sets.map((s, si) => {
-                          const ps = prevSets[oe.id]?.[si]
-                          const hint = ps
-                            ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps_gedaan != null ? `× ${ps.reps_gedaan}` : null].filter(Boolean).join(" ")
-                            : null
-                          return (
-                            <div key={si}>
-                              <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
-                                <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
-                                <input type="number" value={s.reps} placeholder={wo.reps || "—"}
-                                  onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
-                                  style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
-                                />
-                                <input type="number" value={s.gewicht} placeholder="0"
-                                  onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
-                                  style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
-                                />
-                                <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
-                                  style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  {s.done ? "✓" : ""}
-                                </button>
+                      ) : (
+                        // ── Kracht invoer (sets / reps / kg) ──
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, paddingBottom: 2 }}>
+                            <span style={{ color: C.textDim, fontSize: 11 }}>#</span>
+                            <span style={{ color: C.textDim, fontSize: 11 }}>Reps</span>
+                            <span style={{ color: C.textDim, fontSize: 11 }}>Kg</span>
+                            <span></span>
+                          </div>
+                          {sets.map((s, si) => {
+                            const ps = prevSets[oe.id]?.[si]
+                            const hint = ps
+                              ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps_gedaan != null ? `× ${ps.reps_gedaan}` : null].filter(Boolean).join(" ")
+                              : null
+                            return (
+                              <div key={si}>
+                                <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
+                                  <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
+                                  <input type="number" value={s.reps} placeholder={wo.reps || "—"}
+                                    onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                    style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                                  />
+                                  <input type="number" value={s.gewicht} placeholder="0"
+                                    onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                    style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
+                                  />
+                                  <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
+                                    style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    {s.done ? "✓" : ""}
+                                  </button>
+                                </div>
+                                {hint && (
+                                  <p style={{ color: C.textDim, fontSize: 11, margin: "2px 0 4px 28px" }}>Vorige keer: {hint}</p>
+                                )}
                               </div>
-                              {hint && (
-                                <p style={{ color: C.textDim, fontSize: 11, margin: "2px 0 4px 28px" }}>Vorige keer: {hint}</p>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   )
                 })
@@ -3178,21 +3239,58 @@ return (
                 )}
               </div>
               {(() => {
-                const allSets = Object.values(setLogs).flat()
-                const doneSets = allSets.filter(s => s.done)
-                const volume = Math.round(doneSets.reduce((sum, s) => sum + (parseFloat(s.gewicht) || 0) * (parseInt(s.reps) || 0), 0))
-                return doneSets.length > 0 ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
-                      <p style={{ color: GREEN, fontSize: 28, fontWeight: "bold", margin: 0 }}>{doneSets.length}</p>
-                      <p style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>sets voltooid</p>
-                    </div>
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
-                      <p style={{ color: GREEN, fontSize: 28, fontWeight: "bold", margin: 0 }}>{volume}</p>
-                      <p style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>kg volume</p>
-                    </div>
+                const exercises = todayWorkout?.workout?.workout_oefeningen || []
+                const oeMap = {}
+                exercises.forEach(wo => { if (wo.oefening?.id) oeMap[wo.oefening.id] = wo.oefening })
+
+                const cardioSets    = []
+                const krachtSets    = []
+                Object.entries(setLogs).forEach(([oeId, sets]) => {
+                  const oe = oeMap[oeId]
+                  sets.filter(s => s.done).forEach(s => {
+                    if (isCardio(oe)) cardioSets.push(s)
+                    else krachtSets.push(s)
+                  })
+                })
+
+                const totalDuur    = cardioSets.reduce((s, c) => s + (parseFloat(c.duur)    || 0), 0)
+                const totalAfstand = cardioSets.reduce((s, c) => s + (parseFloat(c.afstand) || 0), 0)
+                const volume       = Math.round(krachtSets.reduce((sum, s) => sum + (parseFloat(s.gewicht) || 0) * (parseInt(s.reps) || 0), 0))
+
+                if (cardioSets.length === 0 && krachtSets.length === 0) return null
+
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: cardioSets.length > 0 && krachtSets.length > 0 ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 24 }}>
+                    {cardioSets.length > 0 && (
+                      <>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                          <p style={{ color: GREEN, fontSize: 26, fontWeight: "bold", margin: 0 }}>{Math.round(totalDuur)}</p>
+                          <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>min cardio</p>
+                        </div>
+                        {totalAfstand > 0 && (
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                            <p style={{ color: GREEN, fontSize: 26, fontWeight: "bold", margin: 0 }}>{totalAfstand.toFixed(1)}</p>
+                            <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>km</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {krachtSets.length > 0 && (
+                      <>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                          <p style={{ color: GREEN, fontSize: 26, fontWeight: "bold", margin: 0 }}>{krachtSets.length}</p>
+                          <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>sets voltooid</p>
+                        </div>
+                        {volume > 0 && (
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                            <p style={{ color: GREEN, fontSize: 26, fontWeight: "bold", margin: 0 }}>{volume}</p>
+                            <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>kg volume</p>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                ) : null
+                )
               })()}
               <button onClick={() => setWorkoutScreen("overview")}
                 style={{ width: "100%", padding: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textSub, cursor: "pointer", fontSize: 14 }}>
