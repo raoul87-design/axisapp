@@ -90,7 +90,7 @@ function getNLDate() {
 async function getUserData(whatsappNumber) {
   const { data, error } = await supabase
     .from("users")
-    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, coach_email")
+    .select("id, auth_user_id, name, streak, missed_days, awaiting_reflection, training_location, fitness_level, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, coach_email, goal, goal_title, goal_deadline, target_weight")
     .eq("whatsapp_number", whatsappNumber)
     .single()
 
@@ -201,40 +201,63 @@ async function getCoachFaq(coachEmail) {
   return data || []
 }
 
-// Haal client-specifieke context op: commitments, gewicht, kcal
+// Haal client-specifieke context op: commitments, gewicht, kcal, reflecties, weekmenu
 async function getClientContext(userData) {
-  const userId = userData?.auth_user_id
-  if (!userId) return { recentCommits: [], latestWeight: null, latestKcal: null }
+  const authUserId = userData?.auth_user_id
+  const pubUserId  = userData?.id  // public UUID voor food_logs en meal_plans
+  if (!authUserId) return { recentCommits: [], latestWeight: null, latestKcal: null, recentReflecties: [], weekmenu_vandaag: null }
 
   const today = getNLDate()
+  const DAYS_NL  = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"]
+  const todayKey = DAYS_NL[new Date().getDay()]
 
   const [
     { data: recentCommits },
     { data: weightData },
     { data: kcalData },
+    { data: reflections },
+    mealPlanResult,
   ] = await Promise.all([
     supabase.from("commitments")
       .select("text, date, done")
-      .eq("user_id", userId)
+      .eq("user_id", authUserId)
       .eq("date", today),
     supabase.from("metrics")
       .select("waarde, datum")
-      .eq("user_id", userId)
+      .eq("user_id", authUserId)
       .in("type", ["gewicht", "weight"])
       .order("datum", { ascending: false })
       .limit(1),
     supabase.from("metrics")
       .select("waarde, datum")
-      .eq("user_id", userId)
+      .eq("user_id", authUserId)
       .in("type", ["voeding", "calorie", "kcal"])
       .order("datum", { ascending: false })
       .limit(1),
+    supabase.from("reflections")
+      .select("completed, answer")
+      .eq("user_id", authUserId)
+      .order("created_at", { ascending: false })
+      .limit(3),
+    pubUserId
+      ? supabase.from("meal_plans").select("plan").eq("user_id", pubUserId).lte("week_start", today).order("week_start", { ascending: false }).limit(1).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
 
+  const plan      = mealPlanResult?.data
+  const todayMenu = plan?.plan?.[todayKey] ?? null
+  const weekmenu_vandaag = todayMenu ? {
+    ontbijt: todayMenu.ontbijt?.[0]?.naam ?? null,
+    lunch:   todayMenu.lunch?.[0]?.naam   ?? null,
+    diner:   todayMenu.diner?.[0]?.naam   ?? null,
+  } : null
+
   return {
-    recentCommits: recentCommits || [],
-    latestWeight:  weightData?.[0] ?? null,
-    latestKcal:    kcalData?.[0]   ?? null,
+    recentCommits:    recentCommits || [],
+    latestWeight:     weightData?.[0]   ?? null,
+    latestKcal:       kcalData?.[0]     ?? null,
+    recentReflecties: reflections       || [],
+    weekmenu_vandaag,
   }
 }
 
@@ -260,6 +283,25 @@ function buildSystemPrompt(tone, userData, clientContext, faqItems = []) {
 
   const today = getNLDate()
 
+  // Extra context: doel + deadline
+  let deadlineStr = ""
+  if (userData?.goal_deadline) {
+    const daysLeft = Math.max(0, Math.ceil((new Date(userData.goal_deadline) - new Date()) / 86400000))
+    deadlineStr = `\nDoel: ${userData.goal_title || userData.goal || "niet ingesteld"} — deadline ${userData.goal_deadline} (nog ${daysLeft} dagen).`
+  } else if (userData?.goal_title || userData?.goal) {
+    deadlineStr = `\nDoel: ${userData.goal_title || userData.goal}.`
+  }
+
+  // Recente reflecties
+  const reflectiesStr = clientContext.recentReflecties?.length > 0
+    ? `\nRecente avond check-ins:\n${clientContext.recentReflecties.map(r => `- ${r.completed ? "✅ afgerond" : "❌ gemist"}: "${r.answer}"`).join("\n")}`
+    : ""
+
+  // Weekmenu
+  const weekmenuStr = clientContext.weekmenu_vandaag
+    ? `\nWeekmenü vandaag: ontbijt: ${clientContext.weekmenu_vandaag.ontbijt || "—"} | lunch: ${clientContext.weekmenu_vandaag.lunch || "—"} | diner: ${clientContext.weekmenu_vandaag.diner || "—"}.`
+    : ""
+
   const contextBlock = `
 
 TIJDSBESEF:
@@ -270,15 +312,15 @@ Gebruik de gespreksgeschiedenis alleen als context — niet als onderwerp van ge
 Schrijf NOOIT datum labels ([vandaag], [gisteren], [dd/mm]) in je antwoord — die zijn alleen voor intern gebruik.
 
 CLIENTCONTEXT:
-${name ? `Naam: ${name}` : ""}
+${name ? `Naam: ${name}` : ""}${deadlineStr}
 Huidige streak (rechtstreeks uit database): ${streak} ${streak === 1 ? "dag" : "dagen"} — gebruik dit getal exact, verzin geen andere waarde
 Gemiste dagen (rechtstreeks uit database): ${missedDays} — gebruik dit getal exact
 Trainingslocatie: ${userData?.training_location || "onbekend"}
 Fitnessniveau: ${userData?.fitness_level || "onbekend"}
 Commitments van vandaag (${today}):
 ${commitLines}
-Laatste gewicht: ${weightLine}
-Laatste kcal/voeding: ${kcalLine}
+Laatste gewicht: ${weightLine}${userData?.target_weight ? ` (doel: ${userData.target_weight} kg)` : ""}
+Laatste kcal/voeding: ${kcalLine}${reflectiesStr}${weekmenuStr}
 
 Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 - Te onthouden wat de client eerder heeft gezegd
@@ -953,7 +995,16 @@ async function handleMessage(from, body) {
       for (const item of metrics) {
         if (userId) {
           const { error } = await supabase.from("metrics").insert({ user_id: userId, type: item.metric_type || "anders", waarde: item.waarde, datum: today })
-          if (!error) savedItems.push(item)
+          if (!error) {
+            savedItems.push(item)
+            // Kcal via WhatsApp ook in food_logs zodat Vandaag-tab het toont
+            if (["kcal", "voeding", "calorie"].includes(item.metric_type) && userData?.id) {
+              const kcalNum = parseFloat(String(item.waarde).replace(/[^0-9.]/g, ""))
+              if (!isNaN(kcalNum)) {
+                await supabase.from("food_logs").insert({ user_id: userData.id, date: today, meal_type: "overig", product_name: "WhatsApp invoer", kcal: kcalNum, eiwitten: 0, koolhydraten: 0, vetten: 0, portie_gram: 100, source: "WHATSAPP", done: true })
+              }
+            }
+          }
         }
       }
       const activiteitenTekst = lines.join(" en ")
@@ -1084,7 +1135,23 @@ async function handleMessage(from, body) {
         datum:   today,
       })
       if (error) console.error("Metric opslaan mislukt:", error.message)
-      else { console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde); savedItems.push(item) }
+      else {
+        console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde)
+        savedItems.push(item)
+        // Kcal via WhatsApp ook in food_logs zodat Vandaag-tab het toont
+        if (["kcal", "voeding", "calorie"].includes(item.metric_type) && userData?.id) {
+          const kcalNum = parseFloat(String(item.waarde).replace(/[^0-9.]/g, ""))
+          if (!isNaN(kcalNum)) {
+            const { error: foodErr } = await supabase.from("food_logs").insert({
+              user_id: userData.id, date: today, meal_type: "overig",
+              product_name: "WhatsApp invoer", kcal: kcalNum,
+              eiwitten: 0, koolhydraten: 0, vetten: 0, portie_gram: 100, source: "WHATSAPP", done: true,
+            })
+            if (foodErr) console.error("food_logs via WA mislukt:", foodErr.message)
+            else console.log("food_logs via WA opgeslagen:", kcalNum, "kcal")
+          }
+        }
+      }
     }
 
     for (const item of rustdagen) {

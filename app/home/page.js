@@ -1088,10 +1088,12 @@ async function sendChat(messageText) {
   }
 
   try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), streak, missedDays, commitment: todayCommitment, trainingLocation, fitnessLevel }),
+      headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
     })
     const data = await res.json()
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
