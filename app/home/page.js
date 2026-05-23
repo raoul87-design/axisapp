@@ -576,6 +576,16 @@ async function loadWeekData() {
   setWeekCommits(new Set((commits || []).map(c => c.date)))
 }
 
+// Flatten any content value to a plain string — guards against jsonb arrays
+// (tool_use blocks) leaking from the DB into the Anthropic messages array.
+function normalizeContent(content) {
+  if (typeof content === "string") return content
+  if (Array.isArray(content)) {
+    return content.filter(b => b.type === "text").map(b => b.text || "").join("\n").trim()
+  }
+  return String(content ?? "")
+}
+
 async function loadChatHistory(publicUserId) {
   console.log("[loadChatHistory] aangeroepen met publicUserId:", publicUserId)
   if (!publicUserId) { console.warn("[loadChatHistory] geen publicUserId — aborted"); return }
@@ -592,13 +602,15 @@ async function loadChatHistory(publicUserId) {
   setChatMessages(prev => {
     if (prev.length > 0) { console.log("[loadChatHistory] chatMessages al gevuld — overgeslagen"); return prev }
     console.log("[loadChatHistory] berichten ingeladen:", rows.length)
-    return rows.map(row => ({
-      role: row.role,
-      content: row.content,
-      time: row.created_at
-        ? new Date(row.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
-        : undefined,
-    }))
+    return rows
+      .map(row => ({
+        role: row.role,
+        content: normalizeContent(row.content),
+        time: row.created_at
+          ? new Date(row.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
+          : undefined,
+      }))
+      .filter(row => row.content)  // drop empty rows
   })
 }
 
@@ -1121,7 +1133,7 @@ async function sendChat(messageText) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), publicUserId }),
+      body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: normalizeContent(m.content) })), publicUserId }),
     })
     const data = await res.json()
     const replyTime = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
