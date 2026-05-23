@@ -13,7 +13,7 @@ async function resolveUser(token) {
   if (error || !user) return null
   const { data: profile } = await supabaseAdmin
     .from("users")
-    .select("id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
+    .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
     .eq("auth_user_id", user.id)
     .single()
   return profile || null
@@ -79,7 +79,7 @@ async function fetchContext(profile) {
 
 function buildSystemPrompt(profile, ctx) {
   const today     = getNLDate()
-  const naam      = profile.name        || "gebruiker"
+  const naam      = profile.name || profile.naam || "gebruiker"
   const doel      = profile.goal_title  || profile.goal || "niet ingesteld"
   const streak    = profile.streak      ?? 0
   const missed    = profile.missed_days ?? 0
@@ -312,7 +312,7 @@ async function resolveUserByPublicId(publicUserId) {
   if (!publicUserId) return null
   const { data: profile } = await supabaseAdmin
     .from("users")
-    .select("id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
+    .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
     .eq("id", publicUserId)
     .single()
   return profile || null
@@ -344,7 +344,7 @@ export async function POST(request) {
       const ctx  = await fetchContext(profile)
       systemPrompt = buildSystemPrompt(profile, ctx)
       tools        = COACH_TOOLS
-      console.log("[chat] context geladen: ja | naam:", profile.name, "| streak:", profile.streak)
+      console.log("[chat] context geladen: ja | naam:", profile.name || profile.naam, "| streak:", profile.streak)
       console.log("[chat] system prompt (eerste 200 tekens):", systemPrompt.slice(0, 200))
     } else {
       console.log("[chat] context geladen: nee — geen profiel (token:", token ? "aanwezig maar ongeldig" : "ontbreekt", "| publicUserId:", publicUserId ?? "ontbreekt", ")")

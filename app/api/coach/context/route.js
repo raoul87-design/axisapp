@@ -13,7 +13,7 @@ async function resolveUser(request) {
 
   const { data: profile } = await supabaseAdmin
     .from("users")
-    .select("id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight")
+    .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight")
     .eq("auth_user_id", user.id)
     .single()
 
@@ -112,7 +112,7 @@ export async function GET(request) {
 
     return Response.json({
       profiel: {
-        naam:          profile.name,
+        naam:          profile.name || profile.naam,
         doel:          profile.goal_title || profile.goal,
         deadline:      profile.goal_deadline,
         dagen_te_gaan,
