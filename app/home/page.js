@@ -641,10 +641,10 @@ async function loadProgressData() {
     { data: allDaily },
   ] = await Promise.all([
     supabase.from("metrics").select("waarde, datum")
-      .eq("user_id", user.id).eq("type", "gewicht")
+      .eq("user_id", publicUserIdRef.current ?? publicUserId ?? user.id).eq("type", "gewicht")
       .order("datum", { ascending: true }).limit(200),
     supabase.from("metrics").select("waarde, datum")
-      .eq("user_id", user.id).in("type", ["voeding", "calorie", "kcal"])
+      .eq("user_id", publicUserIdRef.current ?? publicUserId ?? user.id).in("type", ["voeding", "calorie", "kcal"])
       .order("datum", { ascending: true }).limit(200),
     supabase.from("daily_results").select("date, score")
       .eq("user_id", publicUserId ?? user.id).order("date", { ascending: false }),

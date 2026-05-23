@@ -994,7 +994,8 @@ async function handleMessage(from, body) {
       const savedItems = [...commitmentsDone.map(i => ({ ...i, categorie: "COMMITMENT" }))]
       for (const item of metrics) {
         if (userId) {
-          const { error } = await supabase.from("metrics").insert({ user_id: userId, type: item.metric_type || "anders", waarde: item.waarde, datum: today })
+          const cleanWaarde = parseFloat(String(item.waarde).replace(/[^0-9.]/g, ""))
+          const { error } = await supabase.from("metrics").insert({ user_id: userId, type: item.metric_type || "anders", waarde: isNaN(cleanWaarde) ? item.waarde : cleanWaarde, datum: today })
           if (!error) {
             savedItems.push(item)
             // Kcal via WhatsApp ook in food_logs zodat Vandaag-tab het toont
@@ -1128,15 +1129,16 @@ async function handleMessage(from, body) {
     const savedItems = []
 
     for (const item of metrics) {
+      const cleanWaarde = parseFloat(String(item.waarde).replace(/[^0-9.]/g, ""))
       const { error } = await supabase.from("metrics").insert({
         user_id: userId,
         type:    item.metric_type || "anders",
-        waarde:  item.waarde,
+        waarde:  isNaN(cleanWaarde) ? item.waarde : cleanWaarde,
         datum:   today,
       })
       if (error) console.error("Metric opslaan mislukt:", error.message)
       else {
-        console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", item.waarde)
+        console.log("Metric opgeslagen | type:", item.metric_type, "| waarde:", isNaN(cleanWaarde) ? item.waarde : cleanWaarde)
         savedItems.push(item)
         // Kcal via WhatsApp ook in food_logs zodat Vandaag-tab het toont
         if (["kcal", "voeding", "calorie"].includes(item.metric_type) && userData?.id) {
