@@ -939,12 +939,14 @@ function toggleCoachSection() {
 
 async function autoWorkoutCommitment(workoutNaam, forDate) {
   if (!workoutNaam || !user) return
+  const uid = publicUserId ?? user.id
   const tekst = `💪 ${workoutNaam}`
   const { data: dup } = await supabase.from("commitments").select("id")
-    .eq("user_id", user.id).eq("date", forDate).eq("text", tekst).maybeSingle()
+    .eq("user_id", uid).eq("date", forDate).eq("text", tekst).maybeSingle()
   if (!dup) {
+    console.log("[commitments insert] autoWorkoutCommitment | user_id:", uid, "| publicUserId:", publicUserId, "| user.id:", user.id)
     await supabase.from("commitments")
-      .insert({ user_id: user.id, date: forDate, text: tekst, category: "beweging", done: false })
+      .insert({ user_id: uid, date: forDate, text: tekst, category: "beweging", done: false })
     loadCommitments()
   }
 }
@@ -956,8 +958,9 @@ async function cancelWorkout() {
   const { error: planErr } = await supabase.from("workout_planning").delete().eq("id", todayWorkout.id)
   console.log("[cancelWorkout] workout_planning delete:", planErr ? `ERROR: ${planErr.message} (${planErr.code})` : "OK")
   if (workoutNaam) {
+    const uid = publicUserId ?? user.id
     const { error: commitErr } = await supabase.from("commitments").delete()
-      .eq("user_id", user.id).eq("date", getNLDate()).eq("text", `💪 ${workoutNaam}`)
+      .eq("user_id", uid).eq("date", getNLDate()).eq("text", `💪 ${workoutNaam}`)
     console.log("[cancelWorkout] commitments delete:", commitErr ? `ERROR: ${commitErr.message} (${commitErr.code})` : "OK")
   }
   setTodayWorkout(null)
@@ -1001,9 +1004,11 @@ async function finishWorkout() {
   }
   await supabase.from("workout_planning").update({ gedaan: true }).eq("id", todayWorkout.id)
   if (todayWorkout.workout?.naam) {
+    const uid = publicUserId ?? user.id
+    console.log("[commitments insert] finishWorkout update done | user_id:", uid, "| publicUserId:", publicUserId, "| user.id:", user.id)
     await supabase.from("commitments")
       .update({ done: true })
-      .eq("user_id", user.id).eq("date", today).eq("text", `💪 ${todayWorkout.workout.naam}`)
+      .eq("user_id", uid).eq("date", today).eq("text", `💪 ${todayWorkout.workout.naam}`)
   }
   try { localStorage.removeItem("axis-workout-draft") } catch {}
   setTodayWorkout(prev => ({ ...prev, gedaan: true }))
