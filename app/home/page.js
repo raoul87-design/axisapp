@@ -96,6 +96,8 @@ const [myWorkouts,       setMyWorkouts]       = useState([])
 const [coachWorkouts,    setCoachWorkouts]    = useState([])
 const [builderNaam,      setBuilderNaam]      = useState("")
 const [builderItems,     setBuilderItems]     = useState([])
+const [editWorkoutId,    setEditWorkoutId]    = useState(null)
+const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState(null)
 const [builderSearch,      setBuilderSearch]      = useState("")
 const [builderResults,     setBuilderResults]     = useState([])
 const [builderFilterSpier, setBuilderFilterSpier] = useState("alle")
@@ -936,35 +938,30 @@ async function saveBuilder() {
   if (!builderNaam.trim() || builderItems.length === 0 || !user) return
   setBuilderSaving(true)
   try {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .maybeSingle()
-    const payload = {
-      naam: builderNaam.trim(),
-      created_by: publicUserIdRef.current ?? publicUserId ?? user.id,
-      visibility: "personal",
-      is_template: false,
-      niveau: "beginner",
-      schema_type: "custom",
-      dag_type: "custom",
-    }
-    console.log("[saveBuilder] insert payload:", payload)
-    const { data: workout, error: wErr } = await supabase
-      .from("workouts")
-      .insert(payload)
-      .select("id")
-      .single()
-    if (wErr) throw wErr
     const rows = builderItems.map((item, i) => ({
-      workout_id: workout.id, oefening_id: item.oefening_id,
-      sets: item.sets, reps: item.reps, volgorde: i + 1,
+      oefening_id: item.oefening_id, sets: item.sets, reps: item.reps, volgorde: i + 1,
     }))
-    const { error: oeErr } = await supabase.from("workout_oefeningen").insert(rows)
-    if (oeErr) throw oeErr
+    if (editWorkoutId) {
+      const { error: uErr } = await supabase.from("workouts").update({ naam: builderNaam.trim() }).eq("id", editWorkoutId)
+      if (uErr) throw uErr
+      await supabase.from("workout_oefeningen").delete().eq("workout_id", editWorkoutId)
+      const { error: oeErr } = await supabase.from("workout_oefeningen").insert(rows.map(r => ({ ...r, workout_id: editWorkoutId })))
+      if (oeErr) throw oeErr
+    } else {
+      const payload = {
+        naam: builderNaam.trim(),
+        created_by: publicUserIdRef.current ?? publicUserId ?? user.id,
+        visibility: "personal", is_template: false,
+        niveau: "beginner", schema_type: "custom", dag_type: "custom",
+      }
+      const { data: workout, error: wErr } = await supabase.from("workouts").insert(payload).select("id").single()
+      if (wErr) throw wErr
+      const { error: oeErr } = await supabase.from("workout_oefeningen").insert(rows.map(r => ({ ...r, workout_id: workout.id })))
+      if (oeErr) throw oeErr
+    }
     setBuilderNaam("")
     setBuilderItems([])
+    setEditWorkoutId(null)
     const { data: fresh } = await supabase
       .from("workouts")
       .select("id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen(id)")
@@ -977,6 +974,38 @@ async function saveBuilder() {
   } finally {
     setBuilderSaving(false)
   }
+}
+
+async function deleteWorkout(workoutId) {
+  await supabase.from("workout_oefeningen").delete().eq("workout_id", workoutId)
+  await supabase.from("workouts").delete().eq("id", workoutId)
+  setMyWorkouts(prev => prev.filter(w => w.id !== workoutId))
+  if (pickerSelected === workoutId) setPickerSelected(null)
+  setConfirmDeleteWorkout(null)
+}
+
+async function startEditWorkout(w) {
+  const { data } = await supabase
+    .from("workout_oefeningen")
+    .select("oefening_id, sets, reps, volgorde, oefening:oefening_id(id, naam, dag_type, categorie)")
+    .eq("workout_id", w.id)
+    .order("volgorde", { ascending: true })
+  setBuilderNaam(w.naam)
+  setBuilderItems((data || []).map(wo => ({
+    oefening_id: wo.oefening_id,
+    naam: wo.oefening?.naam || "",
+    sets: wo.sets || 1,
+    reps: wo.reps || 0,
+    cardio: wo.oefening?.categorie === "cardio",
+    hyrox: wo.oefening?.categorie === "hyrox",
+  })))
+  setEditWorkoutId(w.id)
+  setBuilderSearch("")
+  setBuilderResults([])
+  setBuilderFilterSpier("alle")
+  setBuilderFilterEquip("alle")
+  setWorkoutScreen("builder")
+  loadBuilderOefeningen("", "alle", "alle")
 }
 
 function getCoachSectionOpen() {
@@ -2945,14 +2974,22 @@ return (
                     {myWorkouts.map(w => {
                       const isSelected = pickerSelected === w.id
                       return (
-                        <button key={w.id} onClick={() => setPickerSelected(isSelected ? null : w.id)}
-                          style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : GREEN + "55"}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
-                          <div>
-                            <p style={{ color: isSelected ? GREEN : "#fafafa", fontSize: 14, fontWeight: 600, margin: 0 }}>{w.naam}</p>
-                            <p style={{ color: "#9a9a9a", fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
-                          </div>
-                          {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: GREEN, fontSize: 16 }}>★</span>}
-                        </button>
+                        <div key={w.id} style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
+                          <button onClick={() => setPickerSelected(isSelected ? null : w.id)}
+                            style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: isSelected ? "#0a1a0f" : C.card, border: `2px solid ${isSelected ? GREEN : GREEN + "55"}`, borderRadius: 10, cursor: "pointer", textAlign: "left" }}>
+                            <div>
+                              <p style={{ color: isSelected ? GREEN : "#fafafa", fontSize: 14, fontWeight: 600, margin: 0 }}>{w.naam}</p>
+                              <p style={{ color: "#9a9a9a", fontSize: 12, marginTop: 3 }}>{(w.workout_oefeningen || []).length} oefeningen</p>
+                            </div>
+                            {isSelected ? <span style={{ color: GREEN, fontSize: 18 }}>✓</span> : <span style={{ color: GREEN, fontSize: 16 }}>★</span>}
+                          </button>
+                          <button onClick={() => startEditWorkout(w)}
+                            style={{ padding: "0 12px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, cursor: "pointer", color: "#9a9a9a", fontSize: 16, flexShrink: 0 }}
+                            title="Bewerken">✏️</button>
+                          <button onClick={() => setConfirmDeleteWorkout(w)}
+                            style={{ padding: "0 12px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, cursor: "pointer", color: "#ef4444", fontSize: 16, flexShrink: 0 }}
+                            title="Verwijderen">🗑</button>
+                        </div>
                       )
                     })}
                   </div>
@@ -3072,7 +3109,7 @@ return (
               )}
 
               <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
-                <button onClick={() => { setBuilderNaam(""); setBuilderItems([]); setBuilderSearch(""); setBuilderResults([]); setBuilderFilterSpier("alle"); setBuilderFilterEquip("alle"); setWorkoutScreen("builder"); loadBuilderOefeningen("", "alle", "alle") }}
+                <button onClick={() => { setBuilderNaam(""); setBuilderItems([]); setEditWorkoutId(null); setBuilderSearch(""); setBuilderResults([]); setBuilderFilterSpier("alle"); setBuilderFilterEquip("alle"); setWorkoutScreen("builder"); loadBuilderOefeningen("", "alle", "alle") }}
                   style={{ width: "100%", padding: "13px 16px", background: "transparent", border: `1.5px dashed ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 14, cursor: "pointer" }}>
                   + Maak eigen schema
                 </button>
@@ -3084,11 +3121,11 @@ return (
           {workoutScreen === "builder" && (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                <button onClick={() => setWorkoutScreen("picker")}
+                <button onClick={() => { setWorkoutScreen("picker"); setEditWorkoutId(null) }}
                   style={{ background: "none", border: "none", color: "#9a9a9a", cursor: "pointer", fontSize: 13, padding: 0 }}>
                   ← Terug
                 </button>
-                <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>Maak eigen schema</h3>
+                <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: 0 }}>{editWorkoutId ? "Schema bewerken" : "Maak eigen schema"}</h3>
               </div>
 
               {/* Naam */}
@@ -3202,7 +3239,7 @@ return (
 
               <button onClick={saveBuilder} disabled={builderSaving || !builderNaam.trim() || builderItems.length === 0}
                 style={{ width: "100%", padding: 14, background: builderSaving || !builderNaam.trim() || builderItems.length === 0 ? "#1a2a1a" : GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: builderSaving || !builderNaam.trim() || builderItems.length === 0 ? "#444" : "#000" }}>
-                {builderSaving ? "Opslaan..." : "Schema opslaan"}
+                {builderSaving ? "Opslaan..." : editWorkoutId ? "Wijzigingen opslaan" : "Schema opslaan"}
               </button>
             </>
           )}
@@ -3469,6 +3506,28 @@ return (
                 ← Terug naar overzicht
               </button>
             </>
+          )}
+
+          {/* ── Delete confirmation modal ── */}
+          {confirmDeleteWorkout && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+              <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 12, padding: 32, maxWidth: 360, width: "100%" }}>
+                <h3 style={{ color: "#fafafa", fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>Schema verwijderen</h3>
+                <p style={{ color: "#888", fontSize: 14, lineHeight: 1.6, margin: "0 0 28px" }}>
+                  Weet je zeker dat je <strong style={{ color: "#fafafa" }}>{confirmDeleteWorkout.naam}</strong> wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+                </p>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setConfirmDeleteWorkout(null)}
+                    style={{ flex: 1, padding: "12px", background: "transparent", border: "1px solid #444", borderRadius: 8, color: "#888", cursor: "pointer", fontSize: 14 }}>
+                    Annuleer
+                  </button>
+                  <button onClick={() => deleteWorkout(confirmDeleteWorkout.id)}
+                    style={{ flex: 1, padding: "12px", background: "#ef4444", border: "none", borderRadius: 8, color: "#fff", fontWeight: "bold", cursor: "pointer", fontSize: 14 }}>
+                    Verwijder
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}
