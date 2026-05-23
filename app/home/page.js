@@ -696,10 +696,14 @@ async function loadWorkoutData() {
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
         .eq("visibility", "template")
         .order("naam", { ascending: true }),
-      supabase.from("workouts")
-        .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
-        .eq("created_by", publicUserIdRef.current ?? publicUserId ?? user.id)
-        .eq("visibility", "personal"),
+      (() => {
+        const personalCreatedBy = publicUserIdRef.current ?? publicUserId ?? user.id
+        console.log("[loadWorkoutData] personal query created_by:", personalCreatedBy, "| publicUserIdRef.current:", publicUserIdRef.current, "| publicUserId:", publicUserId, "| user.id:", user.id)
+        return supabase.from("workouts")
+          .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
+          .eq("created_by", personalCreatedBy)
+          .eq("visibility", "personal")
+      })(),
       profile?.coach_email
         ? supabase.from("workouts")
             .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
@@ -713,7 +717,7 @@ async function loadWorkoutData() {
     console.log("[loadWorkoutData] profile:", profile)
     console.log("[loadWorkoutData] planning:", planning, "err:", planErr)
     console.log("[loadWorkoutData] library count:", libraryData?.length, "err:", libErr)
-    console.log("[loadWorkoutData] personal count:", personalData?.length, "err:", personalErr)
+    console.log("[loadWorkoutData] personal resultaat:", personalData?.length ?? 0, "rijen | err:", personalErr?.message ?? "geen")
     console.log("[loadWorkoutData] coach count:", coachData?.length, "err:", coachErr)
 
     setTodayWorkout(planning || null)
