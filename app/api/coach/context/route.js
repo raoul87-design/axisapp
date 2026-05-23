@@ -64,18 +64,18 @@ export async function GET(request) {
       mealPlanResult,
       { data: workoutPlanning },
     ] = await Promise.all([
-      supabaseAdmin.from("commitments").select("id, text, done").eq("user_id", authUid).eq("date", today),
-      supabaseAdmin.from("food_logs").select("kcal, eiwitten").eq("user_id", pubUid).eq("date", today).eq("done", true),
-      supabaseAdmin.from("metrics").select("waarde").eq("user_id", authUid).in("type", ["gewicht", "weight"]).order("datum", { ascending: false }).limit(1),
-      supabaseAdmin.from("metrics").select("waarde").eq("user_id", authUid).in("type", ["voeding", "calorie", "kcal"]).order("datum", { ascending: false }).limit(1),
-      supabaseAdmin.from("commitments").select("date, done").eq("user_id", authUid).gte("date", weekAgo).lte("date", today),
-      supabaseAdmin.from("commitments").select("date, done").eq("user_id", authUid).gte("date", monthAgo).lte("date", today),
-      supabaseAdmin.from("reflections").select("completed, answer, created_at").eq("user_id", authUid).order("created_at", { ascending: false }).limit(3),
+      supabaseAdmin.from("commitments").select("id, text, done").eq("user_id", pubUid).eq("date", today),
+      supabaseAdmin.from("food_logs").select("kcal, eiwitten, done").eq("user_id", pubUid).eq("date", today),
+      supabaseAdmin.from("metrics").select("waarde, created_at").eq("user_id", pubUid).in("type", ["gewicht", "weight"]).order("created_at", { ascending: false }).limit(1),
+      supabaseAdmin.from("metrics").select("waarde, created_at").eq("user_id", pubUid).in("type", ["voeding", "calorie", "kcal"]).order("created_at", { ascending: false }).limit(1),
+      supabaseAdmin.from("commitments").select("date, done").eq("user_id", pubUid).gte("date", weekAgo).lte("date", today),
+      supabaseAdmin.from("commitments").select("date, done").eq("user_id", pubUid).gte("date", monthAgo).lte("date", today),
+      supabaseAdmin.from("reflections").select("completed, answer, created_at").eq("user_id", pubUid).order("created_at", { ascending: false }).limit(3),
       supabaseAdmin.from("meal_plans").select("plan").eq("user_id", pubUid).lte("week_start", today).order("week_start", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("workout_planning").select("workout:workout_id(naam)").eq("user_id", authUid).eq("datum", today).maybeSingle(),
+      supabaseAdmin.from("workout_planning").select("workout:workout_id(naam)").eq("user_id", pubUid).eq("datum", today).maybeSingle(),
     ])
 
-    // Nutrition: prefer food_logs sum, fallback to kcal metric
+    // Nutrition: prefer food_logs sum (all entries today), fallback to kcal metric
     const foodLogKcal  = (foodLogs || []).reduce((s, f) => s + (Number(f.kcal)      || 0), 0)
     const foodLogEiwit = (foodLogs || []).reduce((s, f) => s + (Number(f.eiwitten)  || 0), 0)
     const kcal_gegeten = foodLogKcal > 0
@@ -84,6 +84,11 @@ export async function GET(request) {
     const eiwit_gegeten = Math.round(foodLogEiwit)
 
     const gewicht_vandaag = weightMetrics?.[0] ? Number(weightMetrics[0].waarde) : null
+
+    console.log(`[context] gewicht: ${gewicht_vandaag ?? "niet gevonden"} kg (pubUid: ${pubUid})`)
+    console.log(`[context] food_logs vandaag: ${(foodLogs || []).length} rijen | kcal: ${kcal_gegeten} | eiwit: ${eiwit_gegeten}`)
+    console.log(`[context] kcal_doel: ${profile.kcal_doel ?? "niet ingesteld"} | eiwit_doel: ${profile.eiwitten_doel ?? "niet ingesteld"}`)
+    console.log(`[context] system prompt context => gewicht_vandaag: ${gewicht_vandaag}, gewicht_doel: ${profile.target_weight ?? "—"}, kcal_gegeten: ${kcal_gegeten}/${profile.kcal_doel ?? "—"}, eiwit: ${eiwit_gegeten}/${profile.eiwitten_doel ?? "—"}`)
 
     // Week stats: a day is "active" if at least one commitment was done
     const weekDaysDone  = new Set((weekCommits  || []).filter(c => c.done).map(c => c.date))
