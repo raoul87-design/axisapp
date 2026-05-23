@@ -4,7 +4,7 @@ function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
-const USER_SELECT = "id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight"
+const USER_SELECT = "id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight"
 
 async function resolveUser(request) {
   const rawToken = request.headers.get("authorization")?.replace("Bearer ", "").trim()
@@ -126,7 +126,7 @@ export async function GET(request) {
 
     return Response.json({
       profiel: {
-        naam:          profile.name || profile.naam,
+        naam:          profile.name,
         doel:          profile.goal_title || profile.goal,
         deadline:      profile.goal_deadline,
         dagen_te_gaan,
