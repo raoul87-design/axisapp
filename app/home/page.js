@@ -221,14 +221,27 @@ function parseMetricValue(raw) {
   const match = raw.match(/(\d+(?:[.,]\d+)?)/)
   return match ? parseFloat(match[1].replace(",", ".")) : null
 }
+function parseTijd(tijdStr) {
+  if (!tijdStr) return null
+  const parts = String(tijdStr).split(":")
+  if (parts.length === 2) return parseInt(parts[0] || 0) + parseInt(parts[1] || 0) / 60
+  return parseFloat(tijdStr) || null
+}
+function fmtTijd(minuten) {
+  if (minuten == null) return null
+  const m = Math.floor(minuten)
+  const s = Math.round((minuten - m) * 60)
+  return `${m}:${s.toString().padStart(2, "0")}`
+}
 
-const GOALS = ["Afvallen", "Aankomen", "Spiermassa", "Fitter worden"]
+const GOALS = ["Afvallen", "Aankomen", "Spiermassa", "Fitter worden", "Hyrox"]
 
 const GOAL_SUGGESTIONS = {
   "Afvallen":      ["30 min wandelen of fietsen", "Onder 1800 kcal blijven vandaag", "1,5 liter water drinken"],
   "Aankomen":      ["45 min krachttraining", "Minstens 150g eiwit eten vandaag", "Extra maaltijd voor het slapengaan"],
   "Spiermassa":    ["1 uur gym — compound oefeningen", "160g eiwit halen vandaag", "8 uur slapen"],
   "Fitter worden": ["20 min bewegen — wandelen telt ook", "Geen snacks na 20:00", "Vroeg naar bed — voor 23:00"],
+  "Hyrox":         ["Hyrox simulatie training", "1 km hardlopen + 1 Hyrox station", "Sled push/pull sessie"],
 }
 
 const CATEGORY_ICON = { beweging: "🏃", voeding: "🥗" }
@@ -656,7 +669,7 @@ async function loadWorkoutData() {
     sundayDate.setDate(sundayDate.getDate() + 6)
     const sunday = sundayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 
-    const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, spiergroep, youtube_url, instructies, fouten ) ) )`
+    const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, categorie, spiergroep, youtube_url, instructies, fouten ) ) )`
 
     const { data: profile } = await supabase.from("users").select("id, coach_email").eq("auth_user_id", user.id).maybeSingle()
 
@@ -740,7 +753,9 @@ function startWorkoutFromPlanning(planning) {
   const logs = {}
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
-    if (isCardio(wo.oefening)) {
+    if (isHyrox(wo.oefening)) {
+      logs[wo.oefening.id] = [{ tijd: "", gewicht: "", done: false }]
+    } else if (isCardio(wo.oefening)) {
       logs[wo.oefening.id] = [{ duur: "", afstand: "", done: false }]
     } else {
       logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
@@ -761,7 +776,7 @@ async function chooseSelfWorkout(workoutId) {
 
   setWorkoutLoading(true)
   const today = getNLDate()
-  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, spiergroep, youtube_url, instructies, fouten ) ) )`
+  const PLANNING_SELECT = `id, datum, gedaan, workout:workout_id ( id, naam, dag_type, workout_oefeningen ( id, sets, reps, volgorde, oefening:oefening_id ( id, naam, dag_type, categorie, spiergroep, youtube_url, instructies, fouten ) ) )`
 
   const uid = publicUserId ?? user.id
 
@@ -817,11 +832,18 @@ const SPIER_KEYWORDS = {
   benen:      ["quadricep", "hamstring", "billen", "kuiten"],
   core:       ["core", "buik", "stabiliteit"],
   cardio:     ["conditie", "cardio", "hardloop", "fietsen", "rowing"],
+  hyrox:      ["skierg", "sled", "burpee", "farmers", "sandbag", "wall ball", "hyrox"],
 }
 const EQUIP_NIVEAU = { gym: "gym", thuis: "homegym", lichaamsgewicht: "lichaamsgewicht" }
 
+function isHyrox(oe) {
+  if (!oe) return false
+  return (oe.categorie || "").toLowerCase() === "hyrox"
+}
+
 function isCardio(oe) {
   if (!oe) return false
+  if (isHyrox(oe)) return false  // hyrox has its own flow
   return (oe.dag_type || "").toLowerCase() === "cardio" ||
     /conditie|cardio|hardloop|fietsen|rowing/i.test(oe.spiergroep || "")
 }
@@ -829,7 +851,7 @@ function isCardio(oe) {
 async function loadBuilderOefeningen(q = builderSearch, spier = builderFilterSpier, equip = builderFilterEquip) {
   let query = supabase
     .from("oefeningen")
-    .select("id, naam, spiergroep, niveau, dag_type")
+    .select("id, naam, spiergroep, niveau, dag_type, categorie")
     .order("naam", { ascending: true })
     .limit(80)
 
@@ -840,7 +862,9 @@ async function loadBuilderOefeningen(q = builderSearch, spier = builderFilterSpi
   let results = data || []
 
   if (spier !== "alle") {
-    if (spier === "cardio") {
+    if (spier === "hyrox") {
+      results = results.filter(oe => isHyrox(oe))
+    } else if (spier === "cardio") {
       results = results.filter(oe => isCardio(oe))
     } else {
       const kws = SPIER_KEYWORDS[spier] || [spier]
@@ -868,8 +892,9 @@ async function setEquipFilter(v) {
 
 function addBuilderOefening(oe) {
   if (builderItems.find(x => x.oefening_id === oe.id)) return
-  const cardio = isCardio(oe)
-  setBuilderItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 1, reps: cardio ? 0 : 10, cardio }])
+  const hyrox = isHyrox(oe)
+  const cardio = !hyrox && isCardio(oe)
+  setBuilderItems(prev => [...prev, { oefening_id: oe.id, naam: oe.naam, sets: 1, reps: cardio || hyrox ? 0 : 10, cardio, hyrox }])
   setBuilderSearch("")
   setBuilderResults([])
 }
@@ -979,12 +1004,16 @@ async function finishWorkout() {
   const rows = []
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
-    const cardio = isCardio(wo.oefening)
+    const hyrox = isHyrox(wo.oefening)
+    const cardio = !hyrox && isCardio(wo.oefening)
     ;(setLogs[wo.oefening.id] || []).forEach((s, i) => {
       if (s.done) rows.push({
         user_id: uid, workout_id: todayWorkout.workout.id,
         oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
-        ...(cardio ? {
+        ...(hyrox ? {
+          duur_minuten: parseTijd(s.tijd),
+          gewicht:      s.gewicht ? parseFloat(s.gewicht) : null,
+        } : cardio ? {
           duur_minuten: s.duur ? parseFloat(s.duur) : null,
           afstand_km:   s.afstand ? parseFloat(s.afstand) : null,
         } : {
@@ -1230,7 +1259,7 @@ const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.leng
 
 // ── Onboarding wizard (nieuwe 5-stap flow) ───────────────────
 if (showWizard) {
-  const GOAL_TYPES  = ["Afvallen", "Sterker worden", "Fitter worden", "Leefstijl verbeteren"]
+  const GOAL_TYPES  = ["Afvallen", "Sterker worden", "Fitter worden", "Leefstijl verbeteren", "Hyrox"]
   const LIKES_OPTS  = ["Kracht", "Hardlopen", "Fietsen", "Zwemmen", "Wandelen", "Anders"]
   const totalWSteps = 5
   const wInput      = { width: "100%", padding: "13px 14px", borderRadius: 8, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none" }
@@ -1274,7 +1303,9 @@ if (showWizard) {
     const today = getNLDate()
     const wPayload = {
       onboarding_completed: true,
-      goal_title:           wizardGoalTitle.trim() || wizardGoalType || null,
+      goal_title:           wizardGoalType === "Hyrox"
+                              ? `Hyrox — ${wizardGoalTitle.trim() || "Race"}`
+                              : (wizardGoalTitle.trim() || wizardGoalType || null),
       goal_deadline:        wizardGoalDeadline || null,
       goal_preferences:     { likes: wizardLikes, niveau: wizardNiveau, locaties: wizardLocaties, frequency: wizardFrequency },
       goal:                 wizardGoalType || null,
@@ -1344,16 +1375,20 @@ if (showWizard) {
               ))}
             </div>
             <div style={{ marginBottom: 16 }}>
-              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Omschrijf je doel</p>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+                {wizardGoalType === "Hyrox" ? "Welke Hyrox wedstrijd train je voor?" : "Omschrijf je doel"}
+              </p>
               <input
                 value={wizardGoalTitle}
                 onChange={e => setWizardGoalTitle(e.target.value)}
-                placeholder='bijv. "10 kg afvallen voor de zomer"'
+                placeholder={wizardGoalType === "Hyrox" ? 'bijv. "Amsterdam Hyrox Open"' : 'bijv. "10 kg afvallen voor de zomer"'}
                 style={wInput}
               />
             </div>
             <div style={{ marginBottom: 28 }}>
-              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Wanneer wil je dit bereikt hebben?</p>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+                {wizardGoalType === "Hyrox" ? "Wedstrijddatum" : "Wanneer wil je dit bereikt hebben?"}
+              </p>
               <input
                 type="date"
                 value={wizardGoalDeadline}
@@ -3005,7 +3040,7 @@ return (
 
                 {/* Spiergroep filter pills */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 7 }}>
-                  {["alle","borst","rug","schouders","armen","benen","core","cardio"].map(v => (
+                  {["alle","borst","rug","schouders","armen","benen","core","cardio","hyrox"].map(v => (
                     <button key={v} onClick={() => setSpierFilter(v)}
                       style={{ padding: "5px 11px", borderRadius: 20, border: `1px solid ${builderFilterSpier === v ? GREEN : C.border}`, background: builderFilterSpier === v ? GREEN + "22" : "transparent", color: builderFilterSpier === v ? GREEN : C.textDim, fontSize: 12, fontWeight: builderFilterSpier === v ? 700 : 400, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }}>
                       {v === "alle" ? "Alle" : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -3176,7 +3211,35 @@ return (
                           )}
                         </div>
                       )}
-                      {isCardio(oe) ? (
+                      {isHyrox(oe) ? (
+                        // ── Hyrox invoer (tijd mm:ss + optioneel gewicht) ──
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input type="text" inputMode="numeric" value={sets[0]?.tijd || ""} placeholder="mm:ss"
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], tijd: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box", fontVariantNumeric: "tabular-nums" }}
+                            />
+                            <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>tijd</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input type="number" min="0" step="0.5" value={sets[0]?.gewicht || ""} placeholder="kg (optioneel)"
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
+                            />
+                            <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>kg</span>
+                          </div>
+                          {prevSets[oe.id]?.[0]?.duur_minuten != null && (
+                            <p style={{ color: C.textDim, fontSize: 11, margin: 0 }}>
+                              Vorige keer: {fmtTijd(prevSets[oe.id][0].duur_minuten)}{prevSets[oe.id][0].gewicht != null ? ` — ${prevSets[oe.id][0].gewicht} kg` : ""}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [oe.id]: u } })}
+                            style={{ padding: "10px 0", borderRadius: 8, border: `2px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: sets[0]?.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: sets[0]?.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>
+                            {sets[0]?.done ? "✓ Gedaan" : "Markeer als gedaan"}
+                          </button>
+                        </div>
+                      ) : isCardio(oe) ? (
                         // ── Cardio invoer ──
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -3269,24 +3332,42 @@ return (
                 const oeMap = {}
                 exercises.forEach(wo => { if (wo.oefening?.id) oeMap[wo.oefening.id] = wo.oefening })
 
+                const hyroxSets     = []
                 const cardioSets    = []
                 const krachtSets    = []
                 Object.entries(setLogs).forEach(([oeId, sets]) => {
                   const oe = oeMap[oeId]
                   sets.filter(s => s.done).forEach(s => {
-                    if (isCardio(oe)) cardioSets.push(s)
+                    if (isHyrox(oe)) hyroxSets.push(s)
+                    else if (isCardio(oe)) cardioSets.push(s)
                     else krachtSets.push(s)
                   })
                 })
 
-                const totalDuur    = cardioSets.reduce((s, c) => s + (parseFloat(c.duur)    || 0), 0)
-                const totalAfstand = cardioSets.reduce((s, c) => s + (parseFloat(c.afstand) || 0), 0)
-                const volume       = Math.round(krachtSets.reduce((sum, s) => sum + (parseFloat(s.gewicht) || 0) * (parseInt(s.reps) || 0), 0))
+                const totalDuur     = cardioSets.reduce((s, c) => s + (parseFloat(c.duur)    || 0), 0)
+                const totalAfstand  = cardioSets.reduce((s, c) => s + (parseFloat(c.afstand) || 0), 0)
+                const hyroxStations = hyroxSets.filter(s => s.tijd).length
+                const volume        = Math.round(krachtSets.reduce((sum, s) => sum + (parseFloat(s.gewicht) || 0) * (parseInt(s.reps) || 0), 0))
 
-                if (cardioSets.length === 0 && krachtSets.length === 0) return null
+                if (hyroxSets.length === 0 && cardioSets.length === 0 && krachtSets.length === 0) return null
 
+                const colCount = [hyroxSets.length > 0, cardioSets.length > 0, krachtSets.length > 0].filter(Boolean).length
                 return (
-                  <div style={{ display: "grid", gridTemplateColumns: cardioSets.length > 0 && krachtSets.length > 0 ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 24 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(colCount + (totalAfstand > 0 || volume > 0 ? 1 : 0), 3)}, 1fr)`, gap: 10, marginBottom: 24 }}>
+                    {hyroxSets.length > 0 && (
+                      <>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                          <p style={{ color: "#f97316", fontSize: 26, fontWeight: "bold", margin: 0 }}>{hyroxSets.length}</p>
+                          <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>Hyrox stations</p>
+                        </div>
+                        {hyroxStations > 0 && (
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
+                            <p style={{ color: "#f97316", fontSize: 26, fontWeight: "bold", margin: 0 }}>{fmtTijd(hyroxSets.reduce((s, h) => s + (parseTijd(h.tijd) || 0), 0))}</p>
+                            <p style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>totale tijd</p>
+                          </div>
+                        )}
+                      </>
+                    )}
                     {cardioSets.length > 0 && (
                       <>
                         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
