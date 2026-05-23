@@ -112,7 +112,14 @@ function buildSystemPrompt(profile, ctx) {
     ? `Weekmenu: ontbijt ${ctx.weekmenu_vandaag.ontbijt || "—"} | lunch ${ctx.weekmenu_vandaag.lunch || "—"} | diner ${ctx.weekmenu_vandaag.diner || "—"}`
     : ""
 
-  return `Je bent de persoonlijke discipline coach van ${naam}.
+  return `BELANGRIJK: Je hebt toegang tot echte tools die data opslaan in de AXIS database:
+- Wanneer de gebruiker zegt "ik weeg X" of "weeg X" of "sla X kg op" → gebruik ALTIJD save_weight
+- Wanneer de gebruiker zegt "commitment: X" of "vandaag doe ik X" of "voeg X toe" → gebruik ALTIJD add_commitment
+- Wanneer de gebruiker zegt "gedaan" of "klaar" of "commitment afgerond" → gebruik ALTIJD mark_commitment_done
+- Wanneer de gebruiker zegt "ik heb X kcal gegeten" of "log X kcal" → gebruik ALTIJD log_food
+Zeg NOOIT dat je geen data kunt opslaan. Je tools werken écht en slaan direct op in de database.
+
+Je bent de persoonlijke discipline coach van ${naam}.
 Doel: ${doel}. ${deadlineStr}
 Streak: ${streak} ${streak === 1 ? "dag" : "dagen"} | Gemiste dagen: ${missed}.
 
@@ -139,20 +146,7 @@ TOON:
 
 GRENZEN:
 - Geen medisch advies of blessurebehandeling
-- Buiten fitness/voeding/discipline domein: vriendelijk doorverwijzen
-
-ACTIES — gebruik tools als de gebruiker dit vraagt:
-- Gewicht opslaan: "ik weeg X", "weeg X", "sla X kg op" → save_weight
-- Commitment toevoegen: "commitment X", "vandaag doe ik X", "voeg X toe" → add_commitment
-- Commitment als gedaan markeren: "gedaan", "klaar", "commitment afgerond" → mark_commitment_done
-- Voeding loggen: "voeding X kcal", "ik heb X kcal gegeten", "log X kcal" → log_food
-
-TOOLS — je hebt de volgende tools en kunt ze ECHT gebruiken:
-- save_weight: sla het gewicht op van de gebruiker
-- add_commitment: voeg een commitment toe voor vandaag
-- mark_commitment_done: markeer de huidige commitment als gedaan
-- log_food: log voeding voor vandaag
-Zeg NOOIT dat je geen data kunt opslaan — je kunt het via deze tools. Gebruik ze direct en bevestig in één zin dat de actie is uitgevoerd.`
+- Buiten fitness/voeding/discipline domein: vriendelijk doorverwijzen`
 }
 
 const COACH_TOOLS = [
