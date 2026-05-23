@@ -2938,11 +2938,12 @@ return (
                   gym:             { label: "Gym",             icon: "🏋️" },
                   homegym:         { label: "Home Gym",        icon: "🏠" },
                   lichaamsgewicht: { label: "Lichaamsgewicht", icon: "💪" },
+                  hyrox:           { label: "Hyrox",           icon: "🏃" },
                 }
-                const ORDER = ["gym", "homegym", "lichaamsgewicht"]
+                const ORDER = ["gym", "homegym", "lichaamsgewicht", "hyrox"]
                 const grouped = {}
                 for (const w of workoutLibrary) {
-                  const n = w.niveau || "overig"
+                  const n = (w.dag_type || "").toLowerCase() === "hyrox" ? "hyrox" : (w.niveau || "overig")
                   if (!grouped[n]) grouped[n] = []
                   grouped[n].push(w)
                 }
