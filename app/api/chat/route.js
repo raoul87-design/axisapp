@@ -339,6 +339,8 @@ export async function POST(request) {
       console.log("[chat] context geladen: nee — geen profiel (token:", token ? "aanwezig maar ongeldig" : "ontbreekt", "| publicUserId:", publicUserId ?? "ontbreekt", ")")
     }
 
+    console.log("[chat] messages naar API (call 1):", JSON.stringify(messages.map(m => ({ role: m.role, type: Array.isArray(m.content) ? m.content.map(b => b.type) : "string" }))))
+
     const firstResponse = await anthropic.messages.create({
       model:      "claude-sonnet-4-6",
       max_tokens: 512,
@@ -365,6 +367,8 @@ export async function POST(request) {
           }],
         },
       ]
+
+      console.log("[chat] messages naar API (call 2 follow-up):", JSON.stringify(followUpMessages.map(m => ({ role: m.role, type: Array.isArray(m.content) ? m.content.map(b => b.type) : "string" }))))
 
       const followUp = await anthropic.messages.create({
         model:      "claude-sonnet-4-6",
