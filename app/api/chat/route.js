@@ -295,6 +295,17 @@ function sanitizeMessages(messages) {
       return null
     })
     .filter(Boolean)
+
+  const merged = []
+  for (const msg of sanitized) {
+    const last = merged[merged.length - 1]
+    if (last && last.role === msg.role) {
+      last.content += "\n" + msg.content
+    } else {
+      merged.push({ ...msg })
+    }
+  }
+  return merged
 }
 
 async function resolveUserByPublicId(publicUserId) {
