@@ -939,7 +939,7 @@ function toggleCoachSection() {
 
 async function autoWorkoutCommitment(workoutNaam, forDate) {
   if (!workoutNaam || !user) return
-  const uid = publicUserId ?? user.id
+  const uid = publicUserIdRef.current ?? publicUserId ?? user.id
   const tekst = `💪 ${workoutNaam}`
   const { data: dup } = await supabase.from("commitments").select("id")
     .eq("user_id", uid).eq("date", forDate).eq("text", tekst).maybeSingle()
@@ -975,7 +975,7 @@ async function finishWorkout() {
   const today = getNLDate()
   const exercises = [...(todayWorkout.workout?.workout_oefeningen || [])]
     .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
-  const uid = publicUserId ?? user.id
+  const uid = publicUserIdRef.current ?? publicUserId ?? user.id
   const rows = []
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
@@ -1004,8 +1004,8 @@ async function finishWorkout() {
   }
   await supabase.from("workout_planning").update({ gedaan: true }).eq("id", todayWorkout.id)
   if (todayWorkout.workout?.naam) {
-    const uid = publicUserId ?? user.id
-    console.log("[commitments insert] finishWorkout update done | user_id:", uid, "| publicUserId:", publicUserId, "| user.id:", user.id)
+    const uid = publicUserIdRef.current ?? publicUserId ?? user.id
+    console.log("[commitments insert] finishWorkout update done | user_id:", uid, "| publicUserId:", publicUserId, "| publicUserIdRef:", publicUserIdRef.current, "| user.id:", user.id)
     await supabase.from("commitments")
       .update({ done: true })
       .eq("user_id", uid).eq("date", today).eq("text", `💪 ${todayWorkout.workout.naam}`)
