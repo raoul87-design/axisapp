@@ -132,6 +132,8 @@ const [wizardSaving,            setWizardSaving]            = useState(false)
 const [wizardNiveau,            setWizardNiveau]            = useState("")
 const [wizardLocaties,          setWizardLocaties]          = useState([])
 const [wizardChosenCommitment,  setWizardChosenCommitment]  = useState("")
+const [wizardVoornaam,          setWizardVoornaam]          = useState("")
+const [wizardAchternaam,        setWizardAchternaam]        = useState("")
 
 // ── Doel balk state ───────────────────────────────────────────
 const [hasCoach,           setHasCoach]           = useState(false)
@@ -399,7 +401,12 @@ async function checkFirstUse() {
   }
 
   console.log("[checkFirstUse] goal:", data.goal ?? "NULL", "| role:", data.role ?? "NULL", "| onboarding_completed:", data.onboarding_completed)
-  if (data.name)              setUserName(data.name.trim().split(/\s+/)[0])
+  if (data.name) {
+    setUserName(data.name.trim().split(/\s+/)[0])
+    const nameParts = data.name.trim().split(/\s+/)
+    setWizardVoornaam(nameParts[0] || "")
+    setWizardAchternaam(nameParts.slice(1).join(" ") || "")
+  }
   if (data.role)              setUserRole(data.role)
   if (data.training_location) setTrainingLocation(data.training_location)
   if (data.fitness_level)     setFitnessLevel(data.fitness_level)
@@ -715,22 +722,40 @@ async function loadWorkoutData() {
     if (planning?.gedaan) setWorkoutScreen("done")
 
     if (planning?.workout?.workout_oefeningen?.length) {
-      const ids = planning.workout.workout_oefeningen.map(wo => wo.oefening?.id).filter(Boolean)
+      const sortedWos = [...planning.workout.workout_oefeningen]
+        .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
+      const ids = sortedWos.map(wo => wo.oefening?.id).filter(Boolean)
       const { data: prev } = await supabase
-        .from("workout_sets").select("oefening_id, gewicht, reps_gedaan, set_nummer, datum")
+        .from("workout_sets").select("oefening_id, gewicht, reps_gedaan, set_nummer, duur_minuten, afstand_km, datum")
         .eq("user_id", profile.id)
         .in("oefening_id", ids)
         .order("datum", { ascending: false })
         .order("set_nummer", { ascending: true })
       const weightMap = {}
-      const setsMap = {}
+      // raw map: oefening_id → { date, sets[] }
+      const rawMap = {}
       for (const s of prev || []) {
         if (!weightMap[s.oefening_id] && s.gewicht != null) weightMap[s.oefening_id] = s.gewicht
-        if (!setsMap[s.oefening_id]) setsMap[s.oefening_id] = { date: s.datum, sets: [] }
-        if (setsMap[s.oefening_id].date === s.datum) setsMap[s.oefening_id].sets.push(s)
+        if (!rawMap[s.oefening_id]) rawMap[s.oefening_id] = { date: s.datum, sets: [] }
+        if (rawMap[s.oefening_id].date === s.datum) rawMap[s.oefening_id].sets.push(s)
       }
+      // Build prevSetsMap keyed by wo.id (unique per station position)
       const prevSetsMap = {}
-      for (const [id, val] of Object.entries(setsMap)) prevSetsMap[id] = val.sets
+      const occurrenceCount = {}
+      for (const wo of sortedWos) {
+        const oeId = wo.oefening?.id
+        if (!oeId) continue
+        const oe = wo.oefening
+        if (isHyrox(oe) || isCardio(oe)) {
+          if (!occurrenceCount[oeId]) occurrenceCount[oeId] = 0
+          occurrenceCount[oeId]++
+          const setNum = occurrenceCount[oeId]
+          const match = (rawMap[oeId]?.sets || []).find(s => s.set_nummer === setNum)
+          prevSetsMap[wo.id] = match ? [match] : []
+        } else {
+          prevSetsMap[wo.id] = rawMap[oeId]?.sets || []
+        }
+      }
       setPrevWeights(weightMap)
       setPrevSets(prevSetsMap)
     }
@@ -754,11 +779,11 @@ function startWorkoutFromPlanning(planning) {
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
     if (isHyrox(wo.oefening)) {
-      logs[wo.oefening.id] = [{ tijd: "", gewicht: "", done: false }]
+      logs[wo.id] = [{ tijd: "", gewicht: "", done: false }]
     } else if (isCardio(wo.oefening)) {
-      logs[wo.oefening.id] = [{ duur: "", afstand: "", done: false }]
+      logs[wo.id] = [{ duur: "", afstand: "", done: false }]
     } else {
-      logs[wo.oefening.id] = Array.from({ length: wo.sets || 3 }, () => ({
+      logs[wo.id] = Array.from({ length: wo.sets || 3 }, () => ({
         reps: wo.reps ? String(wo.reps) : "", gewicht: prevWeights[wo.oefening.id] ? String(prevWeights[wo.oefening.id]) : "", done: false,
       }))
     }
@@ -1002,14 +1027,24 @@ async function finishWorkout() {
     .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
   const uid = publicUserIdRef.current ?? publicUserId ?? user.id
   const rows = []
+  const occurrenceCount = {}
   for (const wo of exercises) {
     if (!wo.oefening?.id) continue
     const hyrox = isHyrox(wo.oefening)
     const cardio = !hyrox && isCardio(wo.oefening)
-    ;(setLogs[wo.oefening.id] || []).forEach((s, i) => {
-      if (s.done) rows.push({
+    const oeId = wo.oefening.id
+    ;(setLogs[wo.id] || []).forEach((s, i) => {
+      if (!s.done) return
+      let setNum = i + 1
+      if (hyrox || cardio) {
+        // use occurrence index as set_nummer so each duplicate station is distinguishable in DB
+        if (!occurrenceCount[oeId]) occurrenceCount[oeId] = 0
+        occurrenceCount[oeId]++
+        setNum = occurrenceCount[oeId]
+      }
+      rows.push({
         user_id: uid, workout_id: todayWorkout.workout.id,
-        oefening_id: wo.oefening.id, datum: today, set_nummer: i + 1,
+        oefening_id: oeId, datum: today, set_nummer: setNum,
         ...(hyrox ? {
           duur_minuten: parseTijd(s.tijd),
           gewicht:      s.gewicht ? parseFloat(s.gewicht) : null,
@@ -1301,8 +1336,10 @@ if (showWizard) {
     if (wizardSaving) return
     setWizardSaving(true)
     const today = getNLDate()
+    const fullName = [wizardVoornaam.trim(), wizardAchternaam.trim()].filter(Boolean).join(" ")
     const wPayload = {
       onboarding_completed: true,
+      ...(fullName ? { name: fullName } : {}),
       goal_title:           wizardGoalType === "Hyrox"
                               ? `Hyrox — ${wizardGoalTitle.trim() || "Race"}`
                               : (wizardGoalTitle.trim() || wizardGoalType || null),
@@ -1330,6 +1367,7 @@ if (showWizard) {
       })
       if (commitErr) console.error("[finishWizard] commitments insert failed:", commitErr.message, "| user_id used:", commitUserId)
     }
+    if (fullName)               setUserName(wizardVoornaam.trim())
     if (wizardGoalTitle.trim()) setGoalTitle(wizardGoalTitle.trim())
     if (wizardGoalDeadline)     setGoalDeadline(wizardGoalDeadline)
     setOnboardingCompleted(true)
@@ -1346,21 +1384,47 @@ if (showWizard) {
           Stap {wizardStep} van {totalWSteps}
         </p>
 
-        {/* Stap 1 — Welkom */}
+        {/* Stap 1 — Welkom + naam */}
         {wizardStep === 1 && (
           <>
             <div style={{ marginBottom: 8 }}>
               <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 12px" }}>AXIS</p>
               <h2 style={{ fontSize: 24, color: "#fff", margin: "0 0 16px", lineHeight: 1.3 }}>
-                {hasCoach ? "Welkom bij AXIS" : "Welkom bij AXIS"}
+                {wizardVoornaam.trim() ? `Welkom, ${wizardVoornaam.trim()}!` : "Welkom bij AXIS"}
               </h2>
-              <p style={{ color: "#888", fontSize: 15, lineHeight: 1.6, margin: "0 0 32px" }}>
+              <p style={{ color: "#888", fontSize: 15, lineHeight: 1.6, margin: "0 0 24px" }}>
                 {hasCoach
                   ? "Je coach heeft je toegang gegeven tot AXIS. Wij zijn er op de dagen dat je niet traint."
                   : "Jij bepaalt je doel — wij helpen je het te halen."}
               </p>
             </div>
-            <button onClick={() => setWizardStep(2)} style={wBtnPrimary}>Aan de slag →</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <div>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Voornaam *</p>
+                <input
+                  value={wizardVoornaam}
+                  onChange={e => setWizardVoornaam(e.target.value)}
+                  placeholder="Thomas"
+                  style={wInput}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Achternaam</p>
+                <input
+                  value={wizardAchternaam}
+                  onChange={e => setWizardAchternaam(e.target.value)}
+                  placeholder="de Vries"
+                  style={wInput}
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => { if (wizardVoornaam.trim()) setWizardStep(2) }}
+              style={{ ...wBtnPrimary, opacity: wizardVoornaam.trim() ? 1 : 0.4, cursor: wizardVoornaam.trim() ? "pointer" : "default" }}
+            >
+              Aan de slag →
+            </button>
           </>
         )}
 
@@ -3164,7 +3228,7 @@ return (
                 .map(wo => {
                   const oe = wo.oefening
                   if (!oe) return null
-                  const sets = setLogs[oe.id] || []
+                  const sets = setLogs[wo.id] || []
                   const prev = prevWeights[oe.id]
                   return (
                     <div key={wo.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
@@ -3217,25 +3281,25 @@ return (
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <input type="text" inputMode="numeric" value={sets[0]?.tijd || ""} placeholder="mm:ss"
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], tijd: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], tijd: e.target.value }; return { ...prev, [wo.id]: u } })}
                               style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box", fontVariantNumeric: "tabular-nums" }}
                             />
                             <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>tijd</span>
                           </div>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <input type="number" min="0" step="0.5" value={sets[0]?.gewicht || ""} placeholder="kg (optioneel)"
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], gewicht: e.target.value }; return { ...prev, [wo.id]: u } })}
                               style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
                             />
                             <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>kg</span>
                           </div>
-                          {prevSets[oe.id]?.[0]?.duur_minuten != null && (
+                          {prevSets[wo.id]?.[0]?.duur_minuten != null && (
                             <p style={{ color: C.textDim, fontSize: 11, margin: 0 }}>
-                              Vorige keer: {fmtTijd(prevSets[oe.id][0].duur_minuten)}{prevSets[oe.id][0].gewicht != null ? ` — ${prevSets[oe.id][0].gewicht} kg` : ""}
+                              Vorige keer: {fmtTijd(prevSets[wo.id][0].duur_minuten)}{prevSets[wo.id][0].gewicht != null ? ` — ${prevSets[wo.id][0].gewicht} kg` : ""}
                             </p>
                           )}
                           <button
-                            onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [oe.id]: u } })}
+                            onClick={() => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ tijd: "", gewicht: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [wo.id]: u } })}
                             style={{ padding: "10px 0", borderRadius: 8, border: `2px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: sets[0]?.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: sets[0]?.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>
                             {sets[0]?.done ? "✓ Gedaan" : "Markeer als gedaan"}
                           </button>
@@ -3245,25 +3309,25 @@ return (
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <input type="number" min="0" value={sets[0]?.duur || ""} placeholder="min"
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], duur: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], duur: e.target.value }; return { ...prev, [wo.id]: u } })}
                               style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
                             />
                             <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>minuten</span>
                           </div>
                           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <input type="number" min="0" step="0.1" value={sets[0]?.afstand || ""} placeholder="km (optioneel)"
-                              onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], afstand: e.target.value }; return { ...prev, [oe.id]: u } })}
+                              onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], afstand: e.target.value }; return { ...prev, [wo.id]: u } })}
                               style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: `1px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box" }}
                             />
                             <span style={{ color: C.textMuted, fontSize: 13, whiteSpace: "nowrap" }}>km</span>
                           </div>
-                          {prevSets[oe.id]?.[0]?.duur_minuten != null && (
+                          {prevSets[wo.id]?.[0]?.duur_minuten != null && (
                             <p style={{ color: C.textDim, fontSize: 11, margin: 0 }}>
-                              Vorige keer: {prevSets[oe.id][0].duur_minuten} min{prevSets[oe.id][0].afstand_km != null ? ` — ${prevSets[oe.id][0].afstand_km} km` : ""}
+                              Vorige keer: {prevSets[wo.id][0].duur_minuten} min{prevSets[wo.id][0].afstand_km != null ? ` — ${prevSets[wo.id][0].afstand_km} km` : ""}
                             </p>
                           )}
                           <button
-                            onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [oe.id]: u } })}
+                            onClick={() => setSetLogs(prev => { const u = [...(prev[wo.id] || [{ duur: "", afstand: "", done: false }])]; u[0] = { ...u[0], done: !u[0].done }; return { ...prev, [wo.id]: u } })}
                             style={{ padding: "10px 0", borderRadius: 8, border: `2px solid ${sets[0]?.done ? GREEN : C.inputBorder}`, background: sets[0]?.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: sets[0]?.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>
                             {sets[0]?.done ? "✓ Gedaan" : "Markeer als gedaan"}
                           </button>
@@ -3278,7 +3342,7 @@ return (
                             <span></span>
                           </div>
                           {sets.map((s, si) => {
-                            const ps = prevSets[oe.id]?.[si]
+                            const ps = prevSets[wo.id]?.[si]
                             const hint = ps
                               ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps_gedaan != null ? `× ${ps.reps_gedaan}` : null].filter(Boolean).join(" ")
                               : null
@@ -3287,14 +3351,14 @@ return (
                                 <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 36px", gap: 6, alignItems: "center" }}>
                                   <span style={{ color: s.done ? GREEN : C.textMuted, fontSize: 14, fontWeight: "bold" }}>{si + 1}</span>
                                   <input type="number" value={s.reps} placeholder={wo.reps || "—"}
-                                    onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                    onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [])]; u[si] = { ...u[si], reps: e.target.value }; return { ...prev, [wo.id]: u } })}
                                     style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
                                   />
                                   <input type="number" value={s.gewicht} placeholder="0"
-                                    onChange={e => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [oe.id]: u } })}
+                                    onChange={e => setSetLogs(prev => { const u = [...(prev[wo.id] || [])]; u[si] = { ...u[si], gewicht: e.target.value }; return { ...prev, [wo.id]: u } })}
                                     style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${s.done ? GREEN : C.inputBorder}`, background: C.inputBg, color: C.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }}
                                   />
-                                  <button onClick={() => setSetLogs(prev => { const u = [...(prev[oe.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [oe.id]: u } })}
+                                  <button onClick={() => setSetLogs(prev => { const u = [...(prev[wo.id] || [])]; u[si] = { ...u[si], done: !u[si].done }; return { ...prev, [wo.id]: u } })}
                                     style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${s.done ? GREEN : C.inputBorder}`, background: s.done ? "#0a1a0f" : "transparent", cursor: "pointer", color: GREEN, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                     {s.done ? "✓" : ""}
                                   </button>
@@ -3331,13 +3395,13 @@ return (
               {(() => {
                 const exercises = todayWorkout?.workout?.workout_oefeningen || []
                 const oeMap = {}
-                exercises.forEach(wo => { if (wo.oefening?.id) oeMap[wo.oefening.id] = wo.oefening })
+                exercises.forEach(wo => { if (wo.id) oeMap[wo.id] = wo.oefening })
 
                 const hyroxSets     = []
                 const cardioSets    = []
                 const krachtSets    = []
-                Object.entries(setLogs).forEach(([oeId, sets]) => {
-                  const oe = oeMap[oeId]
+                Object.entries(setLogs).forEach(([woId, sets]) => {
+                  const oe = oeMap[woId]
                   sets.filter(s => s.done).forEach(s => {
                     if (isHyrox(oe)) hyroxSets.push(s)
                     else if (isCardio(oe)) cardioSets.push(s)

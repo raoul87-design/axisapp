@@ -72,7 +72,7 @@ export default function InvitePage() {
 
       const payload = {
         auth_user_id:         authUser.id,
-        naam:                 resolvedPreData?.naam                          || null,
+        name:                 resolvedPreData?.naam                          || null,
         training_locations:   resolvedPreData?.training_locations?.length
                                 ? resolvedPreData.training_locations : [],
         fitness_level:        resolvedPreData?.fitness_level                 || null,
