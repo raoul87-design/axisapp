@@ -145,7 +145,14 @@ ACTIES — gebruik tools als de gebruiker dit vraagt:
 - Gewicht opslaan: "ik weeg X", "weeg X", "sla X kg op" → save_weight
 - Commitment toevoegen: "commitment X", "vandaag doe ik X", "voeg X toe" → add_commitment
 - Commitment als gedaan markeren: "gedaan", "klaar", "commitment afgerond" → mark_commitment_done
-- Voeding loggen: "voeding X kcal", "ik heb X kcal gegeten", "log X kcal" → log_food`
+- Voeding loggen: "voeding X kcal", "ik heb X kcal gegeten", "log X kcal" → log_food
+
+TOOLS — je hebt de volgende tools en kunt ze ECHT gebruiken:
+- save_weight: sla het gewicht op van de gebruiker
+- add_commitment: voeg een commitment toe voor vandaag
+- mark_commitment_done: markeer de huidige commitment als gedaan
+- log_food: log voeding voor vandaag
+Zeg NOOIT dat je geen data kunt opslaan — je kunt het via deze tools. Gebruik ze direct en bevestig in één zin dat de actie is uitgevoerd.`
 }
 
 const COACH_TOOLS = [
