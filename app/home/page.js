@@ -726,7 +726,7 @@ async function loadWorkoutData() {
         .sort((a, b) => (a.volgorde || 0) - (b.volgorde || 0))
       const ids = sortedWos.map(wo => wo.oefening?.id).filter(Boolean)
       const { data: prev } = await supabase
-        .from("workout_sets").select("oefening_id, gewicht, reps_gedaan, set_nummer, duur_minuten, afstand_km, datum")
+        .from("workout_sets").select("oefening_id, gewicht, reps, set_nummer, duur_minuten, afstand_km, datum")
         .eq("user_id", profile.id)
         .in("oefening_id", ids)
         .order("datum", { ascending: false })
@@ -1052,7 +1052,7 @@ async function finishWorkout() {
           duur_minuten: s.duur ? parseFloat(s.duur) : null,
           afstand_km:   s.afstand ? parseFloat(s.afstand) : null,
         } : {
-          reps_gedaan: s.reps    ? parseInt(s.reps)      : null,
+          reps:        s.reps    ? parseInt(s.reps)      : null,
           gewicht:     s.gewicht ? parseFloat(s.gewicht) : null,
         }),
       })
@@ -3344,7 +3344,7 @@ return (
                           {sets.map((s, si) => {
                             const ps = prevSets[wo.id]?.[si]
                             const hint = ps
-                              ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps_gedaan != null ? `× ${ps.reps_gedaan}` : null].filter(Boolean).join(" ")
+                              ? [ps.gewicht != null ? `${ps.gewicht}kg` : null, ps.reps != null ? `× ${ps.reps}` : null].filter(Boolean).join(" ")
                               : null
                             return (
                               <div key={si}>
