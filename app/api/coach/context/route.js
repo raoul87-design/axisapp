@@ -126,7 +126,7 @@ export async function GET(request) {
 
     return Response.json({
       profiel: {
-        naam:          profile.name,
+        naam:          profile.name?.split(" ")[0] || null,
         doel:          profile.goal_title || profile.goal,
         deadline:      profile.goal_deadline,
         dagen_te_gaan,

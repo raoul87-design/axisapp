@@ -80,7 +80,7 @@ async function fetchContext(profile) {
 
 function buildSystemPrompt(profile, ctx) {
   const today     = getNLDate()
-  const naam      = profile.name || "gebruiker"
+  const naam      = profile.name?.split(" ")[0] || "je"
   const doel      = profile.goal_title  || profile.goal || "niet ingesteld"
   const streak    = profile.streak      ?? 0
   const missed    = profile.missed_days ?? 0
