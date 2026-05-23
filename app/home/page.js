@@ -1030,7 +1030,9 @@ async function saveDailyScore(score) {
 async function addCommitment(customText) {
   const t = customText || text
   if (!t || !user) return
-  await supabase.from("commitments").insert({ text: t, user_id: publicUserId ?? user.id, date: getNLDate(), done: false, category: classifyCommitment(t) })
+  const uid = publicUserId ?? user.id
+  console.log("[addCommitment] user_id:", uid, "| publicUserId:", publicUserId, "| user.id:", user.id)
+  await supabase.from("commitments").insert({ text: t, user_id: uid, date: getNLDate(), done: false, category: classifyCommitment(t) })
   if (!customText) setText("")
   loadCommitments()
 }
