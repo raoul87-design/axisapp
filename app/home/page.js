@@ -696,7 +696,7 @@ async function loadWorkoutData() {
         .order("naam", { ascending: true }),
       supabase.from("workouts")
         .select(`id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen ( id )`)
-        .eq("created_by", profile?.id)
+        .eq("created_by", publicUserIdRef.current ?? publicUserId ?? user.id)
         .eq("visibility", "personal"),
       profile?.coach_email
         ? supabase.from("workouts")
@@ -943,7 +943,7 @@ async function saveBuilder() {
       .maybeSingle()
     const payload = {
       naam: builderNaam.trim(),
-      created_by: user.id,
+      created_by: publicUserIdRef.current ?? publicUserId ?? user.id,
       visibility: "personal",
       is_template: false,
       niveau: "beginner",
@@ -968,7 +968,7 @@ async function saveBuilder() {
     const { data: fresh } = await supabase
       .from("workouts")
       .select("id, naam, niveau, dag_type, schema_type, created_by, visibility, workout_oefeningen(id)")
-      .eq("created_by", user.id).eq("visibility", "personal")
+      .eq("created_by", publicUserIdRef.current ?? publicUserId ?? user.id).eq("visibility", "personal")
     setMyWorkouts(fresh || [])
     setWorkoutScreen("picker")
   } catch (err) {
