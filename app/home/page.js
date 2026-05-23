@@ -33,6 +33,8 @@ const [showAll,         setShowAll]        = useState(false)
 const [whatsappInput,   setWhatsappInput]  = useState("")
 const [whatsappLinked,  setWhatsappLinked] = useState(false)
 const [showSettings,    setShowSettings]   = useState(false)
+const [showFaq,         setShowFaq]        = useState(false)
+const [faqOpen,         setFaqOpen]        = useState({})
 const [weekCheckIns,    setWeekCheckIns]   = useState(new Set())
 const [weekCommits,     setWeekCommits]    = useState(new Set())
 const [theme,           setTheme]          = useState("dark")
@@ -1624,18 +1626,54 @@ if (showWizard) {
           </>
         )}
 
-        {/* Stap 5 — WhatsApp uitleg */}
+        {/* Stap 5 — WhatsApp koppelen */}
         {wizardStep === 5 && (
           <>
-            <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-              <h2 style={{ marginBottom: 12, fontSize: 22, color: "#fff" }}>Zo werkt AXIS</h2>
-              <p style={{ color: "#888", fontSize: 15, lineHeight: 1.7, margin: 0 }}>
-                Elke ochtend sturen wij je een check-in via WhatsApp.<br />
-                Elke avond reflecteer je hoe het ging.<br />
-                <strong style={{ color: "#ccc" }}>Dat is alles.</strong>
-              </p>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 10px" }}>WhatsApp</p>
+              <h2 style={{ fontSize: 22, color: "#fff", margin: "0 0 6px" }}>Koppel WhatsApp aan AXIS</h2>
+              <p style={{ color: "#888", fontSize: 14, margin: 0 }}>Ontvang je dagelijkse check-in en stuur snel je voortgang door.</p>
             </div>
+
+            {/* Stappen */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              {[
+                { n: 1, text: <>Sla dit nummer op als <strong style={{ color: "#fff" }}>'AXIS Coach'</strong>:<br /><span style={{ color: GREEN, fontFamily: "monospace", fontSize: 16 }}>+1 415 523 8886</span></> },
+                { n: 2, text: <>Stuur <span style={{ background: "#1a2a1a", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join axis-coach</span> via WhatsApp om te activeren</> },
+                { n: 3, text: <>Vanaf morgen <strong style={{ color: "#fff" }}>08:00</strong> ontvang je je dagelijkse check-in</> },
+              ].map(({ n, text }) => (
+                <div key={n} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: GREEN, color: "#000", fontWeight: "bold", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>
+                  <p style={{ color: "#ccc", fontSize: 14, lineHeight: 1.6, margin: 0 }}>{text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Voorbeeldberichten */}
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Voorbeeldberichten</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {[
+                  { msg: "76 kilo", uitleg: "gewicht opslaan" },
+                  { msg: "commitment: 30 min hardlopen", uitleg: "commitment toevoegen" },
+                  { msg: "Ja", uitleg: "avond reflectie beantwoorden" },
+                  { msg: "rustdag", uitleg: "rustdag inplannen" },
+                ].map(({ msg, uitleg }) => (
+                  <div key={msg} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ background: "#1a3320", border: "1px solid #2a4a30", borderRadius: "12px 12px 12px 3px", padding: "7px 12px", color: "#a3e6b0", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      {msg}
+                    </div>
+                    <span style={{ color: "#555", fontSize: 12 }}>→ {uitleg}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Knoppen */}
+            <a href="https://wa.me/14155238886" target="_blank" rel="noopener noreferrer"
+              style={{ display: "block", width: "100%", padding: "13px", background: "#1a3320", border: "1px solid #2a5530", borderRadius: 8, color: GREEN, fontWeight: "bold", fontSize: 15, textAlign: "center", textDecoration: "none", boxSizing: "border-box", marginBottom: 10 }}>
+              Open WhatsApp →
+            </a>
             <button
               onClick={finishWizard}
               disabled={wizardSaving}
@@ -2145,6 +2183,7 @@ return (
               { icon: "🔑", label: "Wachtwoord instellen", onClick: async () => { setShowSettings(false); const pw = prompt("Nieuw wachtwoord (min. 6 tekens):"); if (!pw || pw.length < 6) return; const { error } = await supabase.auth.updateUser({ password: pw }); if (error) alert("Fout: " + error.message); else alert("Wachtwoord opgeslagen!") } },
               { icon: "💬", label: "Koppel WhatsApp",      onClick: async () => { setShowSettings(false); const number = prompt("Jouw WhatsApp nummer (+31...):"); if (!number) return; const ok = await linkWhatsapp(number); if (ok) alert("WhatsApp gekoppeld!") } },
               { icon: "🥗", label: "Voedingsdoelen",       onClick: () => { setShowSettings(false); setShowNutritionModal(true) } },
+              { icon: "❓", label: "Help & FAQ",            onClick: () => { setShowSettings(false); setShowFaq(true) } },
             ].map(({ icon, label, onClick }) => (
               <button key={label} onClick={onClick}
                 className="ax-menu-btn"
@@ -2174,6 +2213,127 @@ return (
   })()}
 
   {/* ── DOEL EDIT MODAL (overlay) ──────────────────────────── */}
+  {/* ── FAQ Modal ── */}
+  {showFaq && (
+    <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, overflowY: "auto" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 60px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+          <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>Help & FAQ</h2>
+          <button onClick={() => setShowFaq(false)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 26, lineHeight: 1, padding: "0 4px" }}>×</button>
+        </div>
+
+        {/* Accordion sections */}
+        {[
+          {
+            key: "hoe",
+            titel: "Hoe werkt AXIS?",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Elke ochtend ontvang je een check-in via WhatsApp. Je stuurt je commitment voor de dag.
+                's Avonds reflecteer je met <strong style={{ color: C.text }}>Ja</strong> of <strong style={{ color: C.text }}>Nee</strong>.
+                AXIS houdt je streak en voortgang bij.
+              </p>
+            ),
+          },
+          {
+            key: "whatsapp",
+            titel: "WhatsApp commando's",
+            inhoud: (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { cmd: "76 kilo",                      uitleg: "Gewicht opslaan" },
+                  { cmd: "weeg 76",                      uitleg: "Gewicht (alternatief)" },
+                  { cmd: "commitment: 30 min sporten",   uitleg: "Commitment toevoegen" },
+                  { cmd: "1800 kcal",                    uitleg: "Calorieën loggen" },
+                  { cmd: "180g eiwit",                   uitleg: "Eiwitten loggen" },
+                  { cmd: "rustdag",                      uitleg: "Rustdag inplannen" },
+                  { cmd: "Ja / Nee",                     uitleg: "Avondvraag beantwoorden" },
+                ].map(({ cmd, uitleg }) => (
+                  <div key={cmd} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ background: "#1a2a1a", border: "1px solid #2a4a30", borderRadius: 6, padding: "4px 10px", color: GREEN, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>{cmd}</span>
+                    <span style={{ color: C.textSub, fontSize: 13 }}>{uitleg}</span>
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+          {
+            key: "doel",
+            titel: "Hoofddoel aanpassen",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Tik op <strong style={{ color: C.text }}>···</strong> rechtsboven → <strong style={{ color: C.text }}>Mijn doel aanpassen</strong> → wijzig je doel en deadline. Je streak en voortgang blijven bewaard.
+              </p>
+            ),
+          },
+          {
+            key: "workouts",
+            titel: "Workouts",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Kies een workout uit de library of maak je eigen schema via de <strong style={{ color: C.text }}>+ Maak eigen schema</strong> knop. Cardio en Hyrox exercises hebben speciale tijdtracking (mm:ss). Sla je sets op met de ✓-knop en rond af met <strong style={{ color: C.text }}>Workout afronden</strong>.
+              </p>
+            ),
+          },
+          {
+            key: "voeding",
+            titel: "Voeding",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Zoek producten via de <strong style={{ color: C.text }}>Voeding</strong> tab of scan een barcode. De AI kan een weekmenu genereren op basis van je macro-doelen — boodschappenlijst wordt automatisch aangemaakt. Voedingsdoelen stel je in via <strong style={{ color: C.text }}>··· → Voedingsdoelen</strong>.
+              </p>
+            ),
+          },
+          {
+            key: "coach",
+            titel: "AI Coach",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Stel vragen via de <strong style={{ color: C.text }}>Coach</strong> tab. De coach kent je doel, gewicht, workouts en voeding. Je kunt ook gewicht en commitments via de coach doorgeven — hij slaat ze direct op.
+              </p>
+            ),
+          },
+          {
+            key: "streak",
+            titel: "Streak en voortgang",
+            inhoud: (
+              <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                Je streak telt elke dag dat je actief bent. Een rustdag of goede reden telt niet als gemiste dag. Bekijk je gewichtstrend, kcal-geschiedenis en activiteitenscore via de <strong style={{ color: C.text }}>Voortgang</strong> tab.
+              </p>
+            ),
+          },
+        ].map(({ key, titel, inhoud }) => {
+          const open = !!faqOpen[key]
+          return (
+            <div key={key} style={{ borderBottom: `1px solid ${C.border}` }}>
+              <button
+                onClick={() => setFaqOpen(prev => ({ ...prev, [key]: !prev[key] }))}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: "16px 0", cursor: "pointer", textAlign: "left" }}>
+                <span style={{ color: C.text, fontSize: 15, fontWeight: 600 }}>{titel}</span>
+                <span style={{ color: GREEN, fontSize: 14, transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0, marginLeft: 12 }}>▶</span>
+              </button>
+              {open && (
+                <div style={{ paddingBottom: 16 }}>{inhoud}</div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* WhatsApp activatie */}
+        <div style={{ marginTop: 32, padding: 20, background: "#1a2a1a", border: "1px solid #2a4a30", borderRadius: 12 }}>
+          <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 8px" }}>WhatsApp koppelen</p>
+          <p style={{ color: C.textSub, fontSize: 14, margin: "0 0 4px" }}>Nummer: <strong style={{ color: C.text, fontFamily: "monospace" }}>+1 415 523 8886</strong></p>
+          <p style={{ color: C.textSub, fontSize: 14, margin: "0 0 14px" }}>Stuur <span style={{ background: "#0f1f0f", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join axis-coach</span> om te activeren</p>
+          <a href="https://wa.me/14155238886" target="_blank" rel="noopener noreferrer"
+            style={{ display: "inline-block", padding: "10px 18px", background: GREEN, borderRadius: 8, color: "#000", fontWeight: "bold", fontSize: 14, textDecoration: "none" }}>
+            Open WhatsApp →
+          </a>
+        </div>
+      </div>
+    </div>
+  )}
+
   {showGoalModal && (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) setShowGoalModal(false) }}>
