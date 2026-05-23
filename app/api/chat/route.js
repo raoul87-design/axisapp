@@ -271,41 +271,30 @@ const FALLBACK_SYSTEM = `Je bent de AXIS discipline coach. Gebaseerd op James Sm
 - Maximaal 3 zinnen per antwoord
 - Gebruik 'je' constructies, geen formele taal`
 
-// Strip any tool_use/tool_result pairs from history — the frontend only stores
-// the final text replies, so any leaked tool_use blocks cause a 400 from the API.
+// Always reduce messages to plain text — no tool_use or tool_result blocks
+// ever reach the Anthropic API, regardless of what the DB stored.
 function sanitizeMessages(messages) {
-  const out = []
-  let i = 0
-  while (i < messages.length) {
-    const msg = messages[i]
-    if (msg.role === "assistant" && Array.isArray(msg.content)) {
-      const hasToolUse = msg.content.some(b => b.type === "tool_use")
-      if (hasToolUse) {
-        const next = messages[i + 1]
-        const nextIsResult = next?.role === "user" && Array.isArray(next.content) &&
-          next.content.some(b => b.type === "tool_result")
-        if (nextIsResult) {
-          // Complete pair — skip both, they're internal
-          i += 2
-          continue
-        }
-        // Orphaned tool_use — keep only text blocks
-        const textOnly = msg.content.filter(b => b.type === "text")
-        if (textOnly.length) out.push({ role: "assistant", content: textOnly })
-        i++
-        continue
+  return messages
+    .map(msg => {
+      if (msg.role === "assistant") {
+        const content = Array.isArray(msg.content)
+          ? msg.content.filter(b => b.type === "text").map(b => b.text).join("\n")
+          : typeof msg.content === "string" ? msg.content : ""
+        if (!content.trim()) return null
+        return { role: "assistant", content }
       }
-    }
-    // Skip standalone tool_result user messages
-    if (msg.role === "user" && Array.isArray(msg.content) &&
-        msg.content.every(b => b.type === "tool_result")) {
-      i++
-      continue
-    }
-    out.push(msg)
-    i++
-  }
-  return out
+      if (msg.role === "user") {
+        const content = typeof msg.content === "string"
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? msg.content.filter(b => b.type === "text").map(b => b.text).join("\n")
+            : String(msg.content)
+        if (!content.trim()) return null
+        return { role: "user", content }
+      }
+      return null
+    })
+    .filter(Boolean)
 }
 
 async function resolveUserByPublicId(publicUserId) {
