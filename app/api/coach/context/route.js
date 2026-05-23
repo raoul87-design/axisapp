@@ -4,20 +4,34 @@ function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
+const USER_SELECT = "id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight"
+
 async function resolveUser(request) {
-  const token = request.headers.get("authorization")?.replace("Bearer ", "").trim()
-  if (!token) return null
+  const rawToken = request.headers.get("authorization")?.replace("Bearer ", "").trim()
+  const token = rawToken && rawToken !== "null" && rawToken !== "undefined" ? rawToken : null
 
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !user) return null
+  // Lees publicUserId uit query string (GET request heeft geen body)
+  const url = new URL(request.url)
+  const publicUserId = url.searchParams.get("publicUserId") || null
 
-  const { data: profile } = await supabaseAdmin
-    .from("users")
-    .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight")
-    .eq("auth_user_id", user.id)
-    .single()
+  let profile = null
 
-  return profile || null
+  if (token) {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+    if (!error && user) {
+      const { data } = await supabaseAdmin.from("users").select(USER_SELECT).eq("auth_user_id", user.id).single()
+      profile = data || null
+    }
+  }
+
+  if (!profile && publicUserId) {
+    console.log("[context] publicUserId fallback:", publicUserId)
+    const { data } = await supabaseAdmin.from("users").select(USER_SELECT).eq("id", publicUserId).maybeSingle()
+    profile = data || null
+    console.log("[context] publicUserId fallback profiel gevonden:", profile ? "ja" : "nee")
+  }
+
+  return profile
 }
 
 export async function GET(request) {

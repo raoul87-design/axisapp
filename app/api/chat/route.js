@@ -11,11 +11,12 @@ async function resolveUser(token) {
   if (!token) return null
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
   if (error || !user) return null
-  const { data: profile } = await supabaseAdmin
+  const { data: profile, error: profileErr } = await supabaseAdmin
     .from("users")
     .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
     .eq("auth_user_id", user.id)
-    .single()
+    .maybeSingle()
+  if (profileErr) console.error("[chat] resolveUser profileErr:", profileErr.message)
   return profile || null
 }
 
@@ -311,11 +312,13 @@ function sanitizeMessages(messages) {
 
 async function resolveUserByPublicId(publicUserId) {
   if (!publicUserId) return null
-  const { data: profile } = await supabaseAdmin
+  const { data: profile, error } = await supabaseAdmin
     .from("users")
     .select("id, auth_user_id, name, naam, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight, training_location, fitness_level")
     .eq("id", publicUserId)
-    .single()
+    .maybeSingle()
+  if (error) console.error("[chat] resolveUserByPublicId error:", error.message, "| publicUserId:", publicUserId)
+  console.log("[chat] resolveUserByPublicId:", publicUserId, "→ profiel gevonden:", profile ? "ja" : "nee")
   return profile || null
 }
 
