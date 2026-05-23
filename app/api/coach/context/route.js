@@ -4,6 +4,14 @@ function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
+function getMondayNL() {
+  const now  = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  const diff = now.getDay() === 0 ? -6 : 1 - now.getDay()
+  const mon  = new Date(now)
+  mon.setDate(now.getDate() + diff)
+  return mon.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
+
 const USER_SELECT = "id, auth_user_id, name, goal, goal_title, goal_deadline, streak, missed_days, kcal_doel, eiwitten_doel, koolhydraten_doel, vetten_doel, target_weight"
 
 async function resolveUser(request) {
@@ -39,7 +47,8 @@ export async function GET(request) {
     const profile = await resolveUser(request)
     if (!profile) return Response.json({ error: "Niet geautoriseerd" }, { status: 401 })
 
-    const today = getNLDate()
+    const today  = getNLDate()
+    const monday = getMondayNL()
     const authUid = profile.auth_user_id
     const pubUid  = profile.id
 
@@ -63,6 +72,10 @@ export async function GET(request) {
       { data: reflections },
       mealPlanResult,
       { data: workoutPlanning },
+      { data: workoutsDezeWeek },
+      { data: gewichtTrend },
+      { data: actiefDezeWeek },
+      { data: records },
     ] = await Promise.all([
       supabaseAdmin.from("commitments").select("id, text, done").eq("user_id", pubUid).eq("date", today),
       supabaseAdmin.from("food_logs").select("kcal, eiwitten, done").eq("user_id", pubUid).eq("date", today),
@@ -73,6 +86,10 @@ export async function GET(request) {
       supabaseAdmin.from("reflections").select("completed, answer, created_at").eq("user_id", pubUid).order("created_at", { ascending: false }).limit(3),
       supabaseAdmin.from("meal_plans").select("plan").eq("user_id", pubUid).lte("week_start", today).order("week_start", { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from("workout_planning").select("workout:workout_id(naam)").eq("user_id", pubUid).eq("datum", today).maybeSingle(),
+      supabaseAdmin.from("workout_planning").select("datum, gedaan, workout:workout_id(naam)").eq("user_id", pubUid).gte("datum", monday).order("datum", { ascending: true }),
+      supabaseAdmin.from("metrics").select("waarde, created_at").eq("user_id", pubUid).in("type", ["gewicht", "weight"]).order("created_at", { ascending: false }).limit(7),
+      supabaseAdmin.from("daily_results").select("date, score").eq("user_id", pubUid).gte("date", monday),
+      supabaseAdmin.from("workout_sets").select("gewicht, reps, oefening:oefening_id(naam)").eq("user_id", pubUid).not("gewicht", "is", null).order("gewicht", { ascending: false }).limit(10),
     ])
 
     // Nutrition: prefer food_logs sum (all entries today), fallback to kcal metric
@@ -85,9 +102,34 @@ export async function GET(request) {
 
     const gewicht_vandaag = weightMetrics?.[0] ? Number(weightMetrics[0].waarde) : null
 
-    console.log(`[context] gewicht: ${gewicht_vandaag ?? "niet gevonden"} kg (pubUid: ${pubUid})`)
+    // Gewicht trend: stijgend / dalend / stabiel
+    const gewichtLijst = (gewichtTrend || []).map(m => Number(m.waarde)).filter(v => !isNaN(v))
+    let gewicht_trend_label = "onbekend"
+    if (gewichtLijst.length >= 2) {
+      const diff = gewichtLijst[0] - gewichtLijst[gewichtLijst.length - 1]
+      if (diff > 0.3) gewicht_trend_label = "stijgend"
+      else if (diff < -0.3) gewicht_trend_label = "dalend"
+      else gewicht_trend_label = "stabiel"
+    }
+    const gewicht_trend_lijst = (gewichtTrend || []).map(m => `${m.created_at?.slice(0, 10)}: ${m.waarde} kg`).join(", ")
+
+    // Actieve dagen deze week
+    const actieve_dagen_week = (actiefDezeWeek || []).filter(d => Number(d.score) > 0).length
+
+    // Records: deduplicate per oefening naam, keep highest gewicht
+    const recordMap = {}
+    for (const s of (records || [])) {
+      const naam = s.oefening?.naam
+      if (!naam) continue
+      if (!recordMap[naam] || s.gewicht > recordMap[naam].gewicht) {
+        recordMap[naam] = { naam, gewicht: s.gewicht, reps: s.reps }
+      }
+    }
+    const top_records = Object.values(recordMap).slice(0, 5)
+
+    console.log(`[context] gewicht: ${gewicht_vandaag ?? "niet gevonden"} kg | trend: ${gewicht_trend_label}`)
     console.log(`[context] food_logs vandaag: ${(foodLogs || []).length} rijen | kcal: ${kcal_gegeten} | eiwit: ${eiwit_gegeten}`)
-    console.log(`[context] kcal_doel: ${profile.kcal_doel ?? "niet ingesteld"} | eiwit_doel: ${profile.eiwitten_doel ?? "niet ingesteld"}`)
+    console.log(`[context] actief deze week: ${actieve_dagen_week} | workouts: ${(workoutsDezeWeek || []).length}`)
     console.log(`[context] system prompt context => gewicht_vandaag: ${gewicht_vandaag}, gewicht_doel: ${profile.target_weight ?? "—"}, kcal_gegeten: ${kcal_gegeten}/${profile.kcal_doel ?? "—"}, eiwit: ${eiwit_gegeten}/${profile.eiwitten_doel ?? "—"}`)
 
     // Week stats: a day is "active" if at least one commitment was done
@@ -152,6 +194,10 @@ export async function GET(request) {
       week: { actieve_dagen, gemiste_dagen, deze_week },
       recente_reflecties: (reflections || []).map(r => ({ completed: r.completed, answer: r.answer })),
       weekmenu_vandaag,
+      workouts_deze_week: (workoutsDezeWeek || []).map(w => ({ datum: w.datum, gedaan: w.gedaan, naam: w.workout?.naam ?? null })),
+      gewicht_trend: { label: gewicht_trend_label, metingen: gewicht_trend_lijst },
+      actieve_dagen_week,
+      top_records,
     })
   } catch (err) {
     console.error("[coach/context] error:", err.message)

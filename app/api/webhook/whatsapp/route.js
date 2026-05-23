@@ -85,6 +85,14 @@ function getNLDate() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
 }
 
+function getMondayNL() {
+  const now  = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }))
+  const diff = now.getDay() === 0 ? -6 : 1 - now.getDay()
+  const mon  = new Date(now)
+  mon.setDate(now.getDate() + diff)
+  return mon.toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" })
+}
+
 // ── Data helpers ──────────────────────────────────────────────
 
 async function getUserData(whatsappNumber) {
@@ -201,13 +209,13 @@ async function getCoachFaq(coachEmail) {
   return data || []
 }
 
-// Haal client-specifieke context op: commitments, gewicht, kcal, reflecties, weekmenu
+// Haal client-specifieke context op: commitments, gewicht, kcal, reflecties, weekmenu, workouts, trend
 async function getClientContext(userData) {
-  const authUserId = userData?.auth_user_id
-  const pubUserId  = userData?.id  // public UUID voor food_logs en meal_plans
-  if (!authUserId) return { recentCommits: [], latestWeight: null, latestKcal: null, recentReflecties: [], weekmenu_vandaag: null }
+  const pubUserId = userData?.id
+  if (!pubUserId) return { recentCommits: [], latestWeight: null, latestKcal: null, recentReflecties: [], weekmenu_vandaag: null, workoutsDezeWeek: [], gewichtTrend: [], actiefDezeWeek: 0 }
 
-  const today = getNLDate()
+  const today  = getNLDate()
+  const monday = getMondayNL()
   const DAYS_NL  = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"]
   const todayKey = DAYS_NL[new Date().getDay()]
 
@@ -217,31 +225,18 @@ async function getClientContext(userData) {
     { data: kcalData },
     { data: reflections },
     mealPlanResult,
+    { data: workoutsDezeWeek },
+    { data: gewichtTrendData },
+    { data: actiefData },
   ] = await Promise.all([
-    supabase.from("commitments")
-      .select("text, date, done")
-      .eq("user_id", authUserId)
-      .eq("date", today),
-    supabase.from("metrics")
-      .select("waarde, datum")
-      .eq("user_id", authUserId)
-      .in("type", ["gewicht", "weight"])
-      .order("datum", { ascending: false })
-      .limit(1),
-    supabase.from("metrics")
-      .select("waarde, datum")
-      .eq("user_id", authUserId)
-      .in("type", ["voeding", "calorie", "kcal"])
-      .order("datum", { ascending: false })
-      .limit(1),
-    supabase.from("reflections")
-      .select("completed, answer")
-      .eq("user_id", authUserId)
-      .order("created_at", { ascending: false })
-      .limit(3),
-    pubUserId
-      ? supabase.from("meal_plans").select("plan").eq("user_id", pubUserId).lte("week_start", today).order("week_start", { ascending: false }).limit(1).maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase.from("commitments").select("text, date, done").eq("user_id", pubUserId).eq("date", today),
+    supabase.from("metrics").select("waarde, created_at").eq("user_id", pubUserId).in("type", ["gewicht", "weight"]).order("created_at", { ascending: false }).limit(1),
+    supabase.from("metrics").select("waarde, created_at").eq("user_id", pubUserId).in("type", ["voeding", "calorie", "kcal"]).order("created_at", { ascending: false }).limit(1),
+    supabase.from("reflections").select("completed, answer").eq("user_id", pubUserId).order("created_at", { ascending: false }).limit(3),
+    supabase.from("meal_plans").select("plan").eq("user_id", pubUserId).lte("week_start", today).order("week_start", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("workout_planning").select("datum, gedaan, workout:workout_id(naam)").eq("user_id", pubUserId).gte("datum", monday).order("datum", { ascending: true }),
+    supabase.from("metrics").select("waarde, created_at").eq("user_id", pubUserId).in("type", ["gewicht", "weight"]).order("created_at", { ascending: false }).limit(7),
+    supabase.from("daily_results").select("date, score").eq("user_id", pubUserId).gte("date", monday),
   ])
 
   const plan      = mealPlanResult?.data
@@ -252,12 +247,26 @@ async function getClientContext(userData) {
     diner:   todayMenu.diner?.[0]?.naam   ?? null,
   } : null
 
+  const gewichtLijst = (gewichtTrendData || []).map(m => Number(m.waarde)).filter(v => !isNaN(v))
+  let gewicht_trend = "onbekend"
+  if (gewichtLijst.length >= 2) {
+    const diff = gewichtLijst[0] - gewichtLijst[gewichtLijst.length - 1]
+    if (diff > 0.3) gewicht_trend = "stijgend"
+    else if (diff < -0.3) gewicht_trend = "dalend"
+    else gewicht_trend = "stabiel"
+  }
+
+  const actiefDezeWeek = (actiefData || []).filter(d => Number(d.score) > 0).length
+
   return {
-    recentCommits:    recentCommits || [],
-    latestWeight:     weightData?.[0]   ?? null,
-    latestKcal:       kcalData?.[0]     ?? null,
-    recentReflecties: reflections       || [],
+    recentCommits:    recentCommits    || [],
+    latestWeight:     weightData?.[0]  ?? null,
+    latestKcal:       kcalData?.[0]    ?? null,
+    recentReflecties: reflections      || [],
     weekmenu_vandaag,
+    workoutsDezeWeek: workoutsDezeWeek || [],
+    gewicht_trend,
+    actiefDezeWeek,
   }
 }
 
@@ -302,6 +311,10 @@ function buildSystemPrompt(tone, userData, clientContext, faqItems = []) {
     ? `\nWeekmenü vandaag: ontbijt: ${clientContext.weekmenu_vandaag.ontbijt || "—"} | lunch: ${clientContext.weekmenu_vandaag.lunch || "—"} | diner: ${clientContext.weekmenu_vandaag.diner || "—"}.`
     : ""
 
+  const workoutsStr = clientContext.workoutsDezeWeek?.length > 0
+    ? clientContext.workoutsDezeWeek.map(w => `- ${w.datum}: ${w.workout?.naam || w.naam || "onbekend"} (${w.gedaan ? "✅" : "⬜"})`).join("\n")
+    : "Geen workouts gepland"
+
   const contextBlock = `
 
 TIJDSBESEF:
@@ -313,14 +326,16 @@ Schrijf NOOIT datum labels ([vandaag], [gisteren], [dd/mm]) in je antwoord — d
 
 CLIENTCONTEXT:
 ${name ? `Naam: ${name}` : ""}${deadlineStr}
-Huidige streak (rechtstreeks uit database): ${streak} ${streak === 1 ? "dag" : "dagen"} — gebruik dit getal exact, verzin geen andere waarde
-Gemiste dagen (rechtstreeks uit database): ${missedDays} — gebruik dit getal exact
-Trainingslocatie: ${userData?.training_location || "onbekend"}
-Fitnessniveau: ${userData?.fitness_level || "onbekend"}
+Huidige streak: ${streak} ${streak === 1 ? "dag" : "dagen"} | Gemiste dagen: ${missedDays}
+Trainingslocatie: ${userData?.training_location || "onbekend"} | Fitnessniveau: ${userData?.fitness_level || "onbekend"}
 Commitments van vandaag (${today}):
 ${commitLines}
-Laatste gewicht: ${weightLine}${userData?.target_weight ? ` (doel: ${userData.target_weight} kg)` : ""}
+Laatste gewicht: ${weightLine}${userData?.target_weight ? ` (doel: ${userData.target_weight} kg)` : ""} — trend: ${clientContext.gewicht_trend || "onbekend"}
 Laatste kcal/voeding: ${kcalLine}${reflectiesStr}${weekmenuStr}
+
+DEZE WEEK:
+Actief: ${clientContext.actiefDezeWeek ?? 0} van 7 dagen
+${workoutsStr}
 
 Je hebt toegang tot de gespreksgeschiedenis van deze client. Gebruik dit om:
 - Te onthouden wat de client eerder heeft gezegd
