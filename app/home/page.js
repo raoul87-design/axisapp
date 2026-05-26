@@ -65,7 +65,7 @@ const [vettenDoel,         setVettenDoel]          = useState("")
 const [doelenDoorCoach,    setDoelenDoorCoach]     = useState(false)
 const [savingGoals,        setSavingGoals]         = useState(false)
 
-const [tdeeForm,       setTdeeForm]       = useState({ weight_kg: "", height_cm: "", age: "", gender: "male", activity_level: "moderately_active" })
+const [tdeeForm,       setTdeeForm]       = useState({ weight_kg: "", height_cm: "", age: "", gender: "male", activity_level: "moderately_active", goal: "Onderhouden" })
 const [tdeeResult,     setTdeeResult]     = useState(null)
 const [showTdeeForm,   setShowTdeeForm]   = useState(false)
 const [savingTdee,     setSavingTdee]     = useState(false)
@@ -138,6 +138,15 @@ const [wizardLocaties,          setWizardLocaties]          = useState([])
 const [wizardChosenCommitment,  setWizardChosenCommitment]  = useState("")
 const [wizardVoornaam,          setWizardVoornaam]          = useState("")
 const [wizardAchternaam,        setWizardAchternaam]        = useState("")
+const [wizardInsertedTdee,      setWizardInsertedTdee]      = useState(false)
+const [wizardTdeeGender,        setWizardTdeeGender]        = useState("male")
+const [wizardTdeeAge,           setWizardTdeeAge]           = useState("")
+const [wizardTdeeHeight,        setWizardTdeeHeight]        = useState("")
+const [wizardTdeeWeight,        setWizardTdeeWeight]        = useState("")
+const [wizardTdeeActivity,      setWizardTdeeActivity]      = useState("moderately_active")
+const [wizardTdeeDoel,          setWizardTdeeDoel]          = useState("Onderhouden")
+const [wizardTdeePct,           setWizardTdeePct]           = useState({ e: 30, k: 40, v: 30 })
+const [wizardSavingTdee,        setWizardSavingTdee]        = useState(false)
 
 // ── Doel balk state ───────────────────────────────────────────
 const [hasCoach,           setHasCoach]           = useState(false)
@@ -435,6 +444,11 @@ async function checkFirstUse() {
     gender:         data.gender         ?? prev.gender,
     activity_level: data.activity_level ?? prev.activity_level,
   }))
+  if (data.height_cm)      setWizardTdeeHeight(String(data.height_cm))
+  if (data.age)            setWizardTdeeAge(String(data.age))
+  if (data.gender)         setWizardTdeeGender(data.gender)
+  if (data.activity_level) setWizardTdeeActivity(data.activity_level)
+  if (data.target_weight)  setWizardTdeeWeight(String(data.target_weight))
   if (data.role === "coach") return
   // 5-stap wizard voor onboarding_completed === false (B2B en B2C)
   if (data.onboarding_completed === false) {
@@ -462,7 +476,7 @@ async function saveNutritionGoals() {
 }
 
 function handleCalculateTdee() {
-  const { weight_kg, height_cm, age, gender, activity_level } = tdeeForm
+  const { weight_kg, height_cm, age, gender, activity_level, goal } = tdeeForm
   if (!weight_kg || !height_cm || !age) return
   const result = calculateTDEE({
     weight_kg:      parseFloat(weight_kg),
@@ -471,11 +485,20 @@ function handleCalculateTdee() {
     gender,
     activity_level,
   })
-  setTdeeResult(result)
-  setKcalDoel(String(result.tdee))
-  setEiwittenDoel(String(result.eiwitten))
-  setKoolhydratenDoel(String(result.koolhydraten))
-  setVettenDoel(String(result.vetten))
+  const goalDelta     = goal === "Afvallen" ? -300 : goal === "Aankomen" ? 300 : 0
+  const adjustedTdee  = result.tdee + goalDelta
+  const adjustedResult = {
+    ...result,
+    tdee:         adjustedTdee,
+    eiwitten:     Math.round((adjustedTdee * 0.30) / 4),
+    koolhydraten: Math.round((adjustedTdee * 0.40) / 4),
+    vetten:       Math.round((adjustedTdee * 0.30) / 9),
+  }
+  setTdeeResult(adjustedResult)
+  setKcalDoel(String(adjustedTdee))
+  setEiwittenDoel(String(adjustedResult.eiwitten))
+  setKoolhydratenDoel(String(adjustedResult.koolhydraten))
+  setVettenDoel(String(adjustedResult.vetten))
 }
 
 async function saveTdeeAsGoals() {
@@ -1331,7 +1354,7 @@ const latestWeight = metricsWeight.length > 0 ? metricsWeight[metricsWeight.leng
 if (showWizard) {
   const GOAL_TYPES  = ["Afvallen", "Sterker worden", "Fitter worden", "Leefstijl verbeteren", "Hyrox"]
   const LIKES_OPTS  = ["Kracht", "Hardlopen", "Fietsen", "Zwemmen", "Wandelen", "Anders"]
-  const totalWSteps = 5
+  const totalWSteps = wizardInsertedTdee ? 6 : 5
   const wInput      = { width: "100%", padding: "13px 14px", borderRadius: 8, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 15, boxSizing: "border-box", outline: "none" }
   const wBtnPrimary = { width: "100%", padding: "14px", background: GREEN, border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 15, color: "#000" }
   const wBtnGhost   = { width: "100%", padding: "12px", background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 13 }
@@ -1362,8 +1385,8 @@ if (showWizard) {
     setWizardLoadingAi(false)
   }
 
-  async function advanceToStep4() {
-    setWizardStep(4)
+  async function advanceToStep5() {
+    setWizardStep(5)
     if (wizardAiOptions.length === 0) fetchAiCommitments()
   }
 
@@ -1411,6 +1434,38 @@ if (showWizard) {
     await loadCommitments()
   }
 
+  // ── Wizard TDEE live berekening ──────────────────────────────
+  const wTdeeW = parseFloat(wizardTdeeWeight), wTdeeH = parseFloat(wizardTdeeHeight), wTdeeA = parseInt(wizardTdeeAge)
+  const wTdeeCanCalc = !!(wTdeeW && wTdeeH && wTdeeA)
+  const wTdeeBase    = wTdeeCanCalc ? calculateTDEE({ weight_kg: wTdeeW, height_cm: wTdeeH, age: wTdeeA, gender: wizardTdeeGender, activity_level: wizardTdeeActivity }) : null
+  const wTdeeDelta   = wizardTdeeDoel === "Afvallen" ? -300 : wizardTdeeDoel === "Aankomen" ? 300 : 0
+  const wTdeeKcal    = wTdeeBase ? wTdeeBase.tdee + wTdeeDelta : null
+  const wTdeeEi      = wTdeeKcal ? Math.round((wTdeeKcal * wizardTdeePct.e / 100) / 4) : null
+  const wTdeeKo      = wTdeeKcal ? Math.round((wTdeeKcal * wizardTdeePct.k / 100) / 4) : null
+  const wTdeeVe      = wTdeeKcal ? Math.round((wTdeeKcal * wizardTdeePct.v / 100) / 9) : null
+
+  async function saveWizardTdeeAndAdvance() {
+    if (!wTdeeCanCalc || wizardSavingTdee) return
+    setWizardSavingTdee(true)
+    await supabase.from("users").update({
+      kcal_doel:         wTdeeKcal,
+      eiwitten_doel:     wTdeeEi,
+      koolhydraten_doel: wTdeeKo,
+      vetten_doel:       wTdeeVe,
+      height_cm:         wTdeeH,
+      age:               wTdeeA,
+      gender:            wizardTdeeGender,
+      activity_level:    wizardTdeeActivity,
+      tdee_value:        wTdeeBase.tdee,
+    }).eq("auth_user_id", user.id)
+    setKcalDoel(String(wTdeeKcal))
+    setEiwittenDoel(String(wTdeeEi))
+    setKoolhydratenDoel(String(wTdeeKo))
+    setVettenDoel(String(wTdeeVe))
+    setWizardSavingTdee(false)
+    advanceToStep5()
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f0f", padding: "20px" }}>
       <div style={{ width: "100%", maxWidth: 420, background: "#1a1a1a", padding: 40, borderRadius: 12 }}>
@@ -1429,8 +1484,8 @@ if (showWizard) {
               </h2>
               <p style={{ color: "#888", fontSize: 15, lineHeight: 1.6, margin: "0 0 24px" }}>
                 {hasCoach
-                  ? "Je coach heeft je toegang gegeven tot AXIS. Wij zijn er op de dagen dat je niet traint."
-                  : "Jij bepaalt je doel — wij helpen je het te halen."}
+                  ? "Je coach heeft je toegang gegeven tot AXIS. Stel je doel in — je coach en AXIS houden je scherp."
+                  : "Commit je doel en AXIS helpt je het behalen. Elke dag een stap verder."}
               </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
@@ -1584,13 +1639,132 @@ if (showWizard) {
                 <span>1×</span><span>7×</span>
               </div>
             </div>
-            <button onClick={advanceToStep4} style={wBtnPrimary}>Volgende →</button>
+            <button onClick={() => {
+              if (!kcalDoel) {
+                setWizardTdeeDoel(wizardGoalType === "Afvallen" ? "Afvallen" : "Onderhouden")
+                if (!wizardTdeeWeight && doelGewicht) setWizardTdeeWeight(String(doelGewicht))
+                setWizardInsertedTdee(true)
+                setWizardStep(4)
+              } else {
+                advanceToStep5()
+              }
+            }} style={wBtnPrimary}>Volgende →</button>
             <button onClick={() => setWizardStep(2)} style={wBtnGhost}>Terug</button>
           </>
         )}
 
-        {/* Stap 4 — Eerste commitment (AI) */}
+        {/* Stap 4 — TDEE calculator */}
         {wizardStep === 4 && (
+          <>
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 10px" }}>Calorie doel</p>
+              <h2 style={{ fontSize: 22, color: "#fff", margin: "0 0 6px" }}>Bereken je calorie doel</h2>
+              <p style={{ color: "#888", fontSize: 14, margin: 0 }}>Gebaseerd op de Mifflin-St Jeor formule.</p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Geslacht</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["male", "Man"], ["female", "Vrouw"]].map(([val, lbl]) => (
+                  <button key={val} onClick={() => setWizardTdeeGender(val)} style={{
+                    flex: 1, padding: "10px 8px", borderRadius: 8,
+                    border: `2px solid ${wizardTdeeGender === val ? GREEN : "#333"}`,
+                    background: wizardTdeeGender === val ? "#0a1a0f" : "#111",
+                    color: wizardTdeeGender === val ? GREEN : "#fff",
+                    fontSize: 14, cursor: "pointer", fontWeight: wizardTdeeGender === val ? "bold" : "normal",
+                  }}>{lbl}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+              {[
+                { label: "Leeftijd",     val: wizardTdeeAge,    set: setWizardTdeeAge,    ph: "bijv. 30" },
+                { label: "Lengte (cm)",  val: wizardTdeeHeight, set: setWizardTdeeHeight, ph: "bijv. 180" },
+                { label: "Gewicht (kg)", val: wizardTdeeWeight, set: setWizardTdeeWeight, ph: "bijv. 80" },
+              ].map(({ label, val, set, ph }) => (
+                <div key={label}>
+                  <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>{label}</p>
+                  <input type="number" value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                    style={{ ...wInput, padding: "10px", fontSize: 14 }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Activiteitsniveau</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {[
+                  ["sedentary",        "Zittend"],
+                  ["lightly_active",   "Licht actief"],
+                  ["moderately_active","Actief"],
+                  ["very_active",      "Zeer actief"],
+                ].map(([val, lbl]) => (
+                  <button key={val} onClick={() => setWizardTdeeActivity(val)} style={{
+                    padding: "10px 8px", borderRadius: 8,
+                    border: `2px solid ${wizardTdeeActivity === val ? GREEN : "#333"}`,
+                    background: wizardTdeeActivity === val ? "#0a1a0f" : "#111",
+                    color: wizardTdeeActivity === val ? GREEN : "#fff",
+                    fontSize: 13, cursor: "pointer", fontWeight: wizardTdeeActivity === val ? "bold" : "normal",
+                  }}>{lbl}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: "#555", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Doel</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["Afvallen", "Onderhouden", "Aankomen"].map(d => (
+                  <button key={d} onClick={() => setWizardTdeeDoel(d)} style={{
+                    flex: 1, padding: "10px 4px", borderRadius: 8,
+                    border: `2px solid ${wizardTdeeDoel === d ? GREEN : "#333"}`,
+                    background: wizardTdeeDoel === d ? "#0a1a0f" : "#111",
+                    color: wizardTdeeDoel === d ? GREEN : "#fff",
+                    fontSize: 12, cursor: "pointer", fontWeight: wizardTdeeDoel === d ? "bold" : "normal",
+                  }}>{d}</button>
+                ))}
+              </div>
+            </div>
+
+            {wTdeeKcal !== null && (
+              <div style={{ background: "#0a1a0f", border: "1px solid #1a4d2a", borderRadius: 10, padding: "16px 16px 12px", marginBottom: 16 }}>
+                <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 4px" }}>Jouw dagelijkse calorie doel</p>
+                <p style={{ color: GREEN, fontSize: 28, fontWeight: 800, margin: "0 0 14px", letterSpacing: "-0.02em" }}>{wTdeeKcal.toLocaleString("nl-NL")} kcal</p>
+                <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", margin: "0 0 8px" }}>Macro verdeling %</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 6 }}>
+                  {[
+                    { label: "Eiwit",  key: "e", color: "#60a5fa", grams: wTdeeEi },
+                    { label: "Koolh.", key: "k", color: "#facc15", grams: wTdeeKo },
+                    { label: "Vet",    key: "v", color: "#f97316", grams: wTdeeVe },
+                  ].map(({ label, key, color, grams }) => (
+                    <div key={key}>
+                      <p style={{ color: "#555", fontSize: 10, margin: "0 0 4px" }}>{label}</p>
+                      <input type="number" value={wizardTdeePct[key]} min={5} max={80}
+                        onChange={e => setWizardTdeePct(prev => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #333", background: "#111", color, fontSize: 13, fontWeight: "bold", boxSizing: "border-box", outline: "none" }} />
+                      <p style={{ color, fontSize: 11, margin: "3px 0 0", opacity: 0.8 }}>{grams}g</p>
+                    </div>
+                  ))}
+                </div>
+                {wizardTdeePct.e + wizardTdeePct.k + wizardTdeePct.v !== 100 && (
+                  <p style={{ color: "#f97316", fontSize: 11, margin: "4px 0 0" }}>Totaal {wizardTdeePct.e + wizardTdeePct.k + wizardTdeePct.v}% — pas aan naar 100%</p>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={saveWizardTdeeAndAdvance}
+              disabled={!wTdeeKcal || wizardSavingTdee}
+              style={{ ...wBtnPrimary, opacity: !wTdeeKcal || wizardSavingTdee ? 0.4 : 1, cursor: !wTdeeKcal || wizardSavingTdee ? "default" : "pointer" }}>
+              {wizardSavingTdee ? "Opslaan..." : "Gebruik deze waarden →"}
+            </button>
+            <button onClick={() => advanceToStep5()} style={wBtnGhost}>Zelf invullen →</button>
+            <button onClick={() => setWizardStep(3)} style={{ ...wBtnGhost, marginTop: 4 }}>Terug</button>
+          </>
+        )}
+
+        {/* Stap 5 — Eerste commitment (AI) */}
+        {wizardStep === 5 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Kies je eerste commitment</h2>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS heeft drie voorstellen gemaakt op basis van jouw doel.</p>
@@ -1606,7 +1780,7 @@ if (showWizard) {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
                 {wizardAiOptions.map(opt => (
-                  <button key={opt} onClick={() => { setWizardChosenCommitment(opt); setWizardStep(5) }} style={{
+                  <button key={opt} onClick={() => { setWizardChosenCommitment(opt); setWizardStep(6) }} style={{
                     padding: "14px 16px", borderRadius: 8,
                     border: `1px solid ${wizardChosenCommitment === opt ? GREEN : "#333"}`,
                     background: wizardChosenCommitment === opt ? "#0a1a0f" : "#111",
@@ -1620,14 +1794,14 @@ if (showWizard) {
               </div>
             )}
             {!wizardLoadingAi && !wizardAiError && (
-              <button onClick={() => { setWizardChosenCommitment(""); setWizardStep(5) }} style={wBtnGhost}>Sla over, ik kies later</button>
+              <button onClick={() => { setWizardChosenCommitment(""); setWizardStep(6) }} style={wBtnGhost}>Sla over, ik kies later</button>
             )}
-            <button onClick={() => setWizardStep(3)} style={{ ...wBtnGhost, marginTop: 4 }}>Terug</button>
+            <button onClick={() => setWizardStep(wizardInsertedTdee ? 4 : 3)} style={{ ...wBtnGhost, marginTop: 4 }}>Terug</button>
           </>
         )}
 
-        {/* Stap 5 — WhatsApp koppelen */}
-        {wizardStep === 5 && (
+        {/* Stap 6 — WhatsApp koppelen */}
+        {wizardStep === 6 && (
           <>
             <div style={{ marginBottom: 24 }}>
               <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 10px" }}>WhatsApp</p>
@@ -1639,7 +1813,7 @@ if (showWizard) {
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
               {[
                 { n: 1, text: <>Sla dit nummer op als <strong style={{ color: "#fff" }}>'AXIS Coach'</strong>:<br /><span style={{ color: GREEN, fontFamily: "monospace", fontSize: 16 }}>+1 415 523 8886</span></> },
-                { n: 2, text: <>Stuur <span style={{ background: "#1a2a1a", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join axis-coach</span> via WhatsApp om te activeren</> },
+                { n: 2, text: <>Stuur <span style={{ background: "#1a2a1a", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join burn-lack</span> via WhatsApp om te activeren</> },
                 { n: 3, text: <>Vanaf morgen <strong style={{ color: "#fff" }}>08:00</strong> ontvang je je dagelijkse check-in</> },
               ].map(({ n, text }) => (
                 <div key={n} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -1955,8 +2129,8 @@ if (showNutritionModal) {
         {!readonly && (
           <>
             <button onClick={() => { setShowTdeeForm(v => !v); setTdeeResult(null) }}
-              style={{ width: "100%", marginTop: 16, padding: "10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textMuted, fontSize: 13, cursor: "pointer", textAlign: "left" }}>
-              {showTdeeForm ? "▲ Bereken via TDEE" : "▼ Bereken via TDEE"}
+              style={{ width: "100%", marginTop: 16, padding: "11px 14px", background: "transparent", border: `1px solid ${showTdeeForm ? GREEN : C.border}`, borderRadius: 8, color: showTdeeForm ? GREEN : C.textSub, fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: showTdeeForm ? "bold" : "normal" }}>
+              Herbereken met TDEE calculator {showTdeeForm ? "▲" : "→"}
             </button>
             {showTdeeForm && (
               <div style={{ marginTop: 12, padding: 16, background: C.cardAlt, borderRadius: 10, border: `1px solid ${C.border}` }}>
@@ -1991,6 +2165,20 @@ if (showNutritionModal) {
                     <option value="moderately_active">Matig actief (3-5x/week)</option>
                     <option value="very_active">Zeer actief (6-7x/week)</option>
                   </select>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <p style={{ color: C.textMuted, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 5 }}>Doel</p>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {["Afvallen", "Onderhouden", "Aankomen"].map(d => (
+                      <button key={d} onClick={() => setTdeeForm(prev => ({ ...prev, goal: d }))} style={{
+                        flex: 1, padding: "8px 4px", borderRadius: 7,
+                        border: `1px solid ${tdeeForm.goal === d ? GREEN : C.inputBorder}`,
+                        background: tdeeForm.goal === d ? "#0a1a0f" : C.inputBg,
+                        color: tdeeForm.goal === d ? GREEN : C.textSub,
+                        fontSize: 12, cursor: "pointer", fontWeight: tdeeForm.goal === d ? "bold" : "normal",
+                      }}>{d}</button>
+                    ))}
+                  </div>
                 </div>
                 <button onClick={handleCalculateTdee} disabled={!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age}
                   style={{ width: "100%", padding: "10px", background: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? C.card : C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? C.textDim : C.textSub, fontSize: 13, cursor: (!tdeeForm.weight_kg || !tdeeForm.height_cm || !tdeeForm.age) ? "default" : "pointer" }}>
@@ -2324,7 +2512,7 @@ return (
         <div style={{ marginTop: 32, padding: 20, background: "#1a2a1a", border: "1px solid #2a4a30", borderRadius: 12 }}>
           <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 8px" }}>WhatsApp koppelen</p>
           <p style={{ color: C.textSub, fontSize: 14, margin: "0 0 4px" }}>Nummer: <strong style={{ color: C.text, fontFamily: "monospace" }}>+1 415 523 8886</strong></p>
-          <p style={{ color: C.textSub, fontSize: 14, margin: "0 0 14px" }}>Stuur <span style={{ background: "#0f1f0f", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join axis-coach</span> om te activeren</p>
+          <p style={{ color: C.textSub, fontSize: 14, margin: "0 0 14px" }}>Stuur <span style={{ background: "#0f1f0f", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join burn-lack</span> om te activeren</p>
           <a href="https://wa.me/14155238886" target="_blank" rel="noopener noreferrer"
             style={{ display: "inline-block", padding: "10px 18px", background: GREEN, borderRadius: 8, color: "#000", fontWeight: "bold", fontSize: 14, textDecoration: "none" }}>
             Open WhatsApp →
@@ -3709,6 +3897,7 @@ return (
       koolhydratenDoel={koolhydratenDoel}
       vettenDoel={vettenDoel}
       TAB_H={TAB_H}
+      onSetDoel={() => setShowNutritionModal(true)}
     />
   )}
 

@@ -589,7 +589,7 @@ function AiGenModal({ onClose, onGenerate, loading, error, prefs, setPrefs }) {
 }
 
 // ── Main VoedingTab ────────────────────────────────────────────
-export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, TAB_H }) {
+export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel, koolhydratenDoel, vettenDoel, TAB_H, onSetDoel }) {
   const [subTab,        setSubTab]        = useState("vandaag")
   const [foodLogs,      setFoodLogs]      = useState([])
   const [loadingLogs,   setLoadingLogs]   = useState(true)
@@ -860,6 +860,20 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   function VandaagTab() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* Banner: calorie doel nog niet ingesteld */}
+        {!kcalDoel && (
+          <button onClick={onSetDoel} style={{
+            width: "100%", padding: "14px 16px",
+            background: "#0a1a0f", border: "1px solid #1a4d2a", borderRadius: 12,
+            color: G, fontSize: 14, fontWeight: "bold", cursor: "pointer",
+            textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between",
+            boxSizing: "border-box",
+          }}>
+            <span>Stel je calorie doel in voor gepersonaliseerde tracking</span>
+            <span style={{ flexShrink: 0, marginLeft: 8 }}>→</span>
+          </button>
+        )}
 
         {/* Kcal card */}
         <div style={{ background: TILE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "18px 18px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
