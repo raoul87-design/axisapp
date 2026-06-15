@@ -29,7 +29,7 @@ const T = {
       h1a: "Stop chasing",
       h1b: "your clients.",
       sub1: "Let AXIS do it.",
-      sub2: "The accountability app for personal trainers — daily WhatsApp check-ins and AI coaching for more consistent clients.",
+      sub2: "A daily discipline system for personal trainers. WhatsApp. AI as director. Nutrition. Workouts. Everything in one place.",
       cta1: "Start free →",
       cta2: "I'm a coach →",
     },
@@ -47,15 +47,18 @@ const T = {
     solution: {
       badge: "The solution",
       h2: "Axis fills the gap between sessions.",
-      sub: "Everything your clients need to stay consistent — without extra apps or manual follow-up.",
+      sub: "Everything your clients need to stay consistent. From daily commitments to nutrition plans and workouts — AXIS directs it all.",
       features: [
         { num: "01", title: "Daily commitment",    desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
         { num: "02", title: "Execution tracking",  desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
         { num: "03", title: "Metrics tracking",    desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
-        { num: "04", title: "AI coach",            desc: "Remembers your client's history and adjusts tone based on streak and progress." },
+        { num: "04", title: "AI Director",         desc: "The AXIS AI knows your client's goal, monitors their progress and actively adjusts. Not a generic bot — a coach that knows their story and hits the right tone every day." },
         { num: "05", title: "Progress insights",   desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
-        { num: "06", title: "Personal reminders",  desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
-        { num: "07", title: "Workout delivery",    desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
+        { num: "06", title: "Nutrition plan",      desc: "Coach sets a personal nutrition plan. Clients see their daily kcal and protein goals — directly in the app." },
+        { num: "07", title: "Nutrition tracker",   desc: "Clients log meals via barcode scan or search in the Open Food Facts database. Coach sees macro progress per day." },
+        { num: "08", title: "Shopping list",       desc: "AI automatically generates a weekly shopping list based on the nutrition plan. One tap to export." },
+        { num: "09", title: "Personal reminders",  desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
+        { num: "10", title: "Workout delivery",    desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
       ],
     },
     system: {
@@ -125,7 +128,7 @@ const T = {
       h1a: "Stop met achternazitten",
       h1b: "van je klanten.",
       sub1: "Laat AXIS het doen.",
-      sub2: "De accountability app voor personal trainers — dagelijkse WhatsApp check-ins en AI coaching voor meer consistente klanten.",
+      sub2: "Een dagelijks discipline systeem voor personal trainers. WhatsApp. AI als regisseur. Voeding. Workouts. Alles op één plek.",
       cta1: "Start gratis →",
       cta2: "Ik ben coach →",
     },
@@ -143,15 +146,18 @@ const T = {
     solution: {
       badge: "De oplossing",
       h2: "Axis vult het gat tussen sessies.",
-      sub: "Alles wat je klanten nodig hebben om consistent te blijven — zonder extra apps of handmatig opvolgen.",
+      sub: "Alles wat je klanten nodig hebben om consistent te blijven. Van dagelijkse commitments tot voedingsschema's en workouts — AXIS regisseert het geheel.",
       features: [
         { num: "01", title: "Dagelijkse commitment",      desc: "Klanten committen via WhatsApp aan wat ze vandaag gaan doen. Één heldere intentie, elke ochtend." },
         { num: "02", title: "Uitvoering bijhouden",       desc: "Streaks, gemiste dagen en patronen worden automatisch bijgehouden — voor de coach in één oogopslag zichtbaar." },
         { num: "03", title: "Metrics bijhouden",          desc: "Gewicht, kcal en stappen dagelijks bijhouden via WhatsApp. Geen handmatige invoer, geen aparte app." },
-        { num: "04", title: "AI coach",                   desc: "Onthoudt de geschiedenis van je klant en past de toon aan op basis van streak en voortgang." },
+        { num: "04", title: "AI als regisseur",           desc: "De AXIS AI kent je doel, bewaakt je progressie en stuurt actief bij. Geen generieke bot — een coach die jouw verhaal kent en elke dag de juiste toon aanslaat." },
         { num: "05", title: "Voortgangsinzichten",        desc: "Trends en patronen zichtbaar voor zowel coach als klant. Spot wie ondersteuning nodig heeft voordat ze afhaken." },
-        { num: "06", title: "Persoonlijke herinneringen", desc: "Klanten stellen dagelijkse of eenmalige herinneringen in via WhatsApp. Geen extra app nodig — gewoon één bericht." },
-        { num: "07", title: "Workouts leveren",           desc: "Coach plant workouts, klanten ontvangen ze in de app met oefeningsinstructies en gewichtlogging." },
+        { num: "06", title: "Voedingsschema",             desc: "Coach stelt een persoonlijk voedingsplan in. Klanten zien dagelijks hun kcal- en eiwitdoelen — direct in de app." },
+        { num: "07", title: "Voedingstracker",            desc: "Klanten loggen maaltijden via barcodescan of zoeken in de Open Food Facts database. Coach ziet macro-voortgang per dag." },
+        { num: "08", title: "Boodschappenlijst",          desc: "AI genereert automatisch een weekboodschappenlijst op basis van het voedingsschema. Eén tik om te exporteren." },
+        { num: "09", title: "Persoonlijke herinneringen", desc: "Klanten stellen dagelijkse of eenmalige herinneringen in via WhatsApp. Geen extra app nodig — gewoon één bericht." },
+        { num: "10", title: "Workouts leveren",           desc: "Coach plant workouts, klanten ontvangen ze in de app met oefeningsinstructies en gewichtlogging." },
       ],
     },
     system: {
@@ -226,7 +232,7 @@ function Badge({ children }) {
   )
 }
 
-function PhoneFrame({ src, alt }) {
+function PhoneFrame({ src, alt, fetchpriority }) {
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
       <div style={{
@@ -237,7 +243,7 @@ function PhoneFrame({ src, alt }) {
         <div style={{ height: 20, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ width: 48, height: 4, background: "#333", borderRadius: 4 }} />
         </div>
-        <img src={src} alt={alt} style={{ width: "100%", display: "block" }} />
+        <img src={src} alt={alt} width={208} height={450} loading={fetchpriority ? "eager" : "lazy"} fetchpriority={fetchpriority} style={{ width: "100%", display: "block" }} />
       </div>
       <div style={{ position: "absolute", top: -16, right: -16, width: 32, height: 32, borderRadius: "50%", background: G, opacity: 0.15, filter: "blur(12px)" }} />
     </div>
@@ -256,24 +262,31 @@ function ScreenFrame({ src, alt }) {
           <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
         ))}
       </div>
-      <img src={src} alt={alt} style={{ width: "100%", display: "block" }} />
+      <img src={src} alt={alt} width={560} height={360} loading="lazy" style={{ width: "100%", display: "block" }} />
     </div>
   )
 }
 
 // ── Lang toggle (shared between desktop + mobile) ─────────────
+const LANG_LABELS = { NL: "Nederlands", EN: "English" }
+
 function LangToggle({ lang, setLang }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+    <div role="group" aria-label="Taal kiezen" style={{ display: "flex", alignItems: "center", gap: 0 }}>
       {[["NL","🇳🇱"],["EN","🇬🇧"]].map(([code, flag], i) => (
         <span key={code} style={{ display: "flex", alignItems: "center" }}>
-          {i > 0 && <span style={{ color: "#333", fontSize: 11, padding: "0 1px" }}>|</span>}
-          <button onClick={() => setLang(code)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: 15, padding: "4px 5px", lineHeight: 1,
-            opacity: lang === code ? 1 : 0.4,
-          }}>
-            {flag}
+          {i > 0 && <span aria-hidden="true" style={{ color: "#333", fontSize: 11, padding: "0 1px" }}>|</span>}
+          <button
+            onClick={() => setLang(code)}
+            aria-label={LANG_LABELS[code]}
+            aria-pressed={lang === code}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 15, padding: "4px 5px", lineHeight: 1,
+              opacity: lang === code ? 1 : 0.4,
+            }}
+          >
+            <span aria-hidden="true">{flag}</span>
           </button>
         </span>
       ))}
@@ -408,6 +421,7 @@ function ContactForm({ t }) {
         <input
           type="text" required value={fields.name} onChange={set("name")}
           placeholder={tc.namePlaceholder}
+          autoComplete="name" name="name"
           onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
           style={inputStyle("name")}
         />
@@ -417,6 +431,7 @@ function ContactForm({ t }) {
         <input
           type="email" required value={fields.email} onChange={set("email")}
           placeholder={tc.emailPlaceholder}
+          autoComplete="email" name="email" spellCheck="false"
           onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
           style={inputStyle("email")}
         />
@@ -450,7 +465,8 @@ export default function Website() {
   const t = T[lang]
 
   useEffect(() => {
-    document.documentElement.style.scrollBehavior = "smooth"
+    const noMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (!noMotion) document.documentElement.style.scrollBehavior = "smooth"
     return () => { document.documentElement.style.scrollBehavior = "" }
   }, [])
 
@@ -459,12 +475,14 @@ export default function Website() {
       <style>{`
         .nav-links a { color: ${SUB}; text-decoration: none; font-size: 14px; transition: color 0.15s; }
         .nav-links a:hover { color: ${TEXT}; }
-        .btn-ghost { background: transparent; border: 1px solid #333; color: ${SUB}; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-block; }
+        .btn-ghost { background: transparent; border: 1px solid #333; color: ${SUB}; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-block; touch-action: manipulation; }
         .btn-ghost:hover { border-color: #555; color: ${TEXT}; }
-        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; border: none; }
+        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; border: none; touch-action: manipulation; }
         .btn-green:hover { opacity: 0.88; }
-        .btn-green-outline { background: transparent; border: 1px solid ${G}; color: ${G}; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; }
+        .btn-green-outline { background: transparent; border: 1px solid ${G}; color: ${G}; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; touch-action: manipulation; }
         .btn-green-outline:hover { background: #0a1a0f; }
+        h1, h2, h3 { text-wrap: balance; }
+        #probleem, #oplossing, #prijzen, #contact { scroll-margin-top: 70px; }
         .feature-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px; padding: 28px; flex: 1; min-width: 240px; }
         .step-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px; padding: 28px 24px; flex: 1; min-width: 180px; }
         .pricing-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 16px; padding: 36px; flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 20px; }
@@ -510,7 +528,7 @@ export default function Website() {
           </div>
 
           <div className="hero-phone" style={{ flexShrink: 0 }}>
-            <PhoneFrame src="/screenshot-app.png" alt="AXIS app" />
+            <PhoneFrame src="/screenshot-app.png" alt="AXIS app" fetchpriority="high" />
           </div>
 
         </div>
@@ -635,11 +653,11 @@ export default function Website() {
       <div id="prijzen" style={{ borderTop: `1px solid ${BORDER}` }}>
         <Section>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <Badge>Pricing</Badge>
+            <Badge>Prijzen</Badge>
             <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
-              Simple, transparent pricing.
+              Eenvoudige, transparante prijzen.
             </h2>
-            <p style={{ color: SUB, fontSize: 16 }}>Choose the plan that fits your coaching business.</p>
+            <p style={{ color: SUB, fontSize: 16 }}>Kies het plan dat past bij jouw coachingspraktijk.</p>
           </div>
 
           <div className="pricing-grid" style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
@@ -652,24 +670,24 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€139</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 15 clients</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect for independent coaches just getting started.</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 15 klanten</p>
+                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect voor zelfstandige coaches die net beginnen.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Daily WhatsApp check-ins", "Metrics tracking — weight, kcal, steps", "AI coach with memory", "Personal reminders via WhatsApp", "Workout library — 39 exercises with instructions and weight logging", "Progressive overload suggestions", "Basic coach dashboard", "Up to 15 clients"].map(f => (
+                {["Dagelijkse WhatsApp check-ins", "Metrics bijhouden — gewicht, kcal, stappen", "AI coach met geheugen", "Persoonlijke herinneringen via WhatsApp", "Workout bibliotheek — 39 oefeningen met instructies en gewichtlogging", "Progressive overload suggesties", "Basis coach dashboard", "Tot 15 klanten"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
                   </div>
                 ))}
               </div>
-              <Link href="/" className="btn-ghost" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Choose this plan</Link>
+              <Link href="/" className="btn-ghost" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</Link>
             </div>
 
             {/* Growth */}
             <div className="pricing-card pricing-popular" style={{ position: "relative" }}>
               <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)" }}>
-                <span style={{ background: G, color: "#000", fontSize: 11, fontWeight: 700, padding: "3px 14px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase" }}>Popular</span>
+                <span style={{ background: G, color: "#000", fontSize: 11, fontWeight: 700, padding: "3px 14px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase" }}>Populair</span>
               </div>
               <div>
                 <p style={{ color: G, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Growth</p>
@@ -677,18 +695,18 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€399</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 50 clients</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For coaches who want visibility and a partner to get started.</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 50 klanten</p>
+                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor coaches die grip willen op wat er tussen sessies gebeurt.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Everything from Starter", "Full coach dashboard with insights", "Client detail page — full history", "Nutrition goals per client", "Custom workout builder", "Progressive overload alerts per client", "Coach FAQ — train the AI with your answers", "WhatsApp support from AXIS team", "Up to 50 clients"].map(f => (
+                {["Alles van Starter", "Volledig coach dashboard met inzichten", "Klantdetailpagina — volledige geschiedenis", "Voedingsdoelen per klant", "Voedingstracker met barcodescan en Open Food Facts", "Automatische boodschappenlijst op basis van voedingsschema", "Eigen workout builder", "Progressive overload meldingen per klant", "Coach FAQ — train de AI met jouw antwoorden", "WhatsApp support van het AXIS team", "Tot 50 klanten"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
                   </div>
                 ))}
               </div>
-              <Link href="/" className="btn-green" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Choose this plan</Link>
+              <Link href="/" className="btn-green" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</Link>
             </div>
 
             {/* Pro */}
@@ -699,11 +717,11 @@ export default function Website() {
                   <span style={{ fontSize: 40, fontWeight: 800 }}>€699</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
-                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Up to 150 clients</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>For gyms and coaching businesses that want Axis under their own name.</p>
+                <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 150 klanten</p>
+                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor sportscholen en coachingbedrijven die AXIS onder eigen naam willen.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Everything from Growth", "White label — your name, your brand", "Multiple coach accounts", "Custom branding on all messages", "VIP support", "Up to 150 clients"].map(f => (
+                {["Alles van Growth", "White label — jouw naam, jouw merk", "Meerdere coach accounts", "Eigen branding op alle berichten", "VIP support", "Tot 150 klanten"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -711,7 +729,7 @@ export default function Website() {
                 ))}
               </div>
               <button disabled style={{ textAlign: "center", display: "block", width: "100%", padding: "12px", borderRadius: 8, background: "#1a1a1a", border: `1px solid ${BORDER}`, color: "#444", fontSize: 14, cursor: "not-allowed", marginTop: 8 }}>
-                Coming Soon
+                Binnenkort beschikbaar
               </button>
             </div>
 

@@ -16,7 +16,22 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" -Directory)",
       "Bash(Select-Object Name)",
       "PowerShell(Copy-Item *)",
-      "Bash(dir \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\\\\app\\\\api\\\\chat\")"
+      "Bash(dir \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\\\\app\\\\api\\\\chat\")",
+      "Bash(npx next *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.get\\('dependencies',{}\\).items\\(\\)}, indent=2\\)\\)\")",
+      "Bash(npm uninstall *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(xargs grep -l \"exercises\\\\|WorkoutTab\\\\|TrainingTab\\\\|workout\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(grep -v \"^\\\\s*//\")",
+      "WebSearch",
+      "Bash(mv feature/feature-SKILL.md feature/SKILL.md)",
+      "Bash(mv migrate/migrate-SKILL.md migrate/SKILL.md)",
+      "Bash(mv debug/debug-SKILL.md debug/SKILL.md)",
+      "Bash(Select-Object FullName)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" -Depth 2 | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName)",
+      "Skill(push)"
     ]
   }
 }
