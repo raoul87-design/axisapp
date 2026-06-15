@@ -473,21 +473,92 @@ export default function Website() {
   return (
     <div style={{ background: BG, color: TEXT, fontFamily: "system-ui, -apple-system, sans-serif", minHeight: "100vh" }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+        /* ── Animaties ── */
+        @keyframes axisUp {
+          from { opacity: 0; transform: translateY(22px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes axisFade {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .hero-title      { animation: axisUp   0.85s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+        .hero-sub1       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+        .hero-sub2       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.34s both; }
+        .hero-ctas       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.46s both; }
+        .hero-phone-anim { animation: axisFade 1.1s  ease                        0.2s  both; }
+
+        /* ── Nav ── */
         .nav-links a { color: ${SUB}; text-decoration: none; font-size: 14px; transition: color 0.15s; }
         .nav-links a:hover { color: ${TEXT}; }
+
+        /* ── Buttons ── */
         .btn-ghost { background: transparent; border: 1px solid #333; color: ${SUB}; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-block; touch-action: manipulation; }
         .btn-ghost:hover { border-color: #555; color: ${TEXT}; }
-        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; border: none; touch-action: manipulation; }
-        .btn-green:hover { opacity: 0.88; }
+        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s, transform 0.15s; border: none; touch-action: manipulation; }
+        .btn-green:hover { opacity: 0.88; transform: translateY(-1px); }
         .btn-green-outline { background: transparent; border: 1px solid ${G}; color: ${G}; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; touch-action: manipulation; }
         .btn-green-outline:hover { background: #0a1a0f; }
+
+        /* ── Typografie ── */
         h1, h2, h3 { text-wrap: balance; }
         #probleem, #oplossing, #prijzen, #contact { scroll-margin-top: 70px; }
-        .feature-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px; padding: 28px; flex: 1; min-width: 240px; }
-        .step-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px; padding: 28px 24px; flex: 1; min-width: 180px; }
+
+        /* ── Feature kaarten ── */
+        .feature-card {
+          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px;
+          padding: 28px; flex: 1; min-width: 240px;
+          position: relative; overflow: hidden;
+          transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+        }
+        .feature-card:hover {
+          border-color: rgba(34,197,94,0.22);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(34,197,94,0.1);
+          transform: translateY(-3px);
+        }
+        .feature-watermark {
+          position: absolute; bottom: -8px; right: 10px;
+          font-family: 'Chakra Petch', monospace;
+          font-size: 88px; font-weight: 700; line-height: 1;
+          color: rgba(34,197,94,0.04); pointer-events: none;
+          user-select: none; letter-spacing: -4px;
+        }
+        .feature-num-label {
+          font-family: 'Chakra Petch', monospace;
+          font-size: 10px; color: ${G}; font-weight: 600;
+          letter-spacing: 3px; margin-bottom: 16px; display: block;
+        }
+
+        /* ── Stap kaarten ── */
+        .step-card {
+          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px;
+          padding: 28px 24px; flex: 1; min-width: 180px;
+          transition: border-color 0.2s, background 0.2s;
+          position: relative;
+        }
+        .step-card:hover { border-color: rgba(34,197,94,0.18); background: #121212; }
+        .step-icon-box { transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+        .step-card:hover .step-icon-box { transform: scale(1.15); }
+        .step-label {
+          font-family: 'Chakra Petch', monospace;
+          font-size: 15px; font-weight: 700; letter-spacing: 0.08em;
+          text-transform: uppercase; margin-bottom: 10px;
+        }
+        .steps-wrapper { position: relative; }
+        .steps-connector {
+          position: absolute; top: 44px; left: 52px; right: 52px; height: 1px;
+          background: linear-gradient(90deg, transparent 0%, #252525 15%, #252525 85%, transparent 100%);
+          pointer-events: none; z-index: 0;
+        }
+
+        /* ── Pricing ── */
         .pricing-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 16px; padding: 36px; flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 20px; }
         .pricing-popular { border-color: ${G}; box-shadow: 0 0 0 1px ${G}22, 0 16px 48px rgba(34,197,94,0.08); }
         .check-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: ${SUB}; line-height: 1.5; }
+
+        /* ── Responsive ── */
         @media (max-width: 768px) {
           .hero-grid { flex-direction: column !important; }
           .hero-phone { display: none !important; }
@@ -499,6 +570,15 @@ export default function Website() {
           .nav-links { display: none !important; }
           .nav-right { display: none !important; }
           .nav-hamburger { display: block !important; }
+          .steps-connector { display: none; }
+        }
+
+        /* ── Reduced motion ── */
+        @media (prefers-reduced-motion: reduce) {
+          .hero-title, .hero-sub1, .hero-sub2, .hero-ctas, .hero-phone-anim {
+            animation: none; opacity: 1; transform: none;
+          }
+          .feature-card, .step-card, .step-icon-box, .btn-green { transition: none; }
         }
       `}</style>
 
@@ -506,28 +586,39 @@ export default function Website() {
       <Nav lang={lang} setLang={setLang} t={t} />
 
       {/* ── HERO ────────────────────────────────────────────── */}
-      <div style={{ maxWidth: MAX, margin: "0 auto", padding: "96px 24px 80px" }}>
-        <div className="hero-grid" style={{ display: "flex", alignItems: "center", gap: 64 }}>
+      <div style={{ maxWidth: MAX, margin: "0 auto", padding: "96px 24px 80px", position: "relative" }}>
+        {/* Ambient glow */}
+        <div aria-hidden="true" style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+          background: "radial-gradient(ellipse 75% 55% at 68% 28%, rgba(34,197,94,0.07) 0%, transparent 65%), radial-gradient(ellipse 35% 35% at 15% 85%, rgba(34,197,94,0.03) 0%, transparent 60%)",
+        }} />
+        <div className="hero-grid" style={{ display: "flex", alignItems: "center", gap: 64, position: "relative", zIndex: 1 }}>
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <Badge>{t.hero.badge}</Badge>
-            <h1 style={{ fontSize: "clamp(36px, 5vw, 60px)", fontWeight: 800, lineHeight: 1.1, margin: "24px 0 20px", letterSpacing: "-0.02em" }}>
+            <h1 className="hero-title" style={{
+              fontFamily: "'Chakra Petch', monospace",
+              fontSize: "clamp(38px, 5.2vw, 68px)",
+              fontWeight: 700, lineHeight: 1.0,
+              margin: "24px 0 20px", letterSpacing: "-0.01em",
+              textTransform: "uppercase",
+            }}>
               {t.hero.h1a}<br />
               <span style={{ color: G }}>{t.hero.h1b}</span>
             </h1>
-            <p style={{ fontSize: 22, color: "#ccc", marginBottom: 12, fontWeight: 500 }}>
+            <p className="hero-sub1" style={{ fontSize: 22, color: "#ccc", marginBottom: 12, fontWeight: 500 }}>
               {t.hero.sub1}
             </p>
-            <p style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>
+            <p className="hero-sub2" style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>
               {t.hero.sub2}
             </p>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <div className="hero-ctas" style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
               <Link href="/coach-signup" className="btn-green">{t.hero.cta1}</Link>
               <Link href="/login" className="btn-ghost">{t.hero.cta2}</Link>
             </div>
           </div>
 
-          <div className="hero-phone" style={{ flexShrink: 0 }}>
+          <div className="hero-phone hero-phone-anim" style={{ flexShrink: 0 }}>
             <PhoneFrame src="/screenshot-app.png" alt="AXIS app" fetchpriority="high" />
           </div>
 
@@ -575,7 +666,8 @@ export default function Website() {
           <div className="feature-grid" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {t.solution.features.map(f => (
               <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
-                <div style={{ fontSize: 11, color: G, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{f.num}</div>
+                <div aria-hidden="true" className="feature-watermark">{f.num}</div>
+                <span className="feature-num-label">{f.num}</span>
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{f.title}</h3>
                 <p style={{ color: SUB, fontSize: 14, lineHeight: 1.7 }}>{f.desc}</p>
               </div>
@@ -589,17 +681,22 @@ export default function Website() {
         <Section>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <Badge>{t.system.badge}</Badge>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 0", letterSpacing: "-0.01em" }}>
+            <h2 style={{
+              fontFamily: "'Chakra Petch', monospace",
+              fontSize: "clamp(22px, 3vw, 38px)", fontWeight: 700,
+              margin: "20px 0 0", letterSpacing: "0.06em", textTransform: "uppercase",
+            }}>
               {t.system.h2}
             </h2>
           </div>
-          <div className="steps-grid" style={{ display: "flex", gap: 16 }}>
+          <div className="steps-grid steps-wrapper" style={{ display: "flex", gap: 16, position: "relative" }}>
+            <div aria-hidden="true" className="steps-connector" />
             {t.system.steps.map(s => (
-              <div key={s.step} className="step-card">
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: s.color + "22", border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <div key={s.step} className="step-card" style={{ position: "relative", zIndex: 1 }}>
+                <div className="step-icon-box" style={{ width: 36, height: 36, borderRadius: 8, background: s.color + "22", border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color }} />
                 </div>
-                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10, color: s.color }}>{s.step}</h3>
+                <h3 className="step-label" style={{ color: s.color }}>{s.step}</h3>
                 <p style={{ color: SUB, fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
               </div>
             ))}
