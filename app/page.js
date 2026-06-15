@@ -1,14 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AxisLogo } from "../components/AxisLogo"
 
 const G = "#22c55e"
-const BG = "#0f0f0f"
-const CARD = "#111"
-const BORDER = "#1e1e1e"
-const TEXT = "#ffffff"
-const SUB = "#888"
+const BG = "#0a0a0a"
+const CARD = "rgba(255,255,255,0.03)"
+const BORDER = "rgba(255,255,255,0.08)"
+const TEXT = "#F4F4F5"
+const SUB = "#71717A"
 const MAX = 1100
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjgjwdeo"
@@ -29,9 +29,14 @@ const T = {
       h1a: "Stop chasing",
       h1b: "your clients.",
       sub1: "Let AXIS do it.",
-      sub2: "A daily accountability system for personal trainers. Built on WhatsApp and AI.",
+      sub2: "A daily accountability system for personal trainers. WhatsApp. AI as director. Nutrition. Workouts. Everything in one place.",
       cta1: "Start free",
       cta2: "See how it works →",
+      stats: [
+        { val: "10+", sub: "features" },
+        { val: "€139", sub: "starter/month" },
+        { val: "WhatsApp", sub: "no extra app" },
+      ],
     },
     problem: {
       badge: "The problem",
@@ -52,10 +57,13 @@ const T = {
         { num: "01", title: "Daily commitment",    desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
         { num: "02", title: "Execution tracking",  desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
         { num: "03", title: "Metrics tracking",    desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
-        { num: "04", title: "AI coach",            desc: "Remembers your client's history and adjusts tone based on streak and progress." },
+        { num: "04", title: "AI as director",      desc: "The AXIS AI knows your goal, monitors progress and actively adjusts. Not a generic bot — a coach that knows your story." },
         { num: "05", title: "Progress insights",   desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
-        { num: "06", title: "Personal reminders",  desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
-        { num: "07", title: "Workout delivery",    desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
+        { num: "06", title: "Nutrition plan",      desc: "Coach sets a personal nutrition plan. Clients see their daily kcal and protein targets — directly in the app." },
+        { num: "07", title: "Nutrition tracker",   desc: "Clients log meals via barcode scan or search in Open Food Facts. Coach sees macro progress per day." },
+        { num: "08", title: "Shopping list",       desc: "AI automatically generates a weekly shopping list based on the nutrition plan. One tap to export." },
+        { num: "09", title: "Personal reminders",  desc: "Clients set daily or one-time reminders via WhatsApp. No extra app needed — just one message." },
+        { num: "10", title: "Workout delivery",    desc: "Coach plans workouts, clients receive them in the app with exercise instructions and weight logging." },
       ],
     },
     system: {
@@ -127,6 +135,11 @@ const T = {
       sub2: "Een dagelijks discipline systeem voor personal trainers. WhatsApp. AI als regisseur. Voeding. Workouts. Alles op één plek.",
       cta1: "Start gratis",
       cta2: "Bekijk hoe het werkt →",
+      stats: [
+        { val: "10+", sub: "functies" },
+        { val: "€139", sub: "starter/mnd" },
+        { val: "WhatsApp", sub: "geen extra app" },
+      ],
     },
     problem: {
       badge: "Het probleem",
@@ -160,10 +173,10 @@ const T = {
       badge: "Het systeem",
       h2: "Het Axis Discipline Systeem.",
       steps: [
-        { step: "Commit",      color: G,         desc: "Elke ochtend committeert de klant aan één concreet doel voor die dag. Helder, specifiek, uitvoerbaar." },
-        { step: "Execute",   color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
-        { step: "Reflect",   color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
-        { step: "Recover",   color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
+        { step: "Commit",  color: G,         desc: "Elke ochtend committeert de klant aan één concreet doel voor die dag. Helder, specifiek, uitvoerbaar." },
+        { step: "Execute", color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
+        { step: "Reflect", color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
+        { step: "Recover", color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
       ],
     },
     whatsapp: {
@@ -221,7 +234,13 @@ function Section({ children, style = {} }) {
 
 function Badge({ children }) {
   return (
-    <span style={{ background: "#0a1a0f", color: G, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, padding: "4px 12px", borderRadius: 20, border: `1px solid #1a4d2a`, textTransform: "uppercase" }}>
+    <span style={{
+      background: "rgba(34,197,94,0.08)", color: G,
+      fontSize: 11, fontWeight: 700, letterSpacing: 2,
+      padding: "4px 12px", borderRadius: 4,
+      border: "1px solid rgba(34,197,94,0.2)",
+      textTransform: "uppercase", fontFamily: "'Chakra Petch', monospace",
+    }}>
       {children}
     </span>
   )
@@ -233,12 +252,12 @@ function PhoneFrame({ src }) {
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
       <div style={{
-        display: "inline-block", border: "6px solid #2a2a2a", borderRadius: 32,
-        overflow: "hidden", background: "#1a1a1a",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px #333",
+        display: "inline-block", border: "6px solid #1e1e1e", borderRadius: 32,
+        overflow: "hidden", background: "#111",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06), 0 0 60px rgba(34,197,94,0.04)",
       }}>
-        <div style={{ height: 20, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: 48, height: 4, background: "#333", borderRadius: 4 }} />
+        <div style={{ height: 20, background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 48, height: 4, background: "#2a2a2a", borderRadius: 4 }} />
         </div>
         <div style={{ width: W, height: H, overflow: "hidden", background: "#000" }}>
           <iframe src={src} scrolling="no" title="mockup"
@@ -246,7 +265,7 @@ function PhoneFrame({ src }) {
           />
         </div>
       </div>
-      <div style={{ position: "absolute", top: -16, right: -16, width: 32, height: 32, borderRadius: "50%", background: G, opacity: 0.15, filter: "blur(12px)" }} />
+      <div aria-hidden="true" style={{ position: "absolute", top: -24, right: -24, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
     </div>
   )
 }
@@ -255,8 +274,8 @@ function ScreenFrame({ src }) {
   const NW = 1440, DW = 560, SCALE = DW / NW, DH = 460
   return (
     <div style={{
-      borderRadius: 14, overflow: "hidden", border: `1px solid ${BORDER}`,
-      boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+      borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
       background: CARD, flexShrink: 0, maxWidth: DW, width: "100%"
     }}>
       <div style={{ height: 28, background: "#0a0a0a", display: "flex", alignItems: "center", padding: "0 14px", gap: 6 }}>
@@ -300,16 +319,14 @@ function Nav({ lang, setLang, t }) {
   const close = () => setOpen(false)
 
   return (
-    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
+    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,10,0.88)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <AxisLogo variant="streak" size={20} />
 
-        {/* Desktop links */}
         <div className="nav-links" style={{ display: "flex", gap: 32 }}>
           {t.navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
         </div>
 
-        {/* Desktop right */}
         <div className="nav-right" style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <a href="/b2c" style={{ color: SUB, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap" }}>
             {t.navSwitcher}
@@ -318,7 +335,6 @@ function Nav({ lang, setLang, t }) {
           <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
         </div>
 
-        {/* Mobile hamburger */}
         <button
           className="nav-hamburger"
           onClick={() => setOpen(o => !o)}
@@ -337,14 +353,13 @@ function Nav({ lang, setLang, t }) {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {open && (
-        <div style={{ background: "#0a0a0a", borderTop: `1px solid ${BORDER}`, padding: "8px 0 16px" }}>
+        <div style={{ background: "#0a0a0a", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 16px" }}>
           {t.navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={close} style={{
               display: "block", padding: "12px 24px",
               color: "#ccc", fontSize: 15, textDecoration: "none",
-              borderBottom: `1px solid ${BORDER}`,
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
             }}>
               {l.label}
             </a>
@@ -352,11 +367,11 @@ function Nav({ lang, setLang, t }) {
           <a href="/b2c" onClick={close} style={{
             display: "block", padding: "12px 24px",
             color: SUB, fontSize: 14, textDecoration: "none",
-            borderBottom: `1px solid ${BORDER}`,
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
           }}>
             {t.navSwitcher}
           </a>
-          <div style={{ padding: "12px 24px", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ padding: "12px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <LangToggle lang={lang} setLang={setLang} />
           </div>
           <div style={{ padding: "14px 24px 0" }}>
@@ -397,16 +412,16 @@ function ContactForm({ t }) {
 
   const inputStyle = (key) => ({
     width: "100%", padding: "12px 16px", borderRadius: 8,
-    background: "#0a0a0a", color: "#fff", fontSize: 14,
-    border: `1px solid ${focused === key ? G : "#2a2a2a"}`,
+    background: "#080808", color: "#fff", fontSize: 14,
+    border: `1px solid ${focused === key ? G : "rgba(255,255,255,0.1)"}`,
     outline: "none", boxSizing: "border-box", transition: "border-color 0.15s",
   })
 
   if (status === "success") {
     return (
-      <div style={{ background: "#0a1a0f", border: `1px solid #1a4d2a`, borderRadius: 12, padding: "32px 28px" }}>
-        <p style={{ color: G, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{tc.successTitle}</p>
-        <p style={{ color: "#888", fontSize: 14 }}>{tc.successSub}</p>
+      <div style={{ background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "32px 28px" }}>
+        <p style={{ color: G, fontSize: 18, fontWeight: 700, marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>{tc.successTitle}</p>
+        <p style={{ color: SUB, fontSize: 14 }}>{tc.successSub}</p>
         <button onClick={() => setStatus("idle")} style={{ marginTop: 20, background: "none", border: "none", color: G, fontSize: 14, cursor: "pointer", padding: 0 }}>
           {tc.sendAnother}
         </button>
@@ -417,7 +432,7 @@ function ContactForm({ t }) {
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.name}</label>
+        <label style={{ display: "block", fontSize: 11, color: "#555", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>{tc.name}</label>
         <input
           type="text" required value={fields.name} onChange={set("name")}
           placeholder={tc.namePlaceholder}
@@ -426,7 +441,7 @@ function ContactForm({ t }) {
         />
       </div>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.email}</label>
+        <label style={{ display: "block", fontSize: 11, color: "#555", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>{tc.email}</label>
         <input
           type="email" required value={fields.email} onChange={set("email")}
           placeholder={tc.emailPlaceholder}
@@ -435,7 +450,7 @@ function ContactForm({ t }) {
         />
       </div>
       <div>
-        <label style={{ display: "block", fontSize: 12, color: "#555", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>{tc.message}</label>
+        <label style={{ display: "block", fontSize: 11, color: "#555", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>{tc.message}</label>
         <textarea
           required value={fields.message} onChange={set("message")}
           placeholder={tc.msgPlaceholder}
@@ -449,7 +464,7 @@ function ContactForm({ t }) {
       )}
       <button
         type="submit" disabled={status === "sending"}
-        style={{ padding: "13px 28px", background: status === "sending" ? "#1a4d2a" : G, color: "#000", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: status === "sending" ? "default" : "pointer", transition: "opacity 0.15s", alignSelf: "flex-start", opacity: status === "sending" ? 0.7 : 1 }}
+        style={{ padding: "13px 28px", background: status === "sending" ? "rgba(34,197,94,0.4)" : G, color: "#000", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: status === "sending" ? "default" : "pointer", transition: "opacity 0.15s", alignSelf: "flex-start", opacity: status === "sending" ? 0.7 : 1, fontFamily: "'Chakra Petch', monospace", letterSpacing: "0.05em" }}
       >
         {status === "sending" ? tc.sending : tc.send}
       </button>
@@ -467,12 +482,30 @@ export default function Website() {
     return () => { document.documentElement.style.scrollBehavior = "" }
   }, [])
 
+  // IntersectionObserver voor scroll-animaties
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add("visible") }),
+      { threshold: 0.08, rootMargin: "0px 0px -48px 0px" }
+    )
+    document.querySelectorAll(".fade-up").forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [lang])
+
   return (
     <div style={{ background: BG, color: TEXT, fontFamily: "system-ui, -apple-system, sans-serif", minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
-        /* ── Animaties ── */
+        /* ── Scroll fade-in ── */
+        .fade-up { opacity: 0; transform: translateY(20px); transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1); }
+        .fade-up.visible { opacity: 1; transform: translateY(0); }
+        .fade-up.d1 { transition-delay: 0.08s; }
+        .fade-up.d2 { transition-delay: 0.16s; }
+        .fade-up.d3 { transition-delay: 0.24s; }
+
+        /* ── Hero ── */
         @keyframes axisUp {
           from { opacity: 0; transform: translateY(22px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -485,6 +518,7 @@ export default function Website() {
         .hero-sub1       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
         .hero-sub2       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.34s both; }
         .hero-ctas       { animation: axisUp   0.75s cubic-bezier(0.16,1,0.3,1) 0.46s both; }
+        .hero-stats      { animation: axisFade 1.0s  ease                        0.7s  both; }
         .hero-phone-anim { animation: axisFade 1.1s  ease                        0.2s  both; }
 
         /* ── Nav ── */
@@ -492,69 +526,77 @@ export default function Website() {
         .nav-links a:hover { color: ${TEXT}; }
 
         /* ── Buttons ── */
-        .btn-ghost { background: transparent; border: 1px solid #333; color: ${SUB}; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-block; touch-action: manipulation; }
-        .btn-ghost:hover { border-color: #555; color: ${TEXT}; }
-        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s, transform 0.15s; border: none; touch-action: manipulation; }
+        .btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: ${SUB}; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-block; touch-action: manipulation; }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: ${TEXT}; }
+        .btn-green { background: ${G}; color: #000; padding: 12px 28px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s, transform 0.15s; border: none; touch-action: manipulation; font-family: 'Chakra Petch', monospace; letter-spacing: 0.06em; }
         .btn-green:hover { opacity: 0.88; transform: translateY(-1px); }
-        .btn-green-outline { background: transparent; border: 1px solid ${G}; color: ${G}; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; touch-action: manipulation; }
-        .btn-green-outline:hover { background: #0a1a0f; }
+        .btn-green-outline { background: transparent; border: 1px solid ${G}; color: ${G}; padding: 12px 28px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: background 0.15s; touch-action: manipulation; }
+        .btn-green-outline:hover { background: rgba(34,197,94,0.08); }
 
         /* ── Typografie ── */
         h1, h2, h3 { text-wrap: balance; }
         #probleem, #oplossing, #prijzen, #contact { scroll-margin-top: 70px; }
 
-        /* ── Feature kaarten ── */
+        /* ── Feature grid ── */
+        .feature-grid {
+          display: grid !important;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
         .feature-card {
-          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px;
-          padding: 28px; flex: 1; min-width: 240px;
-          position: relative; overflow: hidden;
+          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 12px;
+          padding: 28px; position: relative; overflow: hidden;
           transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
         }
         .feature-card:hover {
-          border-color: rgba(34,197,94,0.22);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(34,197,94,0.1);
-          transform: translateY(-3px);
+          border-color: rgba(34,197,94,0.2);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(34,197,94,0.08);
+          transform: translateY(-2px);
         }
         .feature-watermark {
-          position: absolute; bottom: -8px; right: 10px;
+          position: absolute; bottom: -12px; right: 8px;
           font-family: 'Chakra Petch', monospace;
-          font-size: 88px; font-weight: 700; line-height: 1;
-          color: rgba(34,197,94,0.04); pointer-events: none;
+          font-size: 80px; font-weight: 700; line-height: 1;
+          color: rgba(34,197,94,0.045); pointer-events: none;
           user-select: none; letter-spacing: -4px;
         }
         .feature-num-label {
           font-family: 'Chakra Petch', monospace;
           font-size: 10px; color: ${G}; font-weight: 600;
-          letter-spacing: 3px; margin-bottom: 16px; display: block;
+          letter-spacing: 3px; margin-bottom: 14px; display: block;
+          opacity: 0.7;
         }
 
         /* ── Stap kaarten ── */
         .step-card {
-          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 14px;
+          background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 12px;
           padding: 28px 24px; flex: 1; min-width: 180px;
           transition: border-color 0.2s, background 0.2s;
           position: relative;
         }
-        .step-card:hover { border-color: rgba(34,197,94,0.18); background: #121212; }
+        .step-card:hover { border-color: rgba(34,197,94,0.16); background: rgba(255,255,255,0.04); }
         .step-icon-box { transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
         .step-card:hover .step-icon-box { transform: scale(1.15); }
         .step-label {
           font-family: 'Chakra Petch', monospace;
-          font-size: 15px; font-weight: 700; letter-spacing: 0.08em;
+          font-size: 14px; font-weight: 700; letter-spacing: 0.1em;
           text-transform: uppercase; margin-bottom: 10px;
         }
         .steps-connector {
           position: absolute; top: 44px; left: 52px; right: 52px; height: 1px;
-          background: linear-gradient(90deg, transparent 0%, #252525 15%, #252525 85%, transparent 100%);
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 15%, rgba(255,255,255,0.08) 85%, transparent 100%);
           pointer-events: none; z-index: 0;
         }
 
         /* ── Pricing ── */
-        .pricing-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 16px; padding: 36px; flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 20px; }
-        .pricing-popular { border-color: ${G}; box-shadow: 0 0 0 1px ${G}22, 0 16px 48px rgba(34,197,94,0.08); }
+        .pricing-card { background: ${CARD}; border: 1px solid ${BORDER}; border-radius: 12px; padding: 36px; flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 20px; }
+        .pricing-popular { border-color: rgba(34,197,94,0.35); box-shadow: 0 0 0 1px rgba(34,197,94,0.12), 0 16px 48px rgba(34,197,94,0.06); }
         .check-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: ${SUB}; line-height: 1.5; }
 
         /* ── Responsive ── */
+        @media (max-width: 900px) {
+          .feature-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
         @media (max-width: 768px) {
           .hero-grid { flex-direction: column !important; }
           .hero-phone { display: none !important; }
@@ -562,18 +604,20 @@ export default function Website() {
           .split-right { flex-direction: column-reverse !important; }
           .pricing-grid { flex-direction: column !important; }
           .steps-grid { flex-wrap: wrap !important; }
-          .feature-grid { flex-direction: column !important; }
+          .feature-grid { grid-template-columns: 1fr !important; }
           .nav-links { display: none !important; }
           .nav-right { display: none !important; }
           .nav-hamburger { display: block !important; }
           .steps-connector { display: none; }
+          .hero-stats { flex-direction: column !important; gap: 20px !important; }
         }
 
         /* ── Reduced motion ── */
         @media (prefers-reduced-motion: reduce) {
-          .hero-title, .hero-sub1, .hero-sub2, .hero-ctas, .hero-phone-anim {
+          .hero-title, .hero-sub1, .hero-sub2, .hero-ctas, .hero-phone-anim, .hero-stats {
             animation: none; opacity: 1; transform: none;
           }
+          .fade-up { opacity: 1; transform: none; transition: none; }
           .feature-card, .step-card, .step-icon-box, .btn-green { transition: none; }
         }
       `}</style>
@@ -585,7 +629,7 @@ export default function Website() {
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "96px 24px 80px", position: "relative" }}>
         <div aria-hidden="true" style={{
           position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
-          background: "radial-gradient(ellipse 75% 55% at 68% 28%, rgba(34,197,94,0.07) 0%, transparent 65%), radial-gradient(ellipse 35% 35% at 15% 85%, rgba(34,197,94,0.03) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse 65% 50% at 65% 25%, rgba(34,197,94,0.08) 0%, transparent 60%)",
         }} />
         <div className="hero-grid" style={{ display: "flex", alignItems: "center", gap: 64, position: "relative", zIndex: 1 }}>
 
@@ -593,7 +637,7 @@ export default function Website() {
             <Badge>{t.hero.badge}</Badge>
             <h1 className="hero-title" style={{
               fontFamily: "'Chakra Petch', monospace",
-              fontSize: "clamp(38px, 5.2vw, 68px)",
+              fontSize: "clamp(36px, 5vw, 64px)",
               fontWeight: 700, lineHeight: 1.0,
               margin: "24px 0 20px", letterSpacing: "-0.01em",
               textTransform: "uppercase",
@@ -601,11 +645,21 @@ export default function Website() {
               {t.hero.h1a}<br />
               <span style={{ color: G }}>{t.hero.h1b}</span>
             </h1>
-            <p className="hero-sub1" style={{ fontSize: 22, color: "#ccc", marginBottom: 12, fontWeight: 500 }}>{t.hero.sub1}</p>
-            <p className="hero-sub2" style={{ fontSize: 16, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 480 }}>{t.hero.sub2}</p>
-            <div className="hero-ctas" style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <p className="hero-sub1" style={{ fontSize: 21, color: "#d4d4d8", marginBottom: 10, fontWeight: 500 }}>{t.hero.sub1}</p>
+            <p className="hero-sub2" style={{ fontSize: 15, color: SUB, marginBottom: 32, lineHeight: 1.75, maxWidth: 460 }}>{t.hero.sub2}</p>
+            <div className="hero-ctas" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
               <a href="https://app.axisapp.nl/coach-signup" className="btn-green">{t.hero.cta1}</a>
               <a href="#oplossing" className="btn-ghost">{t.hero.cta2}</a>
+            </div>
+
+            {/* Stats row */}
+            <div className="hero-stats" style={{ display: "flex", gap: 40, marginTop: 44, paddingTop: 32, borderTop: "1px solid rgba(255,255,255,0.06)", flexWrap: "wrap" }}>
+              {t.hero.stats.map(s => (
+                <div key={s.val} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontFamily: "'Chakra Petch', monospace", fontSize: 24, fontWeight: 700, color: TEXT, lineHeight: 1, letterSpacing: "-0.01em" }}>{s.val}</span>
+                  <span style={{ fontSize: 11, color: SUB, letterSpacing: 1.5, textTransform: "uppercase" }}>{s.sub}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -617,50 +671,52 @@ export default function Website() {
       </div>
 
       {/* ── DIVIDER ─────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}` }} />
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
 
       {/* ── PROBLEEM ────────────────────────────────────────── */}
       <div id="probleem">
         <Section>
-          <div style={{ maxWidth: 700 }}>
+          <div className="fade-up" style={{ maxWidth: 700 }}>
             <Badge>{t.problem.badge}</Badge>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
               {t.problem.h2}<br />
               <span style={{ color: SUB }}>{t.problem.h2sub}</span>
             </h2>
-            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>{t.problem.p}</p>
+            <p style={{ fontSize: 16, color: SUB, lineHeight: 1.85 }}>{t.problem.p}</p>
           </div>
         </Section>
       </div>
 
       {/* ── COACHING ────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#060606" }}>
         <Section>
-          <div style={{ maxWidth: 700 }}>
+          <div className="fade-up" style={{ maxWidth: 700 }}>
             <Badge>{t.coaching.badge}</Badge>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 20px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
               {t.coaching.h2}
             </h2>
-            <p style={{ fontSize: 17, color: SUB, lineHeight: 1.8 }}>{t.coaching.p}</p>
+            <p style={{ fontSize: 16, color: SUB, lineHeight: 1.85 }}>{t.coaching.p}</p>
           </div>
         </Section>
       </div>
 
       {/* ── OPLOSSING ───────────────────────────────────────── */}
-      <div id="oplossing" style={{ borderTop: `1px solid ${BORDER}` }}>
+      <div id="oplossing" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <Section>
-          <Badge>{t.solution.badge}</Badge>
-          <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
-            {t.solution.h2}
-          </h2>
-          <p style={{ color: SUB, fontSize: 16, marginBottom: 48, maxWidth: 560 }}>{t.solution.sub}</p>
-          <div className="feature-grid" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <div className="fade-up">
+            <Badge>{t.solution.badge}</Badge>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 10px", letterSpacing: "-0.02em" }}>
+              {t.solution.h2}
+            </h2>
+            <p style={{ color: SUB, fontSize: 15, marginBottom: 48, maxWidth: 520, lineHeight: 1.75 }}>{t.solution.sub}</p>
+          </div>
+          <div className="feature-grid fade-up d1">
             {t.solution.features.map(f => (
-              <div key={f.num} className="feature-card" style={{ minWidth: 200 }}>
+              <div key={f.num} className="feature-card">
                 <div aria-hidden="true" className="feature-watermark">{f.num}</div>
                 <span className="feature-num-label">{f.num}</span>
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{f.title}</h3>
-                <p style={{ color: SUB, fontSize: 14, lineHeight: 1.7 }}>{f.desc}</p>
+                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, lineHeight: 1.3 }}>{f.title}</h3>
+                <p style={{ color: SUB, fontSize: 13, lineHeight: 1.75 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -668,27 +724,27 @@ export default function Website() {
       </div>
 
       {/* ── AXIS SYSTEEM ────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#060606" }}>
         <Section>
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <div className="fade-up" style={{ textAlign: "center", marginBottom: 56 }}>
             <Badge>{t.system.badge}</Badge>
             <h2 style={{
               fontFamily: "'Chakra Petch', monospace",
-              fontSize: "clamp(22px, 3vw, 38px)", fontWeight: 700,
-              margin: "20px 0 0", letterSpacing: "0.06em", textTransform: "uppercase",
+              fontSize: "clamp(22px, 3vw, 36px)", fontWeight: 700,
+              margin: "20px 0 0", letterSpacing: "0.08em", textTransform: "uppercase",
             }}>
               {t.system.h2}
             </h2>
           </div>
-          <div className="steps-grid" style={{ display: "flex", gap: 16, position: "relative" }}>
+          <div className="steps-grid fade-up d1" style={{ display: "flex", gap: 16, position: "relative" }}>
             <div aria-hidden="true" className="steps-connector" />
             {t.system.steps.map(s => (
               <div key={s.step} className="step-card" style={{ position: "relative", zIndex: 1 }}>
-                <div className="step-icon-box" style={{ width: 36, height: 36, borderRadius: 8, background: s.color + "22", border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <div className="step-icon-box" style={{ width: 36, height: 36, borderRadius: 8, background: s.color + "18", border: `1px solid ${s.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color }} />
                 </div>
                 <h3 className="step-label" style={{ color: s.color }}>{s.step}</h3>
-                <p style={{ color: SUB, fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
+                <p style={{ color: SUB, fontSize: 13, lineHeight: 1.75 }}>{s.desc}</p>
               </div>
             ))}
           </div>
@@ -696,35 +752,35 @@ export default function Website() {
       </div>
 
       {/* ── WHATSAPP ────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}` }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <Section>
-          <div className="split-left" style={{ display: "flex", alignItems: "center", gap: 64 }}>
+          <div className="split-left fade-up" style={{ display: "flex", alignItems: "center", gap: 64 }}>
             <PhoneFrame src="/mockups/whatsapp.html" />
             <div style={{ flex: 1 }}>
               <Badge>{t.whatsapp.badge}</Badge>
-              <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
                 {t.whatsapp.h2a}<br />{t.whatsapp.h2b}
               </h2>
-              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>{t.whatsapp.p}</p>
+              <p style={{ color: SUB, fontSize: 15, lineHeight: 1.85 }}>{t.whatsapp.p}</p>
             </div>
           </div>
         </Section>
       </div>
 
       {/* ── DASHBOARD ───────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#060606" }}>
         <Section>
-          <div className="split-right" style={{ display: "flex", alignItems: "center", gap: 64 }}>
+          <div className="split-right fade-up" style={{ display: "flex", alignItems: "center", gap: 64 }}>
             <div style={{ flex: 1 }}>
               <Badge>{t.dashboard.badge}</Badge>
-              <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+              <h2 style={{ fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 800, margin: "20px 0 16px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
                 {t.dashboard.h2a}<br />{t.dashboard.h2b}
               </h2>
-              <p style={{ color: SUB, fontSize: 16, lineHeight: 1.8 }}>{t.dashboard.p}</p>
+              <p style={{ color: SUB, fontSize: 15, lineHeight: 1.85 }}>{t.dashboard.p}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
                 {t.dashboard.bullets.map(item => (
-                  <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: SUB, lineHeight: 1.5 }}>
-                    <span style={{ color: G, flexShrink: 0 }}>✓</span>
+                  <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: SUB, lineHeight: 1.6 }}>
+                    <span style={{ color: G, flexShrink: 0, marginTop: 1 }}>✓</span>
                     <span>{item}</span>
                   </div>
                 ))}
@@ -736,31 +792,31 @@ export default function Website() {
       </div>
 
       {/* ── PRICING ─────────────────────────────────────────── */}
-      <div id="prijzen" style={{ borderTop: `1px solid ${BORDER}` }}>
+      <div id="prijzen" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <Section>
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
+          <div className="fade-up" style={{ textAlign: "center", marginBottom: 56 }}>
             <Badge>Prijzen</Badge>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.02em" }}>
               Eenvoudige, transparante prijzen.
             </h2>
-            <p style={{ color: SUB, fontSize: 16 }}>Kies het plan dat past bij jouw coachingspraktijk.</p>
+            <p style={{ color: SUB, fontSize: 15 }}>Kies het plan dat past bij jouw coachingspraktijk.</p>
           </div>
 
-          <div className="pricing-grid" style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+          <div className="pricing-grid fade-up d1" style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
 
             {/* Starter */}
             <div className="pricing-card">
               <div>
-                <p style={{ color: SUB, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Starter</p>
+                <p style={{ color: SUB, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>Starter</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€139</span>
+                  <span style={{ fontSize: 40, fontWeight: 800, fontFamily: "'Chakra Petch', monospace" }}>€139</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 15 klanten</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect voor zelfstandige coaches die net beginnen.</p>
+                <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Perfect voor zelfstandige coaches die net beginnen.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Dagelijkse WhatsApp check-ins", "Metrics bijhouden — gewicht, kcal, stappen", "AI coach met geheugen", "Persoonlijke herinneringen via WhatsApp", "Workout bibliotheek — 39 oefeningen met instructies en gewichtlogging", "Progressive overload suggesties", "Basis coach dashboard", "Tot 15 klanten"].map(f => (
+                {["Dagelijkse WhatsApp check-ins", "Metrics bijhouden — gewicht, kcal, stappen", "AI coach met geheugen", "Persoonlijke herinneringen via WhatsApp", "Workout bibliotheek — 39 oefeningen", "Progressive overload suggesties", "Basis coach dashboard", "Tot 15 klanten"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
@@ -773,16 +829,16 @@ export default function Website() {
             {/* Growth */}
             <div className="pricing-card pricing-popular" style={{ position: "relative" }}>
               <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)" }}>
-                <span style={{ background: G, color: "#000", fontSize: 11, fontWeight: 700, padding: "3px 14px", borderRadius: 20, letterSpacing: 1, textTransform: "uppercase" }}>Populair</span>
+                <span style={{ background: G, color: "#000", fontSize: 10, fontWeight: 700, padding: "3px 14px", borderRadius: 4, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'Chakra Petch', monospace" }}>Populair</span>
               </div>
               <div>
-                <p style={{ color: G, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Growth</p>
+                <p style={{ color: G, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>Growth</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€399</span>
+                  <span style={{ fontSize: 40, fontWeight: 800, fontFamily: "'Chakra Petch', monospace" }}>€399</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 50 klanten</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor coaches die grip willen op wat er tussen sessies gebeurt.</p>
+                <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor coaches die grip willen op wat er tussen sessies gebeurt.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                 {["Alles van Starter", "Volledig coach dashboard met inzichten", "Klantdetailpagina — volledige geschiedenis", "Voedingsdoelen per klant", "Voedingstracker met barcodescan en Open Food Facts", "Automatische boodschappenlijst op basis van voedingsschema", "Eigen workout builder", "Progressive overload meldingen per klant", "Coach FAQ — train de AI met jouw antwoorden", "WhatsApp support van het AXIS team", "Tot 50 klanten"].map(f => (
@@ -798,13 +854,13 @@ export default function Website() {
             {/* Pro */}
             <div className="pricing-card">
               <div>
-                <p style={{ color: SUB, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Pro</p>
+                <p style={{ color: SUB, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Chakra Petch', monospace" }}>Pro</p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 40, fontWeight: 800 }}>€699</span>
+                  <span style={{ fontSize: 40, fontWeight: 800, fontFamily: "'Chakra Petch', monospace" }}>€699</span>
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 150 klanten</p>
-                <p style={{ color: "#ccc", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor sportscholen en coachingbedrijven die AXIS onder eigen naam willen.</p>
+                <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor sportscholen en coachingbedrijven die AXIS onder eigen naam willen.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                 {["Alles van Growth", "White label — jouw naam, jouw merk", "Meerdere coach accounts", "Eigen branding op alle berichten", "VIP support", "Tot 150 klanten"].map(f => (
@@ -814,7 +870,7 @@ export default function Website() {
                   </div>
                 ))}
               </div>
-              <button disabled style={{ textAlign: "center", display: "block", width: "100%", padding: "12px", borderRadius: 8, background: "#1a1a1a", border: `1px solid ${BORDER}`, color: "#444", fontSize: 14, cursor: "not-allowed", marginTop: 8 }}>
+              <button disabled style={{ textAlign: "center", display: "block", width: "100%", padding: "12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#3f3f46", fontSize: 14, cursor: "not-allowed", marginTop: 8 }}>
                 Binnenkort beschikbaar
               </button>
             </div>
@@ -824,38 +880,44 @@ export default function Website() {
       </div>
 
       {/* ── CTA ─────────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${BORDER}`, background: "#080808" }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#060606" }}>
         <Section style={{ textAlign: "center" }}>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>
-            {t.cta.h2a}<br />{t.cta.h2b} <span style={{ color: G }}>{t.cta.h2c}</span>
-          </h2>
-          <p style={{ color: SUB, fontSize: 17, marginBottom: 36 }}>{t.cta.p}</p>
-          <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>{t.cta.btn}</a>
+          <div className="fade-up">
+            <h2 style={{
+              fontFamily: "'Chakra Petch', monospace",
+              fontSize: "clamp(28px, 4vw, 52px)", fontWeight: 700,
+              marginBottom: 16, letterSpacing: "0.02em", textTransform: "uppercase", lineHeight: 1.1,
+            }}>
+              {t.cta.h2a}<br />{t.cta.h2b} <span style={{ color: G }}>{t.cta.h2c}</span>
+            </h2>
+            <p style={{ color: SUB, fontSize: 16, marginBottom: 36 }}>{t.cta.p}</p>
+            <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ fontSize: 15, padding: "14px 36px" }}>{t.cta.btn}</a>
+          </div>
         </Section>
       </div>
 
       {/* ── CONTACT ─────────────────────────────────────────── */}
-      <div id="contact" style={{ borderTop: `1px solid ${BORDER}` }}>
+      <div id="contact" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <Section>
-          <div style={{ maxWidth: 560 }}>
+          <div className="fade-up" style={{ maxWidth: 560 }}>
             <Badge>{t.contact.badge}</Badge>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.01em" }}>
+            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 800, margin: "20px 0 12px", letterSpacing: "-0.02em" }}>
               {t.contact.h2}
             </h2>
-            <p style={{ color: SUB, fontSize: 16, marginBottom: 40, lineHeight: 1.7 }}>{t.contact.p}</p>
+            <p style={{ color: SUB, fontSize: 15, marginBottom: 40, lineHeight: 1.75 }}>{t.contact.p}</p>
             <ContactForm t={t} />
           </div>
         </Section>
       </div>
 
       {/* ── FOOTER ──────────────────────────────────────────── */}
-      <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
             <AxisLogo variant="bracket" size={18} />
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>{t.footer.tagline}</p>
           </div>
-          <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
+          <p style={{ color: "#3f3f46", fontSize: 12 }}>© 2026 AXIS</p>
         </div>
       </footer>
 

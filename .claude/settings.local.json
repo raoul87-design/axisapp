@@ -31,7 +31,8 @@
       "Bash(Select-Object FullName)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" -Depth 2 | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName)",
-      "Skill(push)"
+      "Skill(push)",
+      "WebFetch(domain:www.axisapp.nl)"
     ]
   }
 }
