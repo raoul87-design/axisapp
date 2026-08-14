@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { AxisLogo } from "../components/AxisLogo"
+import { APP_URL } from "../lib/config"
 
 const G = "#22c55e"
-const BG = "#0a0a0a"
+const BG = "var(--ink)"
 const CARD = "rgba(255,255,255,0.03)"
 const BORDER = "rgba(255,255,255,0.08)"
 const TEXT = "#F4F4F5"
@@ -28,7 +29,7 @@ const T = {
       badge: "Discipline System for Coaches",
       h1a: "Stop chasing",
       h1b: "your clients.",
-      sub1: "Let AXIS do it.",
+      sub1: "Everyone starts. Stayd is for those who stay.",
       sub2: "A daily accountability system for personal trainers. WhatsApp. AI as director. Nutrition. Workouts. Everything in one place.",
       cta1: "Start free",
       cta2: "See how it works →",
@@ -51,13 +52,13 @@ const T = {
     },
     solution: {
       badge: "The solution",
-      h2: "Axis fills the gap between sessions.",
+      h2: "Stayd fills the gap between sessions.",
       sub: "Everything your clients need to stay consistent — without extra apps or manual follow-up.",
       features: [
         { num: "01", title: "Daily commitment",    desc: "Clients commit to what they will do today via WhatsApp. One clear intention, every morning." },
         { num: "02", title: "Execution tracking",  desc: "Streaks, missed days and patterns are tracked automatically — visible to the coach at a glance." },
         { num: "03", title: "Metrics tracking",    desc: "Weight, kcal and steps tracked daily via WhatsApp. No manual entry, no separate app." },
-        { num: "04", title: "AI as director",      desc: "The AXIS AI knows your goal, monitors progress and actively adjusts. Not a generic bot — a coach that knows your story." },
+        { num: "04", title: "AI as director",      desc: "The Stayd AI knows your goal, monitors progress and actively adjusts. Not a generic bot — a coach that knows your story." },
         { num: "05", title: "Progress insights",   desc: "Trends and patterns visible for both coach and client. Spot who needs support before they drop off." },
         { num: "06", title: "Nutrition plan",      desc: "Coach sets a personal nutrition plan. Clients see their daily kcal and protein targets — directly in the app." },
         { num: "07", title: "Nutrition tracker",   desc: "Clients log meals via barcode scan or search in Open Food Facts. Coach sees macro progress per day." },
@@ -68,12 +69,12 @@ const T = {
     },
     system: {
       badge: "The system",
-      h2: "The Axis Discipline System.",
+      h2: "The Stayd Discipline System.",
       steps: [
         { step: "Commit",  color: G,         desc: "Every morning, the client commits to one concrete goal for the day. Clear, specific, actionable." },
-        { step: "Execute", color: "#60a5fa", desc: "The client works on their commitment throughout the day. Axis tracks whether they follow through." },
-        { step: "Reflect", color: "#f59e0b", desc: "In the evening, Axis checks in. Did you do it? An honest answer drives the next step." },
-        { step: "Recover", color: "#a78bfa", desc: "Missed a day? No problem. Axis helps you bounce back instead of spiraling. Progress over perfection." },
+        { step: "Execute", color: "#60a5fa", desc: "The client works on their commitment throughout the day. Stayd tracks whether they follow through." },
+        { step: "Reflect", color: "#f59e0b", desc: "In the evening, Stayd checks in. Did you do it? An honest answer drives the next step." },
+        { step: "Recover", color: "#a78bfa", desc: "Missed a day? No problem. Stayd helps you bounce back instead of spiraling. Progress over perfection." },
       ],
     },
     whatsapp: {
@@ -86,7 +87,7 @@ const T = {
       badge: "Coach dashboard",
       h2a: "Coaches see",
       h2b: "who executes.",
-      p: "Axis gives coaches visibility into what happens between sessions. See which clients stay consistent. See who needs support. Spend less time chasing updates — and more time coaching.",
+      p: "Stayd gives coaches visibility into what happens between sessions. See which clients stay consistent. See who needs support. Spend less time chasing updates — and more time coaching.",
       bullets: [
         "See daily metrics — weight trends, kcal targets and macro progress",
         "Full client history — commitments, metrics and conversations in one place",
@@ -96,13 +97,13 @@ const T = {
       h2a: "Turn commitments",
       h2b: "into",
       h2c: "execution.",
-      p: "Axis helps personal trainers build more consistent clients.",
+      p: "Stayd helps personal trainers build more consistent clients.",
       btn: "Start free",
     },
     contact: {
       badge: "Contact",
       h2: "Get in touch.",
-      p: "Questions about AXIS or want to get started? Send a message and we'll get back to you within one business day.",
+      p: "Questions about Stayd or want to get started? Send a message and we'll get back to you within one business day.",
       name: "Name",
       email: "Email",
       message: "Message",
@@ -131,7 +132,7 @@ const T = {
       badge: "Discipline Systeem voor Coaches",
       h1a: "Stop met achternazitten",
       h1b: "van je klanten.",
-      sub1: "Laat AXIS het doen.",
+      sub1: "Iedereen begint. Stayd is voor wie blijft.",
       sub2: "Een dagelijks discipline systeem voor personal trainers. WhatsApp. AI als regisseur. Voeding. Workouts. Alles op één plek.",
       cta1: "Start gratis",
       cta2: "Bekijk hoe het werkt →",
@@ -154,13 +155,13 @@ const T = {
     },
     solution: {
       badge: "De oplossing",
-      h2: "Axis vult het gat tussen sessies.",
-      sub: "Alles wat je klanten nodig hebben om consistent te blijven. Van dagelijkse commitments tot voedingsschema's en workouts — AXIS regisseert het geheel.",
+      h2: "Stayd vult het gat tussen sessies.",
+      sub: "Alles wat je klanten nodig hebben om consistent te blijven. Van dagelijkse commitments tot voedingsschema's en workouts — Stayd regisseert het geheel.",
       features: [
         { num: "01", title: "Dagelijkse commitment",      desc: "Klanten committen via WhatsApp aan wat ze vandaag gaan doen. Één heldere intentie, elke ochtend." },
         { num: "02", title: "Uitvoering bijhouden",       desc: "Streaks, gemiste dagen en patronen worden automatisch bijgehouden — voor de coach in één oogopslag zichtbaar." },
         { num: "03", title: "Metrics bijhouden",          desc: "Gewicht, kcal en stappen dagelijks bijhouden via WhatsApp. Geen handmatige invoer, geen aparte app." },
-        { num: "04", title: "AI als regisseur",           desc: "De AXIS AI kent je doel, bewaakt je progressie en stuurt actief bij. Geen generieke bot — een coach die jouw verhaal kent en elke dag de juiste toon aanslaat." },
+        { num: "04", title: "AI als regisseur",           desc: "De Stayd AI kent je doel, bewaakt je progressie en stuurt actief bij. Geen generieke bot — een coach die jouw verhaal kent en elke dag de juiste toon aanslaat." },
         { num: "05", title: "Voortgangsinzichten",        desc: "Trends en patronen zichtbaar voor zowel coach als klant. Spot wie ondersteuning nodig heeft voordat ze afhaken." },
         { num: "06", title: "Voedingsschema",             desc: "Coach stelt een persoonlijk voedingsplan in. Klanten zien dagelijks hun kcal- en eiwitdoelen — direct in de app." },
         { num: "07", title: "Voedingstracker",            desc: "Klanten loggen maaltijden via barcodescan of zoeken in de Open Food Facts database. Coach ziet macro-voortgang per dag." },
@@ -171,12 +172,12 @@ const T = {
     },
     system: {
       badge: "Het systeem",
-      h2: "Het Axis Discipline Systeem.",
+      h2: "Het Stayd Discipline Systeem.",
       steps: [
         { step: "Commit",  color: G,         desc: "Elke ochtend committeert de klant aan één concreet doel voor die dag. Helder, specifiek, uitvoerbaar." },
-        { step: "Execute", color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Axis houdt bij of ze het doorvoeren." },
-        { step: "Reflect", color: "#f59e0b", desc: "'s Avonds check-in van Axis. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
-        { step: "Recover", color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Axis helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
+        { step: "Execute", color: "#60a5fa", desc: "De klant werkt de hele dag aan zijn commitment. Stayd houdt bij of ze het doorvoeren." },
+        { step: "Reflect", color: "#f59e0b", desc: "'s Avonds check-in van Stayd. Heb je het gedaan? Een eerlijk antwoord stuurt de volgende stap." },
+        { step: "Recover", color: "#a78bfa", desc: "Een dag gemist? Geen probleem. Stayd helpt je terug in het zadel in plaats van in een spiraal. Voortgang boven perfectie." },
       ],
     },
     whatsapp: {
@@ -189,7 +190,7 @@ const T = {
       badge: "Coach dashboard",
       h2a: "Coaches zien",
       h2b: "wie uitvoert.",
-      p: "Axis geeft coaches inzicht in wat er tussen sessies gebeurt. Zie welke klanten consistent blijven. Zie wie ondersteuning nodig heeft. Minder tijd aan achternazitten — meer tijd aan coachen.",
+      p: "Stayd geeft coaches inzicht in wat er tussen sessies gebeurt. Zie welke klanten consistent blijven. Zie wie ondersteuning nodig heeft. Minder tijd aan achternazitten — meer tijd aan coachen.",
       bullets: [
         "Bekijk dagelijkse metrics — gewichtstendensen, kcal-doelen en macro-voortgang",
         "Volledige klanthistorie — commitments, metrics en gesprekken op één plek",
@@ -199,13 +200,13 @@ const T = {
       h2a: "Zet commitments",
       h2b: "om in",
       h2c: "uitvoering.",
-      p: "Axis helpt personal trainers meer consistente klanten op te bouwen.",
+      p: "Stayd helpt personal trainers meer consistente klanten op te bouwen.",
       btn: "Start gratis",
     },
     contact: {
       badge: "Contact",
       h2: "Neem contact op.",
-      p: "Vragen over AXIS of wil je beginnen? Stuur een bericht en we reageren binnen één werkdag.",
+      p: "Vragen over Stayd of wil je beginnen? Stuur een bericht en we reageren binnen één werkdag.",
       name: "Naam",
       email: "E-mail",
       message: "Bericht",
@@ -278,7 +279,7 @@ function ScreenFrame({ src }) {
       boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
       background: CARD, flexShrink: 0, maxWidth: DW, width: "100%"
     }}>
-      <div style={{ height: 28, background: "#0a0a0a", display: "flex", alignItems: "center", padding: "0 14px", gap: 6 }}>
+      <div style={{ height: 28, background: "var(--ink)", display: "flex", alignItems: "center", padding: "0 14px", gap: 6 }}>
         {["#ff5f57","#ffbd2e","#28c840"].map(c => (
           <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />
         ))}
@@ -332,7 +333,7 @@ function Nav({ lang, setLang, t }) {
             {t.navSwitcher}
           </a>
           <LangToggle lang={lang} setLang={setLang} />
-          <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
+          <a href={`${APP_URL}/coach-signup`} className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
         </div>
 
         <button
@@ -354,7 +355,7 @@ function Nav({ lang, setLang, t }) {
       </div>
 
       {open && (
-        <div style={{ background: "#0a0a0a", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 16px" }}>
+        <div style={{ background: "var(--ink)", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 16px" }}>
           {t.navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={close} style={{
               display: "block", padding: "12px 24px",
@@ -375,7 +376,7 @@ function Nav({ lang, setLang, t }) {
             <LangToggle lang={lang} setLang={setLang} />
           </div>
           <div style={{ padding: "14px 24px 0" }}>
-            <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+            <a href={`${APP_URL}/coach-signup`} className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
               {t.navCta}
             </a>
           </div>
@@ -648,7 +649,7 @@ export default function Website() {
             <p className="hero-sub1" style={{ fontSize: 21, color: "#d4d4d8", marginBottom: 10, fontWeight: 500 }}>{t.hero.sub1}</p>
             <p className="hero-sub2" style={{ fontSize: 15, color: SUB, marginBottom: 32, lineHeight: 1.75, maxWidth: 460 }}>{t.hero.sub2}</p>
             <div className="hero-ctas" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <a href="https://app.axisapp.nl/coach-signup" className="btn-green">{t.hero.cta1}</a>
+              <a href={`${APP_URL}/coach-signup`} className="btn-green">{t.hero.cta1}</a>
               <a href="#oplossing" className="btn-ghost">{t.hero.cta2}</a>
             </div>
 
@@ -723,7 +724,7 @@ export default function Website() {
         </Section>
       </div>
 
-      {/* ── AXIS SYSTEEM ────────────────────────────────────── */}
+      {/* ── Stayd SYSTEEM ────────────────────────────────────── */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#060606" }}>
         <Section>
           <div className="fade-up" style={{ textAlign: "center", marginBottom: 56 }}>
@@ -823,7 +824,7 @@ export default function Website() {
                   </div>
                 ))}
               </div>
-              <a href="https://app.axisapp.nl/login" className="btn-ghost" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</a>
+              <a href={`${APP_URL}/login`} className="btn-ghost" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</a>
             </div>
 
             {/* Growth */}
@@ -841,14 +842,14 @@ export default function Website() {
                 <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor coaches die grip willen op wat er tussen sessies gebeurt.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                {["Alles van Starter", "Volledig coach dashboard met inzichten", "Klantdetailpagina — volledige geschiedenis", "Voedingsdoelen per klant", "Voedingstracker met barcodescan en Open Food Facts", "Automatische boodschappenlijst op basis van voedingsschema", "Eigen workout builder", "Progressive overload meldingen per klant", "Coach FAQ — train de AI met jouw antwoorden", "WhatsApp support van het AXIS team", "Tot 50 klanten"].map(f => (
+                {["Alles van Starter", "Volledig coach dashboard met inzichten", "Klantdetailpagina — volledige geschiedenis", "Voedingsdoelen per klant", "Voedingstracker met barcodescan en Open Food Facts", "Automatische boodschappenlijst op basis van voedingsschema", "Eigen workout builder", "Progressive overload meldingen per klant", "Coach FAQ — train de AI met jouw antwoorden", "WhatsApp support van het Stayd team", "Tot 50 klanten"].map(f => (
                   <div key={f} className="check-item">
                     <span style={{ color: G, flexShrink: 0 }}>✓</span>
                     <span>{f}</span>
                   </div>
                 ))}
               </div>
-              <a href="https://app.axisapp.nl/login" className="btn-green" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</a>
+              <a href={`${APP_URL}/login`} className="btn-green" style={{ textAlign: "center", display: "block", marginTop: 8 }}>Kies dit plan</a>
             </div>
 
             {/* Pro */}
@@ -860,7 +861,7 @@ export default function Website() {
                   <span style={{ color: SUB, fontSize: 14 }}>/maand</span>
                 </div>
                 <p style={{ color: SUB, fontSize: 13, marginBottom: 24 }}>Tot 150 klanten</p>
-                <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor sportscholen en coachingbedrijven die AXIS onder eigen naam willen.</p>
+                <p style={{ color: "#a1a1aa", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Voor sportscholen en coachingbedrijven die Stayd onder eigen naam willen.</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                 {["Alles van Growth", "White label — jouw naam, jouw merk", "Meerdere coach accounts", "Eigen branding op alle berichten", "VIP support", "Tot 150 klanten"].map(f => (
@@ -891,7 +892,7 @@ export default function Website() {
               {t.cta.h2a}<br />{t.cta.h2b} <span style={{ color: G }}>{t.cta.h2c}</span>
             </h2>
             <p style={{ color: SUB, fontSize: 16, marginBottom: 36 }}>{t.cta.p}</p>
-            <a href="https://app.axisapp.nl/coach-signup" className="btn-green" style={{ fontSize: 15, padding: "14px 36px" }}>{t.cta.btn}</a>
+            <a href={`${APP_URL}/coach-signup`} className="btn-green" style={{ fontSize: 15, padding: "14px 36px" }}>{t.cta.btn}</a>
           </div>
         </Section>
       </div>
@@ -917,7 +918,7 @@ export default function Website() {
             <AxisLogo variant="bracket" size={18} />
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>{t.footer.tagline}</p>
           </div>
-          <p style={{ color: "#3f3f46", fontSize: 12 }}>© 2026 AXIS</p>
+          <p style={{ color: "#3f3f46", fontSize: 12 }}>© 2026 Stayd App</p>
         </div>
       </footer>
 

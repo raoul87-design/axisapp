@@ -9,7 +9,7 @@ const G      = "#22c55e"
 const PROT   = "#7DD3FC"
 const CARB   = "#F472B6"
 const FAT    = "#FB923C"
-const BG     = "#0f0f0f"
+const BG     = "var(--ink)"
 const TILE   = "#141414"
 const TILE2  = "#181818"
 const BORDER = "#1f1f1f"
@@ -259,7 +259,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
             <div style={{ flex: 1, position: "relative" }}>
               <input value={q} onChange={e => onType(e.target.value)} autoFocus
                 placeholder="Zoek product of scan barcode..."
-                style={{ width: "100%", padding: "10px 36px 10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "10px 36px 10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
               {loading && (
                 <div style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, border: `2px solid ${BD3}`, borderTopColor: G, borderRadius: "50%", animation: "axisSpinSearch 0.7s linear infinite" }} />
               )}
@@ -282,7 +282,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
                 <input autoFocus value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && barcodeInput.trim()) { setBarcodeInput(""); setNoScanner(false); handleBarcode(barcodeInput.trim()) } }}
                   placeholder="Voer barcode in (bijv. 8710398522191)"
-                  style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none" }} />
+                  style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 13, outline: "none" }} />
                 <button onClick={() => { if (barcodeInput.trim()) { const v = barcodeInput.trim(); setBarcodeInput(""); setNoScanner(false); handleBarcode(v) } }}
                   disabled={!barcodeInput.trim()}
                   style={{ padding: "0 14px", borderRadius: 8, border: "none", background: barcodeInput.trim() ? G : BD2, color: barcodeInput.trim() ? "#061a0c" : FAINT, fontWeight: 700, fontSize: 13, cursor: barcodeInput.trim() ? "pointer" : "default" }}>
@@ -322,7 +322,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
           {manual && !scanning && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
               <input value={form.naam} onChange={e => setForm(f => ({ ...f, naam: e.target.value }))} placeholder="Productnaam *"
-                style={{ padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none" }} />
+                style={{ padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 13, outline: "none" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
                   { key: "kcal",         label: "Kcal *"     },
@@ -334,7 +334,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
                   <div key={key}>
                     <p style={{ ...MONO, color: FAINT, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", margin: "0 0 5px" }}>{label}</p>
                     <input type="number" value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                      style={{ width: "100%", padding: "8px 11px", borderRadius: 8, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      style={{ width: "100%", padding: "8px 11px", borderRadius: 8, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>
@@ -365,7 +365,7 @@ function AddFoodModal({ meal, onClose, onAdd }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "8px 12px", background: TILE, borderRadius: 9, border: `1px solid ${BORDER}` }}>
                 <span style={{ ...MONO, fontSize: 9.5, color: FAINT, letterSpacing: "0.2em", textTransform: "uppercase", flex: 1 }}>Portie</span>
                 <input type="number" value={portie} onChange={e => setPortie(e.target.value)} min="1"
-                  style={{ width: 64, padding: "5px 8px", borderRadius: 7, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center" }} />
+                  style={{ width: 64, padding: "5px 8px", borderRadius: 7, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center" }} />
                 <span style={{ ...MONO, fontSize: 10, color: DIM }}>gram</span>
               </div>
 
@@ -570,7 +570,7 @@ function AiGenModal({ onClose, onGenerate, loading, error, prefs, setPrefs }) {
               <p style={{ color: FAINT, fontFamily: "JetBrains Mono, monospace", fontSize: 9.5, letterSpacing: "0.2em", textTransform: "uppercase", margin: "0 0 7px" }}>Voorkeuren of allergieën</p>
               <input value={prefs.likes} onChange={e => setPrefs(p => ({ ...p, likes: e.target.value }))}
                 placeholder="Bijv. geen gluten, houd van pasta..."
-                style={{ width: "100%", padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "#0a0a0a", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "10px 13px", borderRadius: 10, border: `1px solid ${BD2}`, background: "var(--ink)", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
             </div>
             {error && (
               <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 9 }}>
@@ -679,7 +679,7 @@ export default function VoedingTab({ publicUserId, user, kcalDoel, eiwittenDoel,
   async function copyShoppingList() {
     const monday  = getMondayNL()
     const weekNum = getWeekNumber(monday)
-    let text = `🛒 Boodschappenlijst AXIS — week ${weekNum}\n`
+    let text = `🛒 Boodschappenlijst Stayd — week ${weekNum}\n`
     let hasItems = false
     for (const { cat, items } of shoppingList) {
       const needed = items.filter(item => !(checkedItems[`${cat}_${item.naam}`] ?? false))

@@ -1,9 +1,10 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { blogPosts, getPostBySlug } from "../../../lib/blog"
+import { SITE_URL } from "../../../lib/config"
 
 const G      = "#22c55e"
-const BG     = "#0f0f0f"
+const BG     = "var(--ink)"
 const BORDER = "#1e1e1e"
 const SUB    = "#888"
 
@@ -15,16 +16,16 @@ export async function generateMetadata({ params }) {
   const post = getPostBySlug(params.slug)
   if (!post) return {}
   return {
-    title: `${post.title} — AXIS`,
+    title: `${post.title} — stayd.`,
     description: post.description,
     alternates: {
-      canonical: `https://axisapp.nl/blog/${post.slug}`,
+      canonical: `${SITE_URL}/blog/${post.slug}`,
     },
     openGraph: {
-      title: `${post.title} — AXIS`,
+      title: `${post.title} — stayd.`,
       description: post.description,
-      url: `https://axisapp.nl/blog/${post.slug}`,
-      siteName: "AXIS",
+      url: `${SITE_URL}/blog/${post.slug}`,
+      siteName: "stayd.",
       locale: "nl_NL",
       type: "article",
     },
@@ -79,8 +80,8 @@ export default function BlogPostPage({ params }) {
     headline: post.title,
     description: post.description,
     datePublished: post.date,
-    author: { "@type": "Organization", name: "AXIS" },
-    publisher: { "@type": "Organization", name: "AXIS", url: "https://axisapp.nl" },
+    author: { "@type": "Organization", name: "stayd." },
+    publisher: { "@type": "Organization", name: "stayd.", url: SITE_URL },
   }
 
   return (
@@ -96,7 +97,7 @@ export default function BlogPostPage({ params }) {
         <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/" style={{ fontWeight: 800, letterSpacing: "0.15em", fontSize: 18, color: "#fff", textDecoration: "none" }}>
             <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: G, marginRight: 8, verticalAlign: "middle" }} />
-            AXIS
+            stayd.
           </Link>
           <Link href="/blog" style={{ color: SUB, fontSize: 14, textDecoration: "none" }}>← Terug naar blog</Link>
         </div>
@@ -125,13 +126,13 @@ export default function BlogPostPage({ params }) {
         {/* CTA */}
         <div style={{ marginTop: 56, padding: "32px", background: "#111", border: `1px solid ${BORDER}`, borderRadius: 12 }}>
           <p style={{ color: G, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 10px" }}>
-            AXIS
+            stayd.
           </p>
           <p style={{ fontSize: 18, fontWeight: 700, color: "#fff", margin: "0 0 8px" }}>
             Klaar om je klanten dagelijks accountable te houden?
           </p>
           <p style={{ color: SUB, fontSize: 14, margin: "0 0 20px", lineHeight: 1.6 }}>
-            AXIS automatiseert de dagelijkse check-ins via WhatsApp zodat jij je focust op coaching.
+            Stayd automatiseert de dagelijkse check-ins via WhatsApp zodat jij je focust op coaching.
           </p>
           <Link href="/" style={{ display: "inline-block", background: G, color: "#000", fontWeight: 700, fontSize: 14, padding: "12px 24px", borderRadius: 8, textDecoration: "none" }}>
             Start gratis →

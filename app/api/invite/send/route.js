@@ -33,26 +33,26 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, fallback: true })
   }
 
-  const from = process.env.BREVO_FROM || "AXIS <noreply@axisapp.nl>"
+  const from = process.env.BREVO_FROM || "stayd. <noreply@stayd.nl>"
 
   const html = `
 <!DOCTYPE html>
 <html lang="nl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0f0f0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f0f;padding:40px 20px">
+<body style="margin:0;padding:0;background:#0B0F0D;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B0F0D;padding:40px 20px">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#1a1a1a;border-radius:12px;overflow:hidden">
         <tr>
           <td style="background:#0a1a0f;padding:28px 40px;border-bottom:1px solid #1e3a1e">
-            <p style="margin:0;color:#22c55e;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase">AXIS</p>
+            <p style="margin:0;font-family:sans-serif;font-weight:700;font-size:16px;letter-spacing:-0.02em;color:#EDF2EE">stayd<span style="color:#22C55E">.</span></p>
           </td>
         </tr>
         <tr>
           <td style="padding:40px">
             <h1 style="margin:0 0 16px;color:#fff;font-size:24px;font-weight:700">Je bent uitgenodigd 💪</h1>
             <p style="margin:0 0 24px;color:#888;font-size:15px;line-height:1.6">
-              ${coachName ? `<strong style="color:#fff">${coachName}</strong> heeft je aangemeld voor AXIS.` : "Je coach heeft je aangemeld voor AXIS."}<br>
+              ${coachName ? `<strong style="color:#fff">${coachName}</strong> heeft je aangemeld voor Stayd.` : "Je coach heeft je aangemeld voor Stayd."}<br>
               ${name ? `Hoi ${name}, k` : "K"}lik op de knop hieronder om je account aan te maken. Je gegevens zijn al ingevuld.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 0 32px">
@@ -67,7 +67,7 @@ export async function POST(request) {
         </tr>
         <tr>
           <td style="padding:20px 40px;border-top:1px solid #222">
-            <p style="margin:0;color:#333;font-size:11px">AXIS — Dagelijkse accountability via WhatsApp</p>
+            <p style="margin:0;color:#333;font-size:11px">stayd. · een merk van Axis App</p>
           </td>
         </tr>
       </table>
@@ -82,7 +82,7 @@ export async function POST(request) {
     const info = await transporter.sendMail({
       from,
       to,
-      subject: "Je coach heeft je aangemeld voor AXIS 💪",
+      subject: "Je coach heeft je aangemeld voor Stayd 💪",
       html,
     })
     console.log("[invite/send] Verstuurd naar", to)

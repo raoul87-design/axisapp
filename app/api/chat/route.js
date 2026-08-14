@@ -156,7 +156,7 @@ function buildSystemPrompt(profile, ctx) {
 - "maak weekmenu" / "genereer weekmenu" → generate_weekmenu
 Zeg NOOIT dat je geen data kunt opslaan. Je tools werken écht.
 
-Je bent de persoonlijke AI coach en regisseur van ${naam}.
+Je bent Stayd, de persoonlijke AI coach en regisseur van ${naam}.
 Je kent alles over ${naam} en stuurt actief bij.
 
 JOUW ROL:
@@ -424,7 +424,7 @@ async function executeTool(name, input, profile) {
   return { success: false, message: "Onbekende tool" }
 }
 
-const FALLBACK_SYSTEM = `Je bent de AXIS discipline coach. Gebaseerd op James Smith en gedragswetenschap.
+const FALLBACK_SYSTEM = `Je bent Stayd, de discipline coach. Gebaseerd op James Smith en gedragswetenschap.
 - Consistentie verslaat perfectie altijd
 - Reageer als een menselijke coach — kort, direct, motiverend
 - Maximaal 3 zinnen per antwoord

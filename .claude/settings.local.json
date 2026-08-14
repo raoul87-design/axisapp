@@ -32,7 +32,25 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" -Depth 2 | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object FullName)",
       "Skill(push)",
-      "WebFetch(domain:www.axisapp.nl)"
+      "WebFetch(domain:www.axisapp.nl)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "WebFetch(domain:github.com)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(New-Item *)",
+      "Bash(npm -v)",
+      "Bash(claude --version)",
+      "Bash(mkdir -p ~/projects/the-switch)",
+      "Bash(cp -r \"C:\\\\Users\\\\raoul\\\\Desktop\\\\axis\" ~/projects/the-switch/app)",
+      "Read(//c/Users/raoul/projects/the-switch/**)",
+      "Read(//tmp/**)",
+      "Bash(curl *)",
+      "Bash(mkdir -p docs)",
+      "Bash(cp ~/Desktop/the-switch-design-principles.md docs/design-principles.md)",
+      "Bash(cp ~/Desktop/sli-architectuur.md docs/)",
+      "Bash(cp ~/Desktop/sli-test-scenarios.md docs/)",
+      "Bash(cp ~/Desktop/ai-coach-system-prompt.md docs/)",
+      "Bash(npx eslint *)"
     ]
   }
 }

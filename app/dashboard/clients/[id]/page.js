@@ -222,7 +222,7 @@ export default function ClientDetail() {
 
   if (!authorized || loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "#333", fontSize: 14 }}>{!authorized ? "Verifying..." : "Loading..."}</p>
       </div>
     )
@@ -230,7 +230,7 @@ export default function ClientDetail() {
 
   if (!user) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "#555", fontSize: 14 }}>Client not found.</p>
       </div>
     )
@@ -465,7 +465,7 @@ export default function ClientDetail() {
   const TD = { padding: "12px 16px" }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--ink)", color: "#fff", fontFamily: "sans-serif" }}>
 
       {/* ── Header ── */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: "20px 32px", display: "flex", alignItems: "center", gap: 16 }}>
@@ -590,7 +590,7 @@ export default function ClientDetail() {
                   <div key={label}>
                     <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>{label}</p>
                     <input type="number" value={val} onChange={e => set(e.target.value)} placeholder={placeholder}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>
@@ -987,7 +987,7 @@ export default function ClientDetail() {
                 display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
               }}>
                 <div style={{
-                  maxWidth: "70%", background: msg.role === "user" ? "#0a1a0f" : "#161616",
+                  maxWidth: "70%", background: msg.role === "user" ? "#0a1a0f" : "var(--surface)",
                   border: `1px solid ${msg.role === "user" ? GREEN + "44" : BORDER}`,
                   borderRadius: 12, padding: "10px 14px",
                 }}>
@@ -1023,13 +1023,13 @@ export default function ClientDetail() {
                   <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>{label}</p>
                   <input type={type} value={tdeeForm[key]} placeholder={placeholder}
                     onChange={e => setTdeeForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
               ))}
               <div>
                 <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Geslacht</p>
                 <select value={tdeeForm.gender} onChange={e => setTdeeForm(prev => ({ ...prev, gender: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none" }}>
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none" }}>
                   <option value="male">Man</option>
                   <option value="female">Vrouw</option>
                 </select>
@@ -1038,7 +1038,7 @@ export default function ClientDetail() {
             <div style={{ marginBottom: 20 }}>
               <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 7 }}>Activiteitsniveau</p>
               <select value={tdeeForm.activity_level} onChange={e => setTdeeForm(prev => ({ ...prev, activity_level: e.target.value }))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none" }}>
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none" }}>
                 <option value="sedentary">Sedentair (weinig/geen sport)</option>
                 <option value="lightly_active">Licht actief (1-3x/week)</option>
                 <option value="moderately_active">Matig actief (3-5x/week)</option>
@@ -1050,7 +1050,7 @@ export default function ClientDetail() {
               Bereken
             </button>
             {tdeeResult && (
-              <div style={{ background: "#0a0a0a", border: `1px solid #1e1e1e`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+              <div style={{ background: "var(--ink)", border: `1px solid #1e1e1e`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
                 <p style={{ color: "#555", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 14 }}>Resultaat</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[

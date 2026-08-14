@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { supabase } from "../../../lib/supabase"
 
 const G = "#22c55e"
-const BG = "#0f0f0f"
+const BG = "var(--ink)"
 const CARD = "#111"
 const BORDER = "#1e1e1e"
 const TEXT = "#ffffff"
@@ -19,20 +20,28 @@ const T = {
       { label: "Features",      href: "#features" },
       { label: "Prijzen",       href: "#prijzen" },
     ],
-    navCta: "Start gratis",
+    navCta: "Wachtlijst",
     navSwitcher: "Voor coaches →",
     hero: {
       badge: "Jouw dagelijkse discipline app",
       h1a: "Bereik je doel.",
       h1b: "Elke dag een stap dichterbij.",
       sub: "Dagelijkse check-ins via WhatsApp, een AI coach die jou kent, en workouts die passen bij jouw doel.",
-      cta: "Start 14 dagen gratis →",
+      cta: "Zet me op de wachtlijst →",
+    },
+    waitlist: {
+      placeholder: "Jouw e-mailadres",
+      btn: "Meld je aan →",
+      sending: "Bezig...",
+      success: "Je staat op de lijst! We laten je weten zodra je aan de slag kan.",
+      duplicate: "Je staat al op de wachtlijst.",
+      error: "Er ging iets mis. Probeer het opnieuw.",
     },
     how: {
       badge: "Hoe het werkt",
       h2: "Vier stappen naar consistentie.",
       steps: [
-        { num: "01", title: "Stel je doel in",                   desc: "Vertel AXIS wat je wil bereiken. De AI coach past zich aan jouw doel en niveau aan." },
+        { num: "01", title: "Stel je doel in",                   desc: "Vertel Stayd wat je wil bereiken. De AI coach past zich aan jouw doel en niveau aan." },
         { num: "02", title: "Dagelijkse check-in via WhatsApp",   desc: "Elke ochtend een bericht. Commit aan één ding dat je vandaag gaat doen." },
         { num: "03", title: "Commitments bijhouden",              desc: "Zie wat je hebt gedaan. Bouw een streak op. Blijf consistent." },
         { num: "04", title: "Voortgang zien",                     desc: "Statistieken, patronen en trends. Zie hoe ver je al bent gekomen." },
@@ -62,13 +71,13 @@ const T = {
       perYear: "/jaar",
       includes: "Wat je krijgt:",
       features: ["AI coach", "Dagelijkse WhatsApp check-in", "Workouts op maat", "Voortgang & statistieken", "Unlimited commitments"],
-      cta: "Start gratis →",
+      cta: "Wachtlijst →",
       trial: "14 dagen gratis — daarna pas betalen",
     },
     cta: {
       h2: "Klaar om te beginnen?",
       p: "14 dagen gratis. Geen creditcard. Stop wanneer je wil.",
-      btn: "Start gratis →",
+      btn: "Wachtlijst →",
     },
     footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
@@ -78,20 +87,28 @@ const T = {
       { label: "Features",     href: "#features" },
       { label: "Pricing",      href: "#prijzen" },
     ],
-    navCta: "Start free",
+    navCta: "Waitlist",
     navSwitcher: "For coaches →",
     hero: {
       badge: "Your daily discipline app",
       h1a: "Reach your goal.",
       h1b: "One step closer every day.",
       sub: "Daily check-ins via WhatsApp, an AI coach that knows you, and workouts that fit your goal.",
-      cta: "Start 14 days free →",
+      cta: "Join the waitlist →",
+    },
+    waitlist: {
+      placeholder: "Your email address",
+      btn: "Join →",
+      sending: "Sending...",
+      success: "You're on the list! We'll let you know when you can get started.",
+      duplicate: "You're already on the waitlist.",
+      error: "Something went wrong. Please try again.",
     },
     how: {
       badge: "How it works",
       h2: "Four steps to consistency.",
       steps: [
-        { num: "01", title: "Set your goal",                    desc: "Tell AXIS what you want to achieve. The AI coach adapts to your goal and level." },
+        { num: "01", title: "Set your goal",                    desc: "Tell Stayd what you want to achieve. The AI coach adapts to your goal and level." },
         { num: "02", title: "Daily check-in via WhatsApp",      desc: "Every morning a message. Commit to one thing you'll do today." },
         { num: "03", title: "Track your commitments",           desc: "See what you've done. Build a streak. Stay consistent." },
         { num: "04", title: "See your progress",                desc: "Statistics, patterns and trends. See how far you've come." },
@@ -121,13 +138,13 @@ const T = {
       perYear: "/year",
       includes: "What you get:",
       features: ["AI coach", "Daily WhatsApp check-in", "Personalized workouts", "Progress & statistics", "Unlimited commitments"],
-      cta: "Start free →",
+      cta: "Waitlist →",
       trial: "14 days free — pay after that",
     },
     cta: {
       h2: "Ready to start?",
       p: "14 days free. No credit card. Cancel anytime.",
-      btn: "Start free →",
+      btn: "Waitlist →",
     },
     footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
@@ -196,7 +213,7 @@ function Nav({ lang, setLang, t }) {
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,15,15,0.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${BORDER}` }}>
       <div style={{ maxWidth: MAX, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/axis-logo.png" alt="AXIS" style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
+        <img src="/logo/stayd-wordmark-op-donker.png" alt="stayd." style={{ height: 32, display: "block", mixBlendMode: "screen" }} />
 
         {/* Desktop links */}
         <div className="nav-links" style={{ display: "flex", gap: 32 }}>
@@ -209,7 +226,7 @@ function Nav({ lang, setLang, t }) {
             {t.navSwitcher}
           </Link>
           <LangToggle lang={lang} setLang={setLang} />
-          <Link href="/signup" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</Link>
+          <a href="#waitlist" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
         </div>
 
         {/* Mobile hamburger */}
@@ -233,7 +250,7 @@ function Nav({ lang, setLang, t }) {
 
       {/* Mobile dropdown */}
       {open && (
-        <div style={{ background: "#0a0a0a", borderTop: `1px solid ${BORDER}`, padding: "8px 0 16px" }}>
+        <div style={{ background: "var(--ink)", borderTop: `1px solid ${BORDER}`, padding: "8px 0 16px" }}>
           {t.navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={close} style={{
               display: "block", padding: "12px 24px",
@@ -254,9 +271,9 @@ function Nav({ lang, setLang, t }) {
             <LangToggle lang={lang} setLang={setLang} />
           </div>
           <div style={{ padding: "14px 24px 0" }}>
-            <Link href="/signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+            <a href="#waitlist" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
               {t.navCta}
-            </Link>
+            </a>
           </div>
         </div>
       )}
@@ -269,6 +286,21 @@ export default function B2CWebsite() {
   const [lang, setLang]         = useState("NL")
   const [billing, setBilling]   = useState("monthly")
   const t = T[lang]
+
+  const [waitlistEmail,  setWaitlistEmail]  = useState("")
+  const [waitlistStatus, setWaitlistStatus] = useState("idle") // idle | sending | success | duplicate | error
+
+  const handleWaitlistSubmit = async (e) => {
+    e.preventDefault()
+    if (!waitlistEmail.trim()) return
+    setWaitlistStatus("sending")
+    const { error } = await supabase.from("waitlist").insert({ email: waitlistEmail.trim().toLowerCase() })
+    if (error) {
+      setWaitlistStatus(error.code === "23505" ? "duplicate" : "error")
+      return
+    }
+    setWaitlistStatus("success")
+  }
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth"
@@ -314,11 +346,32 @@ export default function B2CWebsite() {
             <p style={{ fontSize: 17, color: SUB, marginBottom: 36, lineHeight: 1.7, maxWidth: 500 }}>
               {t.hero.sub}
             </p>
-            <Link href="/signup" className="btn-green" style={{ fontSize: 16, padding: "14px 32px" }}>{t.hero.cta}</Link>
+            <div id="waitlist">
+              {waitlistStatus === "success" || waitlistStatus === "duplicate" ? (
+                <p style={{ color: G, fontSize: 16, fontWeight: 600 }}>
+                  {waitlistStatus === "success" ? t.waitlist.success : t.waitlist.duplicate}
+                </p>
+              ) : (
+                <form onSubmit={handleWaitlistSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <input
+                    type="email" required value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    placeholder={t.waitlist.placeholder}
+                    style={{ flex: "1 1 220px", padding: "14px 16px", fontSize: 16, borderRadius: 8, border: `1px solid ${BORDER}`, background: CARD, color: TEXT, outline: "none" }}
+                  />
+                  <button type="submit" disabled={waitlistStatus === "sending"} className="btn-green" style={{ fontSize: 16, padding: "14px 32px", border: "none", cursor: waitlistStatus === "sending" ? "default" : "pointer" }}>
+                    {waitlistStatus === "sending" ? t.waitlist.sending : t.hero.cta}
+                  </button>
+                  {waitlistStatus === "error" && (
+                    <p style={{ width: "100%", color: "#ef4444", fontSize: 13, margin: 0 }}>{t.waitlist.error}</p>
+                  )}
+                </form>
+              )}
+            </div>
           </div>
 
           <div className="hero-phone" style={{ flexShrink: 0 }}>
-            <PhoneFrame src="/screenshot-app.png" alt="AXIS app" />
+            <PhoneFrame src="/screenshot-app.png" alt="Stayd app" />
           </div>
 
         </div>
@@ -456,13 +509,13 @@ export default function B2CWebsite() {
                 ))}
               </div>
 
-              <Link
-                href="/signup"
+              <a
+                href="#waitlist"
                 className="btn-green"
                 style={{ display: "block", textAlign: "center", fontSize: 16, padding: "14px 28px" }}
               >
                 {t.pricing.cta}
-              </Link>
+              </a>
             </div>
           </div>
         </Section>
@@ -475,7 +528,7 @@ export default function B2CWebsite() {
             {t.cta.h2}
           </h2>
           <p style={{ color: SUB, fontSize: 17, marginBottom: 36 }}>{t.cta.p}</p>
-          <Link href="/signup" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>{t.cta.btn}</Link>
+          <a href="#waitlist" className="btn-green" style={{ fontSize: 16, padding: "14px 36px" }}>{t.cta.btn}</a>
         </Section>
       </div>
 
@@ -483,10 +536,10 @@ export default function B2CWebsite() {
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "40px 24px" }}>
         <div style={{ maxWidth: MAX, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>AXIS</span>
+            <span style={{ fontWeight: 700, letterSpacing: "0.15em", fontSize: 18, color: "#fff" }}>stayd.</span>
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>{t.footer.tagline}</p>
           </div>
-          <p style={{ color: "#444", fontSize: 12 }}>© 2026 AXIS</p>
+          <p style={{ color: "#444", fontSize: 12 }}>© 2026 Stayd App</p>
         </div>
       </footer>
 

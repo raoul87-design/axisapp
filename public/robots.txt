@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://axisapp.nl/sitemap.xml
+Sitemap: https://stayd.nl/sitemap.xml

@@ -29,6 +29,7 @@ const [answer,          setAnswer]         = useState("")
 const [reflectionSubmitted, setReflectionSubmitted] = useState(false)
 const [reflectionDate,      setReflectionDate]      = useState("")
 const [reflectionTekst,     setReflectionTekst]     = useState("")
+const [reflectionGehaald,   setReflectionGehaald]   = useState(false)
 const [showAll,         setShowAll]        = useState(false)
 const [whatsappInput,   setWhatsappInput]  = useState("")
 const [whatsappLinked,  setWhatsappLinked] = useState(false)
@@ -168,7 +169,7 @@ const FORCE_ONBOARDING = false
 
 // ── Kleurenpalet ──────────────────────────────────────────────
 const C = theme === "dark" ? {
-  bg:          "#0f0f0f",
+  bg:          "var(--ink)",
   card:        "#1a1a1a",
   cardAlt:     "#111",
   border:      "#2a2a2a",
@@ -293,6 +294,7 @@ const handleReflection = async (gehaald) => {
   if (error) { console.error("Reflectie opslaan mislukt:", error.message); return }
   setReflectionSubmitted(true)
   setReflectionDate(today)
+  setReflectionGehaald(gehaald)
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -1467,7 +1469,7 @@ if (showWizard) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f0f", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ink)", padding: "20px" }}>
       <div style={{ width: "100%", maxWidth: 420, background: "#1a1a1a", padding: 40, borderRadius: 12 }}>
 
         <p style={{ color: "#555", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32 }}>
@@ -1478,14 +1480,16 @@ if (showWizard) {
         {wizardStep === 1 && (
           <>
             <div style={{ marginBottom: 8 }}>
-              <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 12px" }}>AXIS</p>
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "-0.045em", color: "var(--bone)", display: "inline-block", margin: "0 0 12px" }}>
+                stayd<span style={{ color: "var(--green)" }}>.</span>
+              </span>
               <h2 style={{ fontSize: 24, color: "#fff", margin: "0 0 16px", lineHeight: 1.3 }}>
-                {wizardVoornaam.trim() ? `Welkom, ${wizardVoornaam.trim()}!` : "Welkom bij AXIS"}
+                {wizardVoornaam.trim() ? `Welkom, ${wizardVoornaam.trim()}!` : "Welkom bij Stayd"}
               </h2>
               <p style={{ color: "#888", fontSize: 15, lineHeight: 1.6, margin: "0 0 24px" }}>
                 {hasCoach
-                  ? "Je coach heeft je toegang gegeven tot AXIS. Stel je doel in — je coach en AXIS houden je scherp."
-                  : "Commit je doel en AXIS helpt je het behalen. Elke dag een stap verder."}
+                  ? "Je coach heeft je toegang gegeven tot Stayd. Stel je doel in — je coach en Stayd houden je scherp."
+                  : "Commit je doel en Stayd helpt je het behalen. Elke dag een stap verder."}
               </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
@@ -1767,7 +1771,7 @@ if (showWizard) {
         {wizardStep === 5 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: "#fff" }}>Kies je eerste commitment</h2>
-            <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>AXIS heeft drie voorstellen gemaakt op basis van jouw doel.</p>
+            <p style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>Stayd heeft drie voorstellen gemaakt op basis van jouw doel.</p>
             {wizardLoadingAi ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <p style={{ color: "#555", fontSize: 14 }}>Commitments genereren...</p>
@@ -1805,14 +1809,14 @@ if (showWizard) {
           <>
             <div style={{ marginBottom: 24 }}>
               <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 10px" }}>WhatsApp</p>
-              <h2 style={{ fontSize: 22, color: "#fff", margin: "0 0 6px" }}>Koppel WhatsApp aan AXIS</h2>
+              <h2 style={{ fontSize: 22, color: "#fff", margin: "0 0 6px" }}>Koppel WhatsApp aan Stayd</h2>
               <p style={{ color: "#888", fontSize: 14, margin: 0 }}>Ontvang je dagelijkse check-in en stuur snel je voortgang door.</p>
             </div>
 
             {/* Stappen */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
               {[
-                { n: 1, text: <>Sla dit nummer op als <strong style={{ color: "#fff" }}>'AXIS Coach'</strong>:<br /><span style={{ color: GREEN, fontFamily: "monospace", fontSize: 16 }}>+1 415 523 8886</span></> },
+                { n: 1, text: <>Sla dit nummer op als <strong style={{ color: "#fff" }}>'Stayd Coach'</strong>:<br /><span style={{ color: GREEN, fontFamily: "monospace", fontSize: 16 }}>+1 415 523 8886</span></> },
                 { n: 2, text: <>Stuur <span style={{ background: "#1a2a1a", color: GREEN, padding: "2px 8px", borderRadius: 4, fontFamily: "monospace", fontSize: 13 }}>join burn-lack</span> via WhatsApp om te activeren</> },
                 { n: 3, text: <>Vanaf morgen <strong style={{ color: "#fff" }}>08:00</strong> ontvang je je dagelijkse check-in</> },
               ].map(({ n, text }) => (
@@ -1852,7 +1856,7 @@ if (showWizard) {
               onClick={finishWizard}
               disabled={wizardSaving}
               style={{ ...wBtnPrimary, opacity: wizardSaving ? 0.6 : 1 }}>
-              {wizardSaving ? "Opslaan..." : "Start met AXIS →"}
+              {wizardSaving ? "Opslaan..." : "Start met Stayd →"}
             </button>
           </>
         )}
@@ -1935,7 +1939,7 @@ if (showOnboarding) {
         {onboardingStep === 3 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Jouw gewicht</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Optioneel — helpt AXIS je voortgang bij te houden.</p>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Optioneel — helpt Stayd je voortgang bij te houden.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
               <div>
                 <p style={{ color: C.textMuted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Huidig gewicht (kg)</p>
@@ -1961,7 +1965,7 @@ if (showOnboarding) {
         {onboardingStep === 4 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Waar train je?</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS past de coaching aan op jouw situatie.</p>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Stayd past de coaching aan op jouw situatie.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
               {["Gym", "Thuis", "Buiten", "Wisselend"].map(loc => (
                 <button key={loc} onClick={() => setTrainingLocation(loc)} style={{
@@ -1988,7 +1992,7 @@ if (showOnboarding) {
         {onboardingStep === 5 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Hoe vaak wil je sporten?</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS stelt een trainingsschema in dat bij je past.</p>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Stayd stelt een trainingsschema in dat bij je past.</p>
             <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
               {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} onClick={() => setSportFrequentie(n)} style={{
@@ -2076,7 +2080,7 @@ if (showOnboarding) {
         {onboardingStep === 8 && (
           <>
             <h2 style={{ marginBottom: 8, fontSize: 22, color: C.text }}>Blijf op koers via WhatsApp</h2>
-            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>AXIS stuurt je dagelijks een check-in.<br/>Geen app nodig — gewoon reageren.</p>
+            <p style={{ color: C.textSub, fontSize: 14, marginBottom: 24 }}>Stayd stuurt je dagelijks een check-in.<br/>Geen app nodig — gewoon reageren.</p>
             <input autoFocus value={whatsappInput} onChange={e => setWhatsappInput(e.target.value)}
               placeholder="+31612345678"
               style={{ ...inputStyle, marginBottom: 12 }}
@@ -2321,8 +2325,9 @@ return (
   <div style={{ padding: "8px 22px 22px", borderBottom: "1px solid #1f1f1f" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <div style={{ width: 8, height: 8, borderRadius: 2, background: GREEN }} />
-        <span style={{ color: "#fff", fontSize: 16, fontWeight: "bold", letterSpacing: 2 }}>AXIS</span>
+        <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 16, letterSpacing: "-0.045em", color: "var(--bone)" }}>
+          stayd<span style={{ color: "var(--green)" }}>.</span>
+        </span>
       </div>
       <div style={{ position: "relative" }}>
         <button onClick={() => setShowSettings(!showSettings)}
@@ -2415,12 +2420,12 @@ return (
         {[
           {
             key: "hoe",
-            titel: "Hoe werkt AXIS?",
+            titel: "Hoe werkt Stayd?",
             inhoud: (
               <p style={{ color: C.textSub, fontSize: 14, lineHeight: 1.7, margin: 0 }}>
                 Elke ochtend ontvang je een check-in via WhatsApp. Je stuurt je commitment voor de dag.
                 's Avonds reflecteer je met <strong style={{ color: C.text }}>Ja</strong> of <strong style={{ color: C.text }}>Nee</strong>.
-                AXIS houdt je streak en voortgang bij.
+                Stayd houdt je streak en voortgang bij.
               </p>
             ),
           },
@@ -2674,7 +2679,7 @@ return (
       {/* ── REFLECTIE ── */}
       {todayState > 1 && (
         <div style={{ marginTop: 24, opacity: todayState === 2 ? 0.4 : todayState === 3 ? 0.65 : 1, transition: "opacity 0.4s ease" }}>
-          <div style={{ background: "#161616", border: "1px solid #333", borderRadius: 12, padding: "14px 16px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid #333", borderRadius: 12, padding: "14px 16px" }}>
             <p style={{ fontSize: 13, color: todayState < 4 ? "#6b7280" : "#a1a1aa", margin: todayState === 4 && !reflectionSubmitted ? "0 0 10px" : 0 }}>
               {todayState < 4 ? "Vink commitments af om te reflecteren." : "Heb je je commitments gehaald?"}
             </p>
@@ -2690,7 +2695,9 @@ return (
               </>
             )}
             {todayState === 4 && reflectionSubmitted && (
-              <p style={{ color: GREEN, fontSize: 12, margin: 0 }}>✓ Opgeslagen</p>
+              <p style={{ color: GREEN, fontSize: 12, margin: 0 }}>
+                {reflectionGehaald ? "Well done — you stayd." : "✓ Opgeslagen"}
+              </p>
             )}
           </div>
         </div>
@@ -2814,22 +2821,22 @@ return (
           </button>
         </div>
           {showAddReminder && (
-            <div style={{ background: "#161616", borderRadius: 12, padding: 16, marginBottom: 10, border: "1px solid #333" }}>
+            <div style={{ background: "var(--surface)", borderRadius: 12, padding: 16, marginBottom: 10, border: "1px solid #333" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <input value={reminderForm.tekst} onChange={e => setReminderForm(f => ({ ...f, tekst: e.target.value }))}
                   placeholder="Bijv. creatine innemen"
-                  style={{ padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", fontSize: 14, outline: "none" }} />
+                  style={{ padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "var(--ink)", color: "#fff", fontSize: 14, outline: "none" }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   {[{ val: false, label: "Dagelijks" }, { val: true, label: "Eenmalig" }].map(({ val, label }) => (
                     <button key={label} onClick={() => setReminderForm(f => ({ ...f, eenmalig: val, datum: "" }))}
-                      style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1px solid ${reminderForm.eenmalig === val ? GREEN : "#333"}`, background: reminderForm.eenmalig === val ? "#0a1a0f" : "#0a0a0a", color: reminderForm.eenmalig === val ? GREEN : "#a1a1aa", fontSize: 13, fontWeight: reminderForm.eenmalig === val ? "bold" : "normal", cursor: "pointer" }}>
+                      style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `1px solid ${reminderForm.eenmalig === val ? GREEN : "#333"}`, background: reminderForm.eenmalig === val ? "#0a1a0f" : "var(--ink)", color: reminderForm.eenmalig === val ? GREEN : "#a1a1aa", fontSize: 13, fontWeight: reminderForm.eenmalig === val ? "bold" : "normal", cursor: "pointer" }}>
                       {label}
                     </button>
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {(() => {
-                    const sel = { flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", fontSize: 14, outline: "none", appearance: "none", WebkitAppearance: "none" }
+                    const sel = { flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "var(--ink)", color: "#fff", fontSize: 14, outline: "none", appearance: "none", WebkitAppearance: "none" }
                     const [uurVal, minVal] = reminderForm.tijd ? reminderForm.tijd.split(":") : ["", ""]
                     return (
                       <>
@@ -2846,7 +2853,7 @@ return (
                   })()}
                   {reminderForm.eenmalig && (
                     <input type="date" value={reminderForm.datum} min={getNLDate()} onChange={e => setReminderForm(f => ({ ...f, datum: e.target.value }))}
-                      style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "#0a0a0a", color: "#fff", colorScheme: "dark", fontSize: 14, outline: "none" }} />
+                      style={{ flex: 1, padding: "10px 13px", borderRadius: 8, border: "1px solid #333", background: "var(--ink)", color: "#fff", colorScheme: "dark", fontSize: 14, outline: "none" }} />
                   )}
                 </div>
                 {(() => {
@@ -3120,7 +3127,7 @@ return (
           <span style={{ color: "#fafafa", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em" }}>AX</span>
         </div>
         <div>
-          <p style={{ color: "#fafafa", fontSize: 14, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>AXIS Coach</p>
+          <p style={{ color: "#fafafa", fontSize: 14, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>Stayd Coach</p>
           <p style={{ color: "#5e5e5e", fontSize: 11, margin: 0 }}>Jouw persoonlijke coach</p>
         </div>
       </div>
@@ -3130,7 +3137,7 @@ return (
         {chatMessages.length === 0 ? (
           <div style={{ paddingTop: 24 }}>
             <p style={{ color: "#9a9a9a", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
-              Hoi — ik ben je AXIS coach. Stel me een vraag of kies een onderwerp.
+              Hoi — ik ben je Stayd coach. Stel me een vraag of kies een onderwerp.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {suggestions.map(s => (
@@ -3182,7 +3189,7 @@ return (
         right: 0,
         height: 64,
         padding: "0 16px",
-        background: "#0a0a0a",
+        background: "var(--ink)",
         borderTop: "1px solid #1f1f1f",
         display: "flex",
         gap: 10,
@@ -3777,6 +3784,7 @@ return (
               <div style={{ textAlign: "center", padding: "32px 0 24px" }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>💪</div>
                 <h3 style={{ color: GREEN, fontSize: 22, margin: 0 }}>Workout afgerond!</h3>
+                <p style={{ color: "var(--bone)", fontSize: 14, marginTop: 8 }}>Well done — you stayd.</p>
                 {todayWorkout?.workout?.naam && (
                   <p style={{ color: C.textSub, fontSize: 14, marginTop: 8 }}>{todayWorkout.workout.naam}</p>
                 )}
@@ -3902,7 +3910,7 @@ return (
   )}
 
   {/* ── TAB BAR ──────────────────────────────────────────────── */}
-  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#0a0a0a", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50, padding: "8px 8px 22px", boxSizing: "border-box" }}>
+  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "var(--ink)", borderTop: "1px solid #1f1f1f", display: "flex", zIndex: 50, padding: "8px 8px 22px", boxSizing: "border-box" }}>
 
     {[
       { id: "vandaag",   label: "Vandaag",   icon: (c) => (

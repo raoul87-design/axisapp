@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
+import { APP_URL } from "../../../lib/config"
 
 const GREEN = "#22c55e"
-const BG    = "#0f0f0f"
+const BG    = "var(--ink)"
 const CARD  = "#1a1a1a"
 
 export default function InvitePage() {
@@ -42,7 +43,7 @@ export default function InvitePage() {
     const { data: authData, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
-      options: { emailRedirectTo: "https://app.axisapp.nl/home" },
+      options: { emailRedirectTo: `${APP_URL}/home` },
     })
 
     if (error) {
@@ -144,7 +145,7 @@ export default function InvitePage() {
             Je bent uitgenodigd
           </p>
           <h2 style={{ fontSize: 22, color: "#fff", marginBottom: 8 }}>Maak je account aan</h2>
-          <p style={{ color: "#888", fontSize: 14 }}>Je coach heeft je toegang gegeven tot AXIS.</p>
+          <p style={{ color: "#888", fontSize: 14 }}>Je coach heeft je toegang gegeven tot Stayd.</p>
         </div>
 
         {signingUp ? (
@@ -184,7 +185,7 @@ export default function InvitePage() {
 
 function Screen({ children }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f0f", padding: 24 }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ink)", padding: 24 }}>
       <div style={{ background: "#1a1a1a", padding: 40, borderRadius: 12, maxWidth: 420, width: "100%", textAlign: "center" }}>
         {children}
       </div>

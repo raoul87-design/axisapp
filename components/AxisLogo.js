@@ -14,9 +14,9 @@ export function AxisLogo({ variant = "breathe", size = 24 }) {
   if (variant === "loader") {
     return (
       <span className="axis-loader" style={{ fontSize: size }}>
+        <b className="c1">s</b><b className="c2">t</b><b className="c3">a</b>
+        <b className="c4">y</b><b className="c5">d</b>
         <i className="d" />
-        <b className="c1">A</b><b className="c2">X</b>
-        <b className="c3">I</b><b className="c4">S</b>
       </span>
     )
   }
@@ -24,11 +24,11 @@ export function AxisLogo({ variant = "breathe", size = 24 }) {
   if (variant === "streak") {
     return (
       <span className="axis-wm axis-streak" style={{ fontSize: size }}>
+        stayd
         <span className="streak-dot">
           <i className="q q1" /><i className="q q2" />
           <i className="q q3" /><i className="q q4" />
         </span>
-        AXIS
       </span>
     )
   }
@@ -37,7 +37,7 @@ export function AxisLogo({ variant = "breathe", size = 24 }) {
     return (
       <span className="axis-wm axis-bracket" style={{ fontSize: size }}>
         <span className="br br-l" />
-        <i className="dot" />AXIS
+        stayd<i className="dot" />
         <span className="br br-r" />
       </span>
     )
@@ -46,7 +46,7 @@ export function AxisLogo({ variant = "breathe", size = 24 }) {
   // pulse | breathe
   return (
     <span className={`axis-wm axis-${variant}`} style={{ fontSize: size }}>
-      <i className="dot" />AXIS
+      stayd<i className="dot" />
     </span>
   )
 }

@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_URL } from "../lib/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "AXIS — Accountability app voor personal trainers",
-  description: "AXIS helpt personal trainers hun klanten dagelijks accountable houden via WhatsApp en AI. Automatische check-ins, metrics tracking en coaching tussen sessies door.",
+  title: "stayd. — Accountability app voor personal trainers",
+  description: "stayd. helpt personal trainers hun klanten dagelijks accountable houden via WhatsApp en AI. Automatische check-ins, metrics tracking en coaching tussen sessies door.",
   keywords: ["accountability app personal trainer", "client opvolging personal trainer", "WhatsApp check-in coach", "fitness accountability app", "personal trainer software Nederland"],
   manifest: "/manifest.json",
   icons: {
@@ -22,22 +23,22 @@ export const metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "AXIS",
+    title: "stayd.",
     statusBarStyle: "black-translucent",
   },
   other: {
     "mobile-web-app-capable": "yes",
   },
   openGraph: {
-    title: "AXIS — Accountability app voor personal trainers",
+    title: "stayd. — Accountability app voor personal trainers",
     description: "Dagelijkse accountability voor jouw klanten via WhatsApp en AI. Geen extra app nodig.",
-    url: "https://axisapp.nl",
-    siteName: "AXIS",
+    url: SITE_URL,
+    siteName: "stayd.",
     locale: "nl_NL",
     type: "website",
   },
   alternates: {
-    canonical: "https://axisapp.nl",
+    canonical: SITE_URL,
   },
   robots: {
     index: true,

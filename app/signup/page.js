@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { APP_URL } from "../../lib/config"
 
 const GREEN = "#22c55e"
 
@@ -23,7 +24,7 @@ export default function SignupPage() {
     e.preventDefault()
     setError("")
     setLoading(true)
-    const { data, error: authErr } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "https://app.axisapp.nl" } })
+    const { data, error: authErr } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: APP_URL } })
     if (authErr) { setError(authErr.message); setLoading(false); return }
     await supabase.from("users").insert({
       auth_user_id:         data.user.id,
@@ -35,11 +36,13 @@ export default function SignupPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f0f", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--ink)", padding: "20px" }}>
       <div style={{ width: "100%", maxWidth: 420, background: "#1a1a1a", padding: 40, borderRadius: 12 }}>
 
         <div style={{ marginBottom: 28 }}>
-          <p style={{ color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", margin: "0 0 12px" }}>AXIS</p>
+          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "-0.045em", color: "var(--bone)", display: "inline-block", margin: "0 0 12px" }}>
+            stayd<span style={{ color: "var(--green)" }}>.</span>
+          </span>
           <h2 style={{ fontSize: 22, color: "#fff", margin: "0 0 8px" }}>Maak je account aan</h2>
           <p style={{ color: "#888", fontSize: 14, margin: 0 }}>Start jouw accountability journey.</p>
         </div>

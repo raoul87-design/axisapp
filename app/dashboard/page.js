@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { AxisLogo } from "../../components/AxisLogo"
+import { APP_URL } from "../../lib/config"
 
 const GREEN = "#22c55e"
 const CARD_BG = "#111"
@@ -12,7 +13,7 @@ const BORDER = "#1e1e1e"
 function Sidebar({ active, setActive }) {
   const nav = ["Overview", "Clients", "Commitments", "Schema's", "Insights", "Settings"]
   return (
-    <div style={{ width: 220, minHeight: "100vh", background: "#0a0a0a", borderRight: `1px solid ${BORDER}`, padding: "28px 0", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: 220, minHeight: "100vh", background: "var(--ink)", borderRight: `1px solid ${BORDER}`, padding: "28px 0", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "0 24px 32px" }}>
         <AxisLogo variant="breathe" size={18} />
         <p style={{ color: "#333", fontSize: 10, letterSpacing: 1.5, marginTop: 6, textTransform: "uppercase" }}>Coach Dashboard</p>
@@ -20,7 +21,7 @@ function Sidebar({ active, setActive }) {
       {nav.map(item => (
         <button key={item} onClick={() => setActive(item)} style={{
           display: "block", width: "100%", padding: "11px 24px", textAlign: "left",
-          background: active === item ? "#161616" : "transparent", border: "none",
+          background: active === item ? "var(--surface)" : "transparent", border: "none",
           borderLeft: active === item ? `3px solid ${GREEN}` : "3px solid transparent",
           color: active === item ? "#fff" : "#555", fontSize: 14, cursor: "pointer", transition: "all 0.15s",
         }}>
@@ -438,7 +439,7 @@ export default function Dashboard() {
 
   if (!authorized || loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0f0f0f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "#333", fontSize: 14 }}>{!authorized ? "Verifying..." : "Loading..."}</p>
       </div>
     )
@@ -548,7 +549,7 @@ export default function Dashboard() {
 
   return (
     <>
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f0f", color: "#fff", fontFamily: "sans-serif" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--ink)", color: "#fff", fontFamily: "sans-serif" }}>
       <Sidebar active={activeNav} setActive={setActiveNav} />
 
       <div style={{ flex: 1, padding: "32px 32px 64px", overflowY: "auto" }}>
@@ -642,7 +643,7 @@ export default function Dashboard() {
             <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <input value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Search by name or number..."
-                  style={{ flex: 1, minWidth: 200, padding: "8px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none" }} />
+                  style={{ flex: 1, minWidth: 200, padding: "8px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none" }} />
                 <div style={{ display: "flex", gap: 6 }}>
                   {[["streak", "Streak"], ["missed", "Missed"]].map(([val, label]) => (
                     <button key={val} onClick={() => setClientSort(val)} style={{
@@ -801,14 +802,14 @@ export default function Dashboard() {
               <>
                 <div style={{ padding: "14px 20px", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <input value={historySearch} onChange={e => setHistorySearch(e.target.value)} placeholder="Search commitment text..."
-                    style={{ flex: 2, minWidth: 180, padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 12, outline: "none" }} />
+                    style={{ flex: 2, minWidth: 180, padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 12, outline: "none" }} />
                   <select value={historyClientFilter} onChange={e => setHistoryClientFilter(e.target.value)}
-                    style={{ flex: 1, minWidth: 140, padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: historyClientFilter ? "#fff" : "#555", fontSize: 12, outline: "none" }}>
+                    style={{ flex: 1, minWidth: 140, padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: historyClientFilter ? "#fff" : "#555", fontSize: 12, outline: "none" }}>
                     <option value="">All clients</option>
                     {users.map(u => <option key={u.id} value={u.id}>{displayName(u)}</option>)}
                   </select>
                   <input type="date" value={historyDateFilter} onChange={e => setHistoryDateFilter(e.target.value)}
-                    style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: historyDateFilter ? "#fff" : "#555", fontSize: 12, outline: "none" }} />
+                    style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: historyDateFilter ? "#fff" : "#555", fontSize: 12, outline: "none" }} />
                   {(historySearch || historyClientFilter || historyDateFilter) && (
                     <button onClick={() => { setHistorySearch(""); setHistoryClientFilter(""); setHistoryDateFilter("") }}
                       style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "transparent", color: "#555", fontSize: 12, cursor: "pointer" }}>
@@ -1191,7 +1192,7 @@ export default function Dashboard() {
                     {sbItems.length > 0 && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {sbItems.map((item, i) => (
-                          <div key={item.oefening_id} style={{ background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 8, padding: "12px 14px" }}>
+                          <div key={item.oefening_id} style={{ background: "var(--ink)", border: "1px solid #1a1a1a", borderRadius: 8, padding: "12px 14px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                               <span style={{ color: "#fff", fontSize: 14, fontWeight: "bold" }}>{i + 1}. {item.naam}</span>
                               <button onClick={() => setSbItems(prev => prev.filter(x => x.oefening_id !== item.oefening_id))}
@@ -1262,7 +1263,7 @@ export default function Dashboard() {
                 {inviteLinks.map(link => {
                   const clientName = link.pre_data?.naam || link.client_email || null
                   return (
-                    <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "#0a0a0a", border: `1px solid ${link.gebruikt ? "#1a1a1a" : BORDER}` }}>
+                    <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, background: "var(--ink)", border: `1px solid ${link.gebruikt ? "#1a1a1a" : BORDER}` }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {clientName && (
                           <p style={{ fontSize: 12, color: link.gebruikt ? "#444" : "#ccc", fontWeight: "bold", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1270,7 +1271,7 @@ export default function Dashboard() {
                           </p>
                         )}
                         <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#aaa", fontFamily: "monospace", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          axisapp.nl/invite/{link.code}
+                          {APP_URL.replace(/^https?:\/\//, "")}/invite/{link.code}
                         </p>
                         <p style={{ fontSize: 11, color: link.gebruikt ? "#333" : "#555", margin: "3px 0 0" }}>
                           {link.gebruikt ? "Gebruikt" : "Actief"}
@@ -1350,11 +1351,11 @@ export default function Dashboard() {
 
     {/* ── CLIENT MODAL ── */}
     {showClientModal && (() => {
-      const iStyle = { width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #2a2a2a", background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }
+      const iStyle = { width: "100%", padding: "11px 14px", borderRadius: 8, border: "1px solid #2a2a2a", background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }
       const btnP   = { padding: "10px 20px", borderRadius: 8, border: `1px solid ${GREEN}`, background: "#0a1a0f", color: GREEN, fontSize: 13, cursor: "pointer", fontWeight: "bold" }
       const btnG   = { padding: "10px 16px", borderRadius: 8, border: "1px solid #2a2a2a", background: "transparent", color: "#555", fontSize: 13, cursor: "pointer" }
-      const chkBtn = (sel) => ({ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "#0a0a0a", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal", width: "100%" })
-      const optBtn = (sel) => ({ padding: "12px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "#0a0a0a", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal" })
+      const chkBtn = (sel) => ({ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "var(--ink)", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal", width: "100%" })
+      const optBtn = (sel) => ({ padding: "12px 14px", borderRadius: 8, border: `2px solid ${sel ? GREEN : "#2a2a2a"}`, background: sel ? "#0a1a0f" : "var(--ink)", color: sel ? GREEN : "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left", fontWeight: sel ? "bold" : "normal" })
       const firstName = clientForm.naam.trim().split(" ")[0] || "de client"
       return (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
@@ -1495,7 +1496,7 @@ export default function Dashboard() {
                     { label: "Frequentie", value: `${clientForm.frequentie}× per week` },
                     clientForm.doelGewicht && { label: "Doelgewicht", value: `${clientForm.doelGewicht} kg` },
                   ].filter(Boolean).map(({ label, value }) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 14px", borderRadius: 8, background: "#0a0a0a", border: "1px solid #1e1e1e" }}>
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 14px", borderRadius: 8, background: "var(--ink)", border: "1px solid #1e1e1e" }}>
                       <span style={{ color: "#555", fontSize: 12 }}>{label}</span>
                       <span style={{ color: "#fff", fontSize: 12 }}>{value}</span>
                     </div>
@@ -1526,7 +1527,7 @@ export default function Dashboard() {
                     E-mail verstuurd naar <span style={{ color: "#ccc" }}>{clientForm.email}</span>.
                   </p>
                 )}
-                <div style={{ background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 8, padding: "10px 14px", marginBottom: 20, textAlign: "left" }}>
+                <div style={{ background: "var(--ink)", border: "1px solid #1e1e1e", borderRadius: 8, padding: "10px 14px", marginBottom: 20, textAlign: "left" }}>
                   <p style={{ color: "#555", fontSize: 11, margin: "0 0 4px" }}>Invite link</p>
                   <p style={{ color: "#aaa", fontSize: 12, fontFamily: "monospace", margin: 0, wordBreak: "break-all" }}>{inviteSentUrl}</p>
                 </div>
@@ -1561,7 +1562,7 @@ export default function Dashboard() {
                 value={faqForm.vraag}
                 onChange={e => setFaqForm(f => ({ ...f, vraag: e.target.value }))}
                 placeholder="Bijv. Hoeveel eiwitten heb ik nodig?"
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }}
               />
             </div>
             <div>
@@ -1571,7 +1572,7 @@ export default function Dashboard() {
                 onChange={e => setFaqForm(f => ({ ...f, antwoord: e.target.value }))}
                 placeholder="Bijv. Streef naar 1.8-2g eiwit per kg lichaamsgewicht per dag."
                 rows={4}
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "#0a0a0a", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid #2a2a2a`, background: "var(--ink)", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }}
               />
             </div>
           </div>

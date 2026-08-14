@@ -44,7 +44,7 @@ export default function ResetPassword() {
 
   return (
     <div style={{
-      backgroundColor: "#0f0f0f",
+      backgroundColor: "var(--ink)",
       color: "white",
       height: "100vh",
       display: "flex",
@@ -52,7 +52,9 @@ export default function ResetPassword() {
       alignItems: "center",
       flexDirection: "column",
     }}>
-      <h1 style={{ fontSize: 40, marginBottom: 8 }}>AXIS</h1>
+      <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 40, letterSpacing: "-0.045em", color: "var(--bone)", marginBottom: 8 }}>
+        stayd<span style={{ color: "var(--green)" }}>.</span>
+      </h1>
       <p style={{ color: "#888", fontSize: 13, marginBottom: 24 }}>Nieuw wachtwoord instellen</p>
 
       {error && (

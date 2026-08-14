@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { AxisLogo } from "../../components/AxisLogo"
+import { supabase } from "../../lib/supabase"
 
 const G = "#22c55e"
-const BG = "#0a0a0a"
+const BG = "var(--ink)"
 const CARD = "rgba(255,255,255,0.03)"
 const BORDER = "rgba(255,255,255,0.08)"
 const TEXT = "#F4F4F5"
@@ -19,25 +20,33 @@ const T = {
       { label: "Features",      href: "#features" },
       { label: "Prijzen",       href: "#prijzen" },
     ],
-    navCta: "Start gratis",
+    navCta: "Wachtlijst",
     navSwitcher: "Voor coaches →",
     hero: {
       badge: "Jouw dagelijkse discipline app",
       h1a: "BEREIK JE DOEL.",
       h1b: "ELKE DAG.",
       sub: "Dagelijkse check-ins via WhatsApp, een AI coach die jou kent, en workouts die passen bij jouw doel.",
-      cta: "Start 14 dagen gratis →",
+      cta: "Zet me op de wachtlijst →",
       stats: [
         { val: "14 dagen", sub: "gratis proberen" },
         { val: "€9,99", sub: "per maand" },
         { val: "WhatsApp", sub: "geen extra app" },
       ],
     },
+    waitlist: {
+      placeholder: "Jouw e-mailadres",
+      btn: "Meld je aan →",
+      sending: "Bezig...",
+      success: "Je staat op de lijst! We laten je weten zodra je aan de slag kan.",
+      duplicate: "Je staat al op de wachtlijst.",
+      error: "Er ging iets mis. Probeer het opnieuw.",
+    },
     how: {
       badge: "Hoe het werkt",
       h2: "Vier stappen naar consistentie.",
       steps: [
-        { num: "01", title: "Stel je doel in",                 desc: "Vertel AXIS wat je wil bereiken. De AI coach past zich aan jouw doel en niveau aan." },
+        { num: "01", title: "Stel je doel in",                 desc: "Vertel Stayd wat je wil bereiken. De AI coach past zich aan jouw doel en niveau aan." },
         { num: "02", title: "Dagelijkse check-in via WhatsApp", desc: "Elke ochtend een bericht. Commit aan één ding dat je vandaag gaat doen." },
         { num: "03", title: "Commitments bijhouden",            desc: "Zie wat je hebt gedaan. Bouw een streak op. Blijf consistent." },
         { num: "04", title: "Voortgang zien",                   desc: "Statistieken, patronen en trends. Zie hoe ver je al bent gekomen." },
@@ -71,14 +80,14 @@ const T = {
         "Unlimited commitments",
         "Persoonlijke herinneringen",
       ],
-      cta: "Start gratis →",
+      cta: "Wachtlijst →",
       trial: "14 dagen gratis — daarna pas betalen",
     },
     cta: {
       h2a: "Klaar om",
       h2b: "te beginnen?",
       p: "14 dagen gratis. Geen creditcard. Stop wanneer je wil.",
-      btn: "Start gratis →",
+      btn: "Wachtlijst →",
     },
     footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
@@ -88,25 +97,33 @@ const T = {
       { label: "Features",     href: "#features" },
       { label: "Pricing",      href: "#prijzen" },
     ],
-    navCta: "Start free",
+    navCta: "Waitlist",
     navSwitcher: "For coaches →",
     hero: {
       badge: "Your daily discipline app",
       h1a: "REACH YOUR GOAL.",
       h1b: "EVERY DAY.",
       sub: "Daily check-ins via WhatsApp, an AI coach that knows you, and workouts built around your goal.",
-      cta: "Start 14 days free →",
+      cta: "Join the waitlist →",
       stats: [
         { val: "14 days", sub: "free trial" },
         { val: "€9.99", sub: "per month" },
         { val: "WhatsApp", sub: "no extra app" },
       ],
     },
+    waitlist: {
+      placeholder: "Your email address",
+      btn: "Join →",
+      sending: "Sending...",
+      success: "You're on the list! We'll let you know when you can get started.",
+      duplicate: "You're already on the waitlist.",
+      error: "Something went wrong. Please try again.",
+    },
     how: {
       badge: "How it works",
       h2: "Four steps to consistency.",
       steps: [
-        { num: "01", title: "Set your goal",               desc: "Tell AXIS what you want to achieve. The AI coach adapts to your goal and level." },
+        { num: "01", title: "Set your goal",               desc: "Tell Stayd what you want to achieve. The AI coach adapts to your goal and level." },
         { num: "02", title: "Daily check-in via WhatsApp", desc: "Every morning a message. Commit to one thing you'll do today." },
         { num: "03", title: "Track your commitments",      desc: "See what you've done. Build a streak. Stay consistent." },
         { num: "04", title: "See your progress",           desc: "Statistics, patterns and trends. See how far you've come." },
@@ -140,14 +157,14 @@ const T = {
         "Unlimited commitments",
         "Personal reminders",
       ],
-      cta: "Start free →",
+      cta: "Waitlist →",
       trial: "14 days free — pay after that",
     },
     cta: {
       h2a: "Ready to",
       h2b: "start?",
       p: "14 days free. No credit card. Cancel anytime.",
-      btn: "Start free →",
+      btn: "Waitlist →",
     },
     footer: { tagline: "Commit. Execute. Reflect. Recover." },
   },
@@ -240,7 +257,7 @@ function Nav({ lang, setLang, t }) {
             {t.navSwitcher}
           </a>
           <LangToggle lang={lang} setLang={setLang} />
-          <a href="https://app.axisapp.nl/signup" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
+          <a href="#waitlist" className="btn-green" style={{ padding: "8px 20px", fontSize: 13 }}>{t.navCta}</a>
         </div>
 
         <button
@@ -262,7 +279,7 @@ function Nav({ lang, setLang, t }) {
       </div>
 
       {open && (
-        <div style={{ background: "#0a0a0a", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 16px" }}>
+        <div style={{ background: "var(--ink)", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 16px" }}>
           {t.navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={close} style={{
               display: "block", padding: "12px 24px",
@@ -283,7 +300,7 @@ function Nav({ lang, setLang, t }) {
             <LangToggle lang={lang} setLang={setLang} />
           </div>
           <div style={{ padding: "14px 24px 0" }}>
-            <a href="https://app.axisapp.nl/signup" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
+            <a href="#waitlist" className="btn-green" style={{ display: "inline-block", padding: "10px 24px", fontSize: 14 }} onClick={close}>
               {t.navCta}
             </a>
           </div>
@@ -297,6 +314,21 @@ function Nav({ lang, setLang, t }) {
 export default function B2CPage() {
   const [lang, setLang] = useState("NL")
   const t = T[lang]
+
+  const [waitlistEmail,  setWaitlistEmail]  = useState("")
+  const [waitlistStatus, setWaitlistStatus] = useState("idle") // idle | sending | success | duplicate | error
+
+  const handleWaitlistSubmit = async (e) => {
+    e.preventDefault()
+    if (!waitlistEmail.trim()) return
+    setWaitlistStatus("sending")
+    const { error } = await supabase.from("waitlist").insert({ email: waitlistEmail.trim().toLowerCase() })
+    if (error) {
+      setWaitlistStatus(error.code === "23505" ? "duplicate" : "error")
+      return
+    }
+    setWaitlistStatus("success")
+  }
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth"
@@ -429,8 +461,27 @@ export default function B2CPage() {
               <span style={{ color: G }}>{t.hero.h1b}</span>
             </h1>
             <p className="hero-sub" style={{ fontSize: 16, color: SUB, marginBottom: 32, lineHeight: 1.75, maxWidth: 460 }}>{t.hero.sub}</p>
-            <div className="hero-cta">
-              <a href="https://app.axisapp.nl/signup" className="btn-green" style={{ fontSize: 15, padding: "14px 32px" }}>{t.hero.cta}</a>
+            <div className="hero-cta" id="waitlist">
+              {waitlistStatus === "success" || waitlistStatus === "duplicate" ? (
+                <p style={{ color: G, fontSize: 15, fontWeight: 600 }}>
+                  {waitlistStatus === "success" ? t.waitlist.success : t.waitlist.duplicate}
+                </p>
+              ) : (
+                <form onSubmit={handleWaitlistSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <input
+                    type="email" required value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    placeholder={t.waitlist.placeholder}
+                    style={{ flex: "1 1 220px", padding: "14px 16px", fontSize: 15, borderRadius: 8, border: `1px solid ${BORDER}`, background: CARD, color: TEXT, outline: "none" }}
+                  />
+                  <button type="submit" disabled={waitlistStatus === "sending"} className="btn-green" style={{ fontSize: 15, padding: "14px 32px", border: "none", cursor: waitlistStatus === "sending" ? "default" : "pointer" }}>
+                    {waitlistStatus === "sending" ? t.waitlist.sending : t.hero.cta}
+                  </button>
+                  {waitlistStatus === "error" && (
+                    <p style={{ width: "100%", color: "#ef4444", fontSize: 13, margin: 0 }}>{t.waitlist.error}</p>
+                  )}
+                </form>
+              )}
             </div>
 
             {/* Stats row */}
@@ -552,7 +603,7 @@ export default function B2CPage() {
               </div>
 
               <a
-                href="https://app.axisapp.nl/signup"
+                href="#waitlist"
                 className="btn-green"
                 style={{ display: "block", textAlign: "center", fontSize: 15, padding: "14px 28px" }}
               >
@@ -576,7 +627,7 @@ export default function B2CPage() {
               {t.cta.h2a}<br /><span style={{ color: G }}>{t.cta.h2b}</span>
             </h2>
             <p style={{ color: SUB, fontSize: 16, marginBottom: 36 }}>{t.cta.p}</p>
-            <a href="https://app.axisapp.nl/signup" className="btn-green" style={{ fontSize: 15, padding: "14px 36px" }}>{t.cta.btn}</a>
+            <a href="#waitlist" className="btn-green" style={{ fontSize: 15, padding: "14px 36px" }}>{t.cta.btn}</a>
           </div>
         </Section>
       </div>
@@ -588,7 +639,7 @@ export default function B2CPage() {
             <AxisLogo variant="bracket" size={18} />
             <p style={{ color: SUB, fontSize: 12, marginTop: 4 }}>{t.footer.tagline}</p>
           </div>
-          <p style={{ color: "#3f3f46", fontSize: 12 }}>© 2026 AXIS</p>
+          <p style={{ color: "#3f3f46", fontSize: 12 }}>© 2026 Stayd App</p>
         </div>
       </footer>
 

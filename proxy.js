@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 export function proxy(request) {
   const { pathname } = request.nextUrl
 
-  // On app.axisapp.nl, rewrite root "/" to "/home"
+  // On an app.* subdomain (app.stayd.nl, app.axisapp.nl), rewrite root "/" to "/home"
   if (pathname === "/") {
     const host = request.headers.get("host") || ""
     if (host.startsWith("app.")) {

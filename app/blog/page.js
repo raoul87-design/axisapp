@@ -4,7 +4,7 @@ import Link from "next/link"
 import { blogPosts } from "../../lib/blog"
 
 const G      = "#22c55e"
-const BG     = "#0f0f0f"
+const BG     = "var(--ink)"
 const CARD   = "#111"
 const BORDER = "#1e1e1e"
 const SUB    = "#888"
@@ -18,7 +18,7 @@ export default function BlogPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/" style={{ fontWeight: 800, letterSpacing: "0.15em", fontSize: 18, color: "#fff", textDecoration: "none" }}>
             <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: G, marginRight: 8, verticalAlign: "middle" }} />
-            AXIS
+            stayd.
           </Link>
           <Link href="/" style={{ color: SUB, fontSize: 14, textDecoration: "none" }}>← Terug naar home</Link>
         </div>

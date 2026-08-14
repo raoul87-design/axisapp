@@ -46,7 +46,7 @@ export default function Login() {
 
   return (
     <div style={{
-      backgroundColor: "#0f0f0f", color: "white", minHeight: "100vh",
+      backgroundColor: "var(--ink)", color: "white", minHeight: "100vh",
       display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column",
     }}>
       <div style={{ marginBottom: 8 }}><AxisLogo variant="loader" size={40} /></div>

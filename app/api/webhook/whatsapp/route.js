@@ -42,7 +42,9 @@ Gebruik dit kader proactief als iemand wil afvallen of vragen heeft over voeding
 // Toon-toevoeging voor alle WhatsApp system prompts
 const WA_TONE = `
 
+Je bent Stayd, de AI coach van de gebruiker.
 Schrijf als een echte coach die een WhatsApp stuurt.
+- Kort, feitelijk, warm zonder zoet
 - Korte zinnen, geen opsommingen
 - Soms een tegenvraag in plaats van een antwoord
 - Af en toe een kleine imperfectie in de zin
@@ -357,7 +359,7 @@ Als de client kcal of macros instuurt — vergelijk altijd met dit doel:
 
   const scopeBlock = `
 
-SCOPE — WAT AXIS DOET:
+SCOPE — WAT STAYD DOET:
 - Dagelijkse check-in via WhatsApp (08:00)
 - Commitments bijhouden en afvinken
 - Metrics opslaan: gewicht, kcal, stappen
@@ -365,21 +367,21 @@ SCOPE — WAT AXIS DOET:
 - Reminders instellen op verzoek: "Herinner me elke dag om 19:00 aan creatine" of "Herinner me morgen om 09:00 aan mijn afspraak"
 - Vragen beantwoorden over sport, voeding en discipline
 
-WAT AXIS NIET DOET:
+WAT STAYD NIET DOET:
 - Agenda beheren
 - Afspraken inplannen met anderen
 - Workouts of voedingsschema's maken
 - Medisch advies geven
 - Berichten sturen naar anderen
 
-Als iemand iets vraagt buiten dit domein: leg vriendelijk uit wat AXIS wel kan doen en stuur het gesprek terug naar commitment, metrics of coaching.`
+Als iemand iets vraagt buiten dit domein: leg vriendelijk uit wat Stayd wel kan doen en stuur het gesprek terug naar commitment, metrics of coaching.`
 
   const faqBlock = faqItems.length > 0 ? `
 
 COACH FAQ — gebruik deze antwoorden als een client een vergelijkbare vraag stelt:
 ${faqItems.map(f => `Q: ${f.vraag}\nA: ${f.antwoord}`).join("\n\n")}
 
-Staat een vraag niet in de FAQ? Gebruik normale AXIS kennis. Zeg NOOIT dat iets niet in de FAQ staat.` : ""
+Staat een vraag niet in de FAQ? Gebruik normale Stayd kennis. Zeg NOOIT dat iets niet in de FAQ staat.` : ""
 
   return `${SYSTEM_PROMPTS[tone]}${NUTRITION_KNOWLEDGE}${contextBlock}${scopeBlock}${faqBlock}`
 }
@@ -614,7 +616,8 @@ async function handleReflection(from, body, userData) {
   console.log("Streak bijgewerkt:", newStreak, "| MissedDays:", newMissedDays)
 
   if (completed) {
-    await sendWhatsApp(from, `Geweldig! 🔥 Streak staat nu op ${newStreak} ${newStreak === 1 ? "dag" : "dagen"}. Morgen weer!`)
+    const dagRegel = newStreak === 1 ? "Dag 1." : `Dag ${newStreak} op rij.`
+    await sendWhatsApp(from, `Geweldig! 🔥 ${dagRegel} Well done — you stayd.`)
   } else if (hasDoneActivity) {
     // Extraheer de activiteit: strip "nee [maar/toch/wel]" prefix
     const activityText = body.replace(/^(nee|no|nope)[,.\s]*(maar|but|toch|wel)?[,.\s]*/i, "").trim() || body
@@ -671,9 +674,9 @@ async function handleOverig(from, body, userData, history = []) {
     max_tokens: 128,
     system: `${SYSTEM_PROMPTS[tone]}
 
-Je ontvangt een bericht dat je niet precies begrijpt of dat buiten het domein van AXIS valt.
+Je ontvangt een bericht dat je niet precies begrijpt of dat buiten het domein van Stayd valt.
 
-Als het buiten het domein valt (reminders, agenda, taken buiten fitness): leg vriendelijk maar duidelijk uit wat AXIS wel en niet doet. Zeg: "Dat kan ik niet voor je doen — AXIS is geen reminder app. Wat ik wel doe: elke ochtend om 08:00 stuur ik je een check-in. Stuur me dan je commitment voor die dag."
+Als het buiten het domein valt (reminders, agenda, taken buiten fitness): leg vriendelijk maar duidelijk uit wat Stayd wel en niet doet. Zeg: "Dat kan ik niet voor je doen — Stayd is geen reminder app. Wat ik wel doe: elke ochtend om 08:00 stuur ik je een check-in. Stuur me dan je commitment voor die dag."
 
 Als het onduidelijk is maar binnen het domein zou kunnen vallen: reageer menselijk en nieuwsgierig. Stel één korte doorvraag. Geen opsommingen, geen uitleg over wat je kunt doen.`,
     messages,
@@ -1055,7 +1058,7 @@ async function handleMessage(from, body) {
         console.log(`Dagelijks vraag-count: ${questionCount}/${DAILY_QUESTION_LIMIT}`)
         if (questionCount >= DAILY_QUESTION_LIMIT) {
           console.log("Vragenlimiet bereikt — bericht geblokkeerd")
-          await sendWhatsApp(from, "Je hebt vandaag je vragenlimiet bereikt. Open de AXIS app voor meer coaching.")
+          await sendWhatsApp(from, "Je hebt vandaag je vragenlimiet bereikt. Open de Stayd app voor meer coaching.")
           return
         }
         // Laad geheugen + context parallel
