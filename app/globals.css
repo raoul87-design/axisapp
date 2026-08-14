@@ -125,7 +125,7 @@
   display: inline-block;
   width: 0.38em;
   height: 0.38em;
-  border-radius: 0.13em;
+  border-radius: 50%;
   margin-left: 0.22em;
   background: rgba(34,197,94,0.15);
   border: 1px solid rgba(34,197,94,0.4);

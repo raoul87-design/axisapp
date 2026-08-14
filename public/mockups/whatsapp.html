@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>AXIS — WhatsApp</title>
+<title>stayd. — WhatsApp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -50,13 +50,15 @@
   .back { color: var(--wa-text); font-size: 18px; padding: 0 2px; }
   .avatar {
     width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background: #0B0F0D;
     display: grid; place-items: center;
-    font-weight: 800; font-size: 13px; color: #052;
-    letter-spacing: 0.04em;
+    font-weight: 800; font-size: 16px;
+    letter-spacing: 0.02em;
     position: relative;
     flex-shrink: 0;
   }
+  .avatar .s { color: #EDF2EE; }
+  .avatar .dot { color: #22c55e; }
   .name-block { flex: 1; }
   .name { font-weight: 600; font-size: 15px; }
   .status { font-size: 11px; color: var(--wa-muted); display: flex; align-items: center; gap: 6px; }
@@ -227,9 +229,9 @@
 
   <div class="wa-head">
     <div class="back">‹</div>
-    <div class="avatar">AX</div>
+    <div class="avatar"><span class="s">s</span><span class="dot">.</span></div>
     <div class="name-block">
-      <div class="name">AXIS Coach</div>
+      <div class="name">Stayd Coach</div>
       <div class="status"><span class="live-dot"></span>online</div>
     </div>
     <div class="head-icons">
